@@ -1,254 +1,352 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import CommonModal from "../../components/common/CommonModal";
+import Autocomplete from "../../components/common/Autocomplete";
+import { useStore } from "../../store/useStore";
+import api from "../../utils/api";
 
 function PurchaseReturn() {
-    const [returnNo, setReturnNo] = useState(1);
-    const [returnDate, setReturnDate] = useState(
-        new Date().toISOString().split("T")[0]
-    );
+  const [returnDate, setReturnDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
 
-    const [vendor, setVendor] = useState("");
-    const [purchaseInvoiceNo, setPurchaseInvoiceNo] = useState("");
-    const [reason, setReason] = useState("");
-    const [product, setProduct] = useState("");
-    const [qty, setQty] = useState("");
-    const [rate, setRate] = useState("");
+  const [vendorId, setVendorId] = useState(null);
+  const [itemId, setItemId] = useState(null);
+  const [purchaseInvoiceNo, setPurchaseInvoiceNo] = useState("");
+  const [reason, setReason] = useState("");
+  const [qty, setQty] = useState("");
+  const [rate, setRate] = useState(0);
 
-    const [returns, setReturns] = useState([]);
+  const [returns, setReturns] = useState([]);
+  const [loadingReturns, setLoadingReturns] = useState(false);
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("");
+  const [showSaveModal, setShowSaveModal] = useState(false);
 
-    // Amount calculation
-    const amount =
-        (parseFloat(qty) || 0) * (parseFloat(rate) || 0);
+  // Zustand Cache
+  const vendors = useStore((state) => state.vendors);
+  const items = useStore((state) => state.items);
+  const fetchVendors = useStore((state) => state.fetchVendors);
+  const fetchItems = useStore((state) => state.fetchItems);
 
-    // Add Return
-    const addReturn = () => {
-        if (
-            !vendor ||
-            !purchaseInvoiceNo ||
-            !product ||
-            !qty ||
-            !rate
-        ) {
-            alert("Please fill all required fields");
-            return;
-        }
+  useEffect(() => {
+    fetchVendors();
+    fetchItems();
+    fetchPurchaseReturns();
+  }, []);
 
-        if (qty <= 0 || rate <= 0) {
-            alert("Qty and Rate must be greater than 0");
-            return;
-        }
+  const fetchPurchaseReturns = async () => {
+    setLoadingReturns(true);
+    try {
+      const res = await api.get("/transactions/purchase-returns");
+      setReturns(res.data);
+    } catch (err) {
+      console.error("Failed to fetch purchase returns:", err);
+    } finally {
+      setLoadingReturns(false);
+    }
+  };
 
-        const newReturn = {
-            returnNo: `PR-${String(returnNo).padStart(3, "0")}`,
-            returnDate,
-            vendor,
-            purchaseInvoiceNo,
-            reason,
-            product,
-            qty,
-            rate,
-            amount,
-        };
+  const selectedVendor = vendors.find((v) => v.id === vendorId);
+  const selectedItem = items.find((i) => i.id === itemId);
 
-        setReturns([...returns, newReturn]);
-        setReturnNo(returnNo + 1);
+  const amount = (parseFloat(qty) || 0) * rate;
 
-        // Reset form
-        setVendor("");
-        setPurchaseInvoiceNo("");
-        setReason("");
-        setProduct("");
-        setQty("");
-        setRate("");
+  const handleSaveReturn = async () => {
+    if (!vendorId) {
+      setMessage("Please select a Vendor");
+      setMessageType("error");
+      return;
+    }
+    if (!itemId) {
+      setMessage("Please select a Product");
+      setMessageType("error");
+      return;
+    }
+    const returnQty = parseInt(qty) || 0;
+    if (returnQty <= 0) {
+      setMessage("Return quantity must be greater than 0");
+      setMessageType("warning");
+      return;
+    }
 
-        alert("Purchase Return Saved Successfully");
-    };
+    // Client-side stock check for return
+    if (selectedItem && returnQty > selectedItem.openingStock) {
+      setMessage(
+        `Insufficient stock to perform return. Available: ${selectedItem.openingStock}, Requested: ${returnQty}`
+      );
+      setMessageType("error");
+      return;
+    }
 
-    // Total Summary
-    const totalReturnAmount = returns.reduce(
-        (total, item) => total + item.amount,
-        0
-    );
+    try {
+      const payload = {
+        vendorId,
+        itemId,
+        qty: returnQty,
+        invoiceNo: purchaseInvoiceNo,
+        reason,
+        returnDate
+      };
 
-    return (
-        <div>
-            <h1 className="text-3xl font-bold mb-6">
-                Purchase Return
-            </h1>
+      await api.post("/transactions/purchase-returns", payload);
 
-            {/* FORM */}
-            <div className="bg-white p-5 rounded-xl shadow">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      // Force refresh of Master Items (stock decrease) & Vendors (outstanding balance decrease)
+      await fetchItems(true);
+      await fetchVendors(true);
 
-                    {/* Return Number */}
-                    <input
-                        type="text"
-                        value={`PR-${String(returnNo).padStart(3, "0")}`}
-                        readOnly
-                        className="border p-3 rounded-lg bg-gray-100"
-                    />
+      // Reload returns list
+      fetchPurchaseReturns();
 
-                    {/* Return Date */}
-                    <input
-                        type="date"
-                        value={returnDate}
-                        onChange={(e) =>
-                            setReturnDate(e.target.value)
-                        }
-                        className="border p-3 rounded-lg"
-                    />
+      // Reset form
+      setVendorId(null);
+      setItemId(null);
+      setPurchaseInvoiceNo("");
+      setReason("");
+      setQty("");
+      setRate(0);
 
-                    {/* Vendor */}
-                    <input
-                        type="text"
-                        placeholder="Vendor Name"
-                        value={vendor}
-                        onChange={(e) =>
-                            setVendor(e.target.value)
-                        }
-                        className="border p-3 rounded-lg"
-                    />
+      setMessage("Purchase Return saved successfully!");
+      setMessageType("success");
+      setShowSaveModal(true);
 
-                    {/* Purchase Invoice Number */}
-                    <input
-                        type="text"
-                        placeholder="Purchase Invoice Number"
-                        value={purchaseInvoiceNo}
-                        onChange={(e) =>
-                            setPurchaseInvoiceNo(e.target.value)
-                        }
-                        className="border p-3 rounded-lg"
-                    />
+      setTimeout(() => {
+        setMessage("");
+      }, 4000);
+    } catch (err) {
+      console.error("Failed to save purchase return:", err);
+      const errText = err.response?.data?.error || err.response?.data?.message || "Failed to save return";
+      setMessage(errText);
+      setMessageType("error");
+    }
+  };
 
-                    {/* Reason */}
-                    <input
-                        type="text"
-                        placeholder="Reason"
-                        value={reason}
-                        onChange={(e) =>
-                            setReason(e.target.value)
-                        }
-                        className="border p-3 rounded-lg"
-                    />
+  const totalReturnAmount = Math.round(
+    returns.reduce((total, item) => total + (Number(item.grandTotal) || 0), 0) * 100
+  ) / 100;
 
-                    {/* Product */}
-                    <input
-                        type="text"
-                        placeholder="Product"
-                        value={product}
-                        onChange={(e) =>
-                            setProduct(e.target.value)
-                        }
-                        className="border p-3 rounded-lg"
-                    />
+  return (
+    <div className="space-y-6">
+      <h1 className="text-3xl font-bold mb-6 text-gray-800">Purchase Return</h1>
 
-                    {/* Qty */}
-                    <input
-                        type="number"
-                        placeholder="Qty"
-                        value={qty}
-                        onChange={(e) =>
-                            setQty(e.target.value)
-                        }
-                        className="border p-3 rounded-lg"
-                    />
-
-                    {/* Rate */}
-                    <input
-                        type="number"
-                        placeholder="Rate"
-                        value={rate}
-                        onChange={(e) =>
-                            setRate(e.target.value)
-                        }
-                        className="border p-3 rounded-lg"
-                    />
-
-                    {/* Amount */}
-                    <input
-                        type="text"
-                        value={`₹ ${amount}`}
-                        readOnly
-                        className="border p-3 rounded-lg bg-gray-100"
-                    />
-                </div>
-
-                <button
-                    onClick={addReturn}
-                    className="bg-green-600 text-white px-6 py-3 rounded-lg mt-4"
-                >
-                    Save Return
-                </button>
-            </div>
-
-            {/* SUMMARY */}
-            <div className="bg-white p-5 rounded-xl shadow mt-6 w-72">
-                <h3 className="text-gray-500">
-                    Total Return Amount
-                </h3>
-                <p className="text-3xl font-bold text-red-600">
-                    ₹ {totalReturnAmount}
-                </p>
-            </div>
-
-            {/* TABLE */}
-            <div className="bg-white p-5 rounded-xl shadow mt-6 overflow-x-auto">
-                <table className="w-full border-collapse">
-
-                    <thead className="bg-green-600 text-white">
-                        <tr>
-                            <th className="p-3">Return Number</th>
-                            <th className="p-3">Return Date</th>
-                            <th className="p-3">Vendor</th>
-                            <th className="p-3">Purchase Invoice No</th>
-                            <th className="p-3">Reason</th>
-                            <th className="p-3">Product</th>
-                            <th className="p-3">Qty</th>
-                            <th className="p-3">Rate</th>
-                            <th className="p-3">Amount</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {returns.map((item, index) => (
-                            <tr
-                                key={index}
-                                className="border-t text-center"
-                            >
-                                <td className="p-3">
-                                    {item.returnNo}
-                                </td>
-                                <td className="p-3">
-                                    {item.returnDate}
-                                </td>
-                                <td className="p-3">
-                                    {item.vendor}
-                                </td>
-                                <td className="p-3">
-                                    {item.purchaseInvoiceNo}
-                                </td>
-                                <td className="p-3">
-                                    {item.reason}
-                                </td>
-                                <td className="p-3">
-                                    {item.product}
-                                </td>
-                                <td className="p-3">
-                                    {item.qty}
-                                </td>
-                                <td className="p-3">
-                                    ₹ {item.rate}
-                                </td>
-                                <td className="p-3">
-                                    ₹ {item.amount}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-
-                </table>
-            </div>
+      {message && (
+        <div
+          className={`p-4 rounded-lg mb-4 text-white font-medium shadow-md transition-all duration-300 ${
+            messageType === "success"
+              ? "bg-emerald-600"
+              : messageType === "warning"
+              ? "bg-amber-500"
+              : "bg-rose-600"
+          }`}
+        >
+          {message}
         </div>
-    );
+      )}
+
+      {/* FORM */}
+      <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div>
+            <label className="block mb-2 text-sm font-semibold text-gray-700">Return Number</label>
+            <input
+              type="text"
+              value="[Auto-Generated]"
+              readOnly
+              className="border border-gray-200 p-3 rounded-lg w-full bg-gray-50 text-gray-500 font-mono"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-2 text-sm font-semibold text-gray-700">Return Date</label>
+            <input
+              type="date"
+              value={returnDate}
+              onChange={(e) => setReturnDate(e.target.value)}
+              className="border border-gray-200 p-3 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-2 text-sm font-semibold text-gray-700">Vendor Name</label>
+            <Autocomplete
+              options={vendors}
+              labelKey="name"
+              valueKey="id"
+              placeholder="Select Vendor..."
+              selectedId={vendorId}
+              searchFields={["name", "mobile"]}
+              customRender={(opt) => (
+                <div className="flex justify-between w-full">
+                  <span className="font-semibold text-gray-800">{opt.name}</span>
+                  <span className="text-sm text-gray-500">
+                    Bal: ₹{opt.outstandingBalance}
+                  </span>
+                </div>
+              )}
+              onSelect={(opt) => setVendorId(opt.id)}
+              onClear={() => setVendorId(null)}
+            />
+            {selectedVendor && (
+              <p className="text-xs text-gray-500 mt-1">
+                Outstanding Balance: <span className="font-bold text-gray-700">₹{selectedVendor.outstandingBalance}</span>
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="block mb-2 text-sm font-semibold text-gray-700">Purchase Invoice No</label>
+            <input
+              type="text"
+              placeholder="e.g. GY-PUR-0001 (Optional)"
+              value={purchaseInvoiceNo}
+              onChange={(e) => setPurchaseInvoiceNo(e.target.value)}
+              className="border border-gray-200 p-3 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-2 text-sm font-semibold text-gray-700">Reason</label>
+            <input
+              type="text"
+              placeholder="e.g. Defective stock"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="border border-gray-200 p-3 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-2 text-sm font-semibold text-gray-700">Product</label>
+            <Autocomplete
+              options={items}
+              labelKey="name"
+              valueKey="id"
+              placeholder="Select Product..."
+              selectedId={itemId}
+              searchFields={["name", "sku"]}
+              customRender={(opt) => (
+                <div className="flex justify-between w-full">
+                  <span className="font-semibold text-gray-800">{opt.name}</span>
+                  <span className="text-sm text-gray-500">
+                    Stock: {opt.openingStock} | Cost: ₹{opt.purchasePrice}
+                  </span>
+                </div>
+              )}
+              onSelect={(opt) => {
+                setItemId(opt.id);
+                setRate(opt.purchasePrice);
+              }}
+              onClear={() => {
+                setItemId(null);
+                setRate(0);
+              }}
+            />
+            {selectedItem && (
+              <p className="text-xs text-gray-500 mt-1">
+                Current Stock: <span className="font-bold text-gray-700">{selectedItem.openingStock}</span>
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="block mb-2 text-sm font-semibold text-gray-700">Qty</label>
+            <input
+              type="number"
+              placeholder="Qty"
+              value={qty}
+              onChange={(e) => setQty(e.target.value)}
+              className="border border-gray-200 p-3 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-2 text-sm font-semibold text-gray-700">Purchase Rate</label>
+            <input
+              type="text"
+              value={itemId ? `₹ ${rate}` : "-"}
+              readOnly
+              className="border border-gray-200 p-3 rounded-lg w-full bg-gray-50 text-gray-500 font-semibold"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-2 text-sm font-semibold text-gray-700">Return Amount</label>
+            <input
+              type="text"
+              value={`₹ ${amount.toFixed(2)}`}
+              readOnly
+              className="border border-gray-200 p-3 rounded-lg w-full bg-gray-50 text-gray-700 font-bold"
+            />
+          </div>
+        </div>
+
+        <button
+          onClick={handleSaveReturn}
+          className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-lg mt-6 font-bold shadow-md transition"
+        >
+          Save Return
+        </button>
+      </div>
+
+      {/* SUMMARY */}
+      <div className="bg-white p-5 rounded-xl shadow border border-gray-100 w-72">
+        <h3 className="text-gray-500 text-sm font-semibold">Total Return Amount</h3>
+        <p className="text-3xl font-extrabold text-rose-600 mt-1">₹ {totalReturnAmount}</p>
+      </div>
+
+      {/* TABLE */}
+      <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+        <h2 className="text-2xl font-bold mb-4 text-gray-800">Saved Returns</h2>
+        {loadingReturns ? (
+          <div className="text-center py-6 text-gray-500">Loading returns...</div>
+        ) : returns.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 text-gray-700 border-b border-gray-200">
+                <tr>
+                  <th className="p-3 text-left font-semibold text-sm">Return Number</th>
+                  <th className="p-3 text-left font-semibold text-sm">Return Date</th>
+                  <th className="p-3 text-left font-semibold text-sm">Vendor</th>
+                  <th className="p-3 text-left font-semibold text-sm">Purchase Invoice No</th>
+                  <th className="p-3 text-left font-semibold text-sm">Item</th>
+                  <th className="p-3 text-left font-semibold text-sm">Qty</th>
+                  <th className="p-3 text-left font-semibold text-sm">Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {returns.map((item) => (
+                  <tr key={item.id} className="hover:bg-gray-50/50 transition">
+                    <td className="p-3 font-mono font-semibold text-gray-900">{item.returnNo}</td>
+                    <td className="p-3 text-gray-600">{new Date(item.returnDate).toLocaleDateString()}</td>
+                    <td className="p-3 text-gray-700 font-medium">{item.vendor?.name || "-"}</td>
+                    <td className="p-3 text-gray-600 font-mono">{item.invoiceNo || "-"}</td>
+                    <td className="p-3 text-gray-700">{item.items?.[0]?.item?.name || "-"}</td>
+                    <td className="p-3 text-gray-600">{item.totalQty}</td>
+                    <td className="p-3 text-rose-600 font-bold">₹ {item.grandTotal}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center py-6 text-gray-400">No returns saved yet</div>
+        )}
+      </div>
+
+      <CommonModal isOpen={showSaveModal} title="Purchase Return Saved">
+        <p className="mb-4 text-gray-600">
+          The Purchase Return has been successfully saved. Inventory levels and vendor outstanding balances have been updated.
+        </p>
+        <div className="flex justify-end">
+          <button
+            onClick={() => setShowSaveModal(false)}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-lg font-semibold transition"
+          >
+            OK
+          </button>
+        </div>
+      </CommonModal>
+    </div>
+  );
 }
 
 export default PurchaseReturn;

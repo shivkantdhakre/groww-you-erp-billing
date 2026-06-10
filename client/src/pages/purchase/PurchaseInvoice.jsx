@@ -190,6 +190,7 @@ function PurchaseInvoice() {
 
       // Force refresh of Master Items to get updated database stock levels!
       await fetchItems(true);
+      await fetchVendors(true);
 
       // Reload saved purchases table
       fetchPurchaseInvoices();

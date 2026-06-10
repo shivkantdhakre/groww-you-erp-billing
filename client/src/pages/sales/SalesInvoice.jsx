@@ -198,6 +198,7 @@ function SalesInvoice() {
 
       // Force refresh of Master Items to get updated database stock levels!
       await fetchItems(true);
+      await fetchCustomers(true);
 
       // Reload saved invoices table
       fetchSalesInvoices();

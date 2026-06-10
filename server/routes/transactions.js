@@ -3,7 +3,11 @@ import {
   getSalesInvoices,
   createSalesInvoice,
   getPurchaseInvoices,
-  createPurchaseInvoice
+  createPurchaseInvoice,
+  getSalesReturns,
+  createSalesReturn,
+  getPurchaseReturns,
+  createPurchaseReturn
 } from "../controllers/transactionsController.js";
 import { verifyTokenAndTenant } from "../middleware/authMiddleware.js";
 
@@ -20,49 +24,15 @@ router.post("/sales-invoices", createSalesInvoice);
 router.get("/purchase-invoices", getPurchaseInvoices);
 router.post("/purchase-invoices", createPurchaseInvoice);
 
-// Mock data structures for other endpoints
-let salesReturns = [];
-let purchaseReturns = [];
-let vouchers = []; // Contra, Journal, Payment, Receipt
-
 // --- RETURNS ---
-router.get("/sales-returns", (req, res) => {
-  res.status(200).json(salesReturns.filter(r => r.companyId === req.user.companyId));
-});
+router.get("/sales-returns", getSalesReturns);
+router.post("/sales-returns", createSalesReturn);
 
-router.post("/sales-returns", (req, res) => {
-  const { returnNo, date, customerName, items, grandTotal } = req.body;
-  const newReturn = {
-    id: salesReturns.length + 1,
-    companyId: req.user.companyId,
-    returnNo: returnNo || `SRT-${String(salesReturns.length + 1).padStart(3, "0")}`,
-    date,
-    customerName,
-    items,
-    grandTotal
-  };
-  salesReturns.push(newReturn);
-  res.status(201).json(newReturn);
-});
+router.get("/purchase-returns", getPurchaseReturns);
+router.post("/purchase-returns", createPurchaseReturn);
 
-router.get("/purchase-returns", (req, res) => {
-  res.status(200).json(purchaseReturns.filter(r => r.companyId === req.user.companyId));
-});
-
-router.post("/purchase-returns", (req, res) => {
-  const { returnNo, date, vendorName, items, grandTotal } = req.body;
-  const newReturn = {
-    id: purchaseReturns.length + 1,
-    companyId: req.user.companyId,
-    returnNo: returnNo || `PRT-${String(purchaseReturns.length + 1).padStart(3, "0")}`,
-    date,
-    vendorName,
-    items,
-    grandTotal
-  };
-  purchaseReturns.push(newReturn);
-  res.status(201).json(newReturn);
-});
+// Mock data structures for other endpoints
+let vouchers = []; // Contra, Journal, Payment, Receipt
 
 // --- VOUCHERS (Contra, Journal, Payment, Receipt) ---
 router.get("/vouchers", (req, res) => {

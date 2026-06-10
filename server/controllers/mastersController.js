@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -6,18 +6,21 @@ const prisma = new PrismaClient();
 // CUSTOMER CONTROLLERS
 // ==========================================
 
-// Fetch all customers for the logged-in user's company
+// Fetch all active customers for the logged-in user's company
 export const getCustomers = async (req, res) => {
   try {
     const customers = await prisma.customer.findMany({
-      where: { companyId: req.user.companyId },
-      orderBy: { name: 'asc' } // Alphabetical order for the frontend
+      where: {
+        companyId: req.user.companyId,
+        isActive: true
+      },
+      orderBy: { name: "asc" } // Alphabetical order for the frontend
     });
     
     res.status(200).json(customers);
   } catch (error) {
-    console.error('Error fetching customers:', error);
-    res.status(500).json({ message: 'Failed to fetch customers' });
+    console.error("Error fetching customers:", error);
+    res.status(500).json({ message: "Failed to fetch customers" });
   }
 };
 
@@ -34,14 +37,41 @@ export const createCustomer = async (req, res) => {
         address,
         gstin,
         openingBalance: parseFloat(openingBalance) || 0.0,
-        creditLimit: parseFloat(creditLimit) || 0.0
+        outstandingBalance: 0.0,
+        creditLimit: parseFloat(creditLimit) || 0.0,
+        isActive: true
       }
     });
     
     res.status(201).json(newCustomer);
   } catch (error) {
-    console.error('Error creating customer:', error);
-    res.status(500).json({ message: 'Failed to create customer' });
+    console.error("Error creating customer:", error);
+    res.status(500).json({ message: "Failed to create customer" });
+  }
+};
+
+// Soft delete customer safely (tenant-isolated)
+export const deleteCustomer = async (req, res) => {
+  try {
+    const customer = await prisma.customer.findFirst({
+      where: {
+        id: parseInt(req.params.id),
+        companyId: req.user.companyId
+      }
+    });
+    if (!customer) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+
+    await prisma.customer.update({
+      where: { id: customer.id },
+      data: { isActive: false }
+    });
+
+    res.status(200).json({ message: "Customer soft-deleted successfully" });
+  } catch (error) {
+    console.error("Error soft-deleting customer:", error);
+    res.status(500).json({ message: "Failed to delete customer" });
   }
 };
 
@@ -49,19 +79,24 @@ export const createCustomer = async (req, res) => {
 // VENDOR CONTROLLERS
 // ==========================================
 
+// Fetch active vendors
 export const getVendors = async (req, res) => {
   try {
     const vendors = await prisma.vendor.findMany({
-      where: { companyId: req.user.companyId },
-      orderBy: { name: 'asc' }
+      where: {
+        companyId: req.user.companyId,
+        isActive: true
+      },
+      orderBy: { name: "asc" }
     });
     res.status(200).json(vendors);
   } catch (error) {
-    console.error('Error fetching vendors:', error);
-    res.status(500).json({ message: 'Failed to fetch vendors' });
+    console.error("Error fetching vendors:", error);
+    res.status(500).json({ message: "Failed to fetch vendors" });
   }
 };
 
+// Create a vendor safely
 export const createVendor = async (req, res) => {
   try {
     const { name, mobile, address, gstin, openingBalance } = req.body;
@@ -72,13 +107,40 @@ export const createVendor = async (req, res) => {
         mobile,
         address,
         gstin,
-        openingBalance: parseFloat(openingBalance) || 0.0
+        openingBalance: parseFloat(openingBalance) || 0.0,
+        outstandingBalance: 0.0,
+        isActive: true
       }
     });
     res.status(201).json(newVendor);
   } catch (error) {
-    console.error('Error creating vendor:', error);
-    res.status(500).json({ message: 'Failed to create vendor' });
+    console.error("Error creating vendor:", error);
+    res.status(500).json({ message: "Failed to create vendor" });
+  }
+};
+
+// Soft delete vendor safely (tenant-isolated)
+export const deleteVendor = async (req, res) => {
+  try {
+    const vendor = await prisma.vendor.findFirst({
+      where: {
+        id: parseInt(req.params.id),
+        companyId: req.user.companyId
+      }
+    });
+    if (!vendor) {
+      return res.status(404).json({ message: "Vendor not found" });
+    }
+
+    await prisma.vendor.update({
+      where: { id: vendor.id },
+      data: { isActive: false }
+    });
+
+    res.status(200).json({ message: "Vendor soft-deleted successfully" });
+  } catch (error) {
+    console.error("Error soft-deleting vendor:", error);
+    res.status(500).json({ message: "Failed to delete vendor" });
   }
 };
 
@@ -86,19 +148,24 @@ export const createVendor = async (req, res) => {
 // ITEM (INVENTORY) CONTROLLERS
 // ==========================================
 
+// Fetch active items
 export const getItems = async (req, res) => {
   try {
     const items = await prisma.item.findMany({
-      where: { companyId: req.user.companyId },
-      orderBy: { name: 'asc' }
+      where: {
+        companyId: req.user.companyId,
+        isActive: true
+      },
+      orderBy: { name: "asc" }
     });
     res.status(200).json(items);
   } catch (error) {
-    console.error('Error fetching items:', error);
-    res.status(500).json({ message: 'Failed to fetch items' });
+    console.error("Error fetching items:", error);
+    res.status(500).json({ message: "Failed to fetch items" });
   }
 };
 
+// Create an item safely
 export const createItem = async (req, res) => {
   try {
     const { name, sku, category, unit, purchasePrice, salePrice, gstPercentage, openingStock, minStockAlert } = req.body;
@@ -113,13 +180,38 @@ export const createItem = async (req, res) => {
         salePrice: parseFloat(salePrice) || 0.0,
         gstPercentage: parseFloat(gstPercentage) || 0.0,
         openingStock: parseInt(openingStock) || 0,
-        minStockAlert: parseInt(minStockAlert) || 0
+        minStockAlert: parseInt(minStockAlert) || 0,
+        isActive: true
       }
     });
     res.status(201).json(newItem);
   } catch (error) {
-    console.error('Error creating item:', error);
-    res.status(500).json({ message: 'Failed to create item' });
+    console.error("Error creating item:", error);
+    res.status(500).json({ message: "Failed to create item" });
   }
 };
 
+// Soft delete item safely (tenant-isolated)
+export const deleteItem = async (req, res) => {
+  try {
+    const item = await prisma.item.findFirst({
+      where: {
+        id: parseInt(req.params.id),
+        companyId: req.user.companyId
+      }
+    });
+    if (!item) {
+      return res.status(404).json({ message: "Item not found" });
+    }
+
+    await prisma.item.update({
+      where: { id: item.id },
+      data: { isActive: false }
+    });
+
+    res.status(200).json({ message: "Item soft-deleted successfully" });
+  } catch (error) {
+    console.error("Error soft-deleting item:", error);
+    res.status(500).json({ message: "Failed to delete item" });
+  }
+};

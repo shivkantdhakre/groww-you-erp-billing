@@ -9,22 +9,24 @@ datasource db {
 
 // -- MULTI-TENANCY CORE --
 model Company {
-  id             Int        @id @default(autoincrement())
-  name           String
-  gstNumber      String?
-  address        String?
-  mobileNumber   String?
-  invoicePrefix  String?
-  financialYear  String?
-  users          User[]
-  customers      Customer[]
-  vendors        Vendor[]
-  items          Item[]
-  invoices       Invoice[]
-  stockMovements StockMovement[]
+  id                   Int                    @id @default(autoincrement())
+  name                 String
+  gstNumber            String?
+  address              String?
+  mobileNumber         String?
+  invoicePrefix        String?
+  financialYear        String?
+  users                User[]
+  customers            Customer[]
+  vendors              Vendor[]
+  items                Item[]
+  invoices             Invoice[]
+  stockMovements       StockMovement[]
+  financialTransactions FinancialTransaction[]
+  returns              Return[]
   
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
 }
 
 model User {
@@ -41,36 +43,44 @@ model User {
 
 // -- MASTER DATA --
 model Customer {
-  id             Int       @id @default(autoincrement())
-  companyId      Int
-  company        Company   @relation(fields: [companyId], references: [id])
-  name           String
-  mobile         String
-  address        String?
-  gstin          String?
-  openingBalance Float     @default(0.0)
-  creditLimit    Float     @default(0.0)
-  invoices       Invoice[]
+  id                 Int                    @id @default(autoincrement())
+  companyId          Int
+  company            Company                @relation(fields: [companyId], references: [id])
+  name               String
+  mobile             String
+  address            String?
+  gstin              String?
+  openingBalance     Float                  @default(0.0)
+  outstandingBalance Float                  @default(0.0)
+  creditLimit        Float                  @default(0.0)
+  isActive           Boolean                @default(true)
+  invoices           Invoice[]
+  returns            Return[]
+  financialTransactions FinancialTransaction[]
 
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
 
   @@index([companyId, mobile])
 }
 
 model Vendor {
-  id             Int       @id @default(autoincrement())
-  companyId      Int
-  company        Company   @relation(fields: [companyId], references: [id])
-  name           String
-  mobile         String
-  address        String?
-  gstin          String?
-  openingBalance Float     @default(0.0)
-  invoices       Invoice[]
+  id                 Int                    @id @default(autoincrement())
+  companyId          Int
+  company            Company                @relation(fields: [companyId], references: [id])
+  name               String
+  mobile             String
+  address            String?
+  gstin              String?
+  openingBalance     Float                  @default(0.0)
+  outstandingBalance Float                  @default(0.0)
+  isActive           Boolean                @default(true)
+  invoices           Invoice[]
+  returns            Return[]
+  financialTransactions FinancialTransaction[]
 
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
 }
 
 model Item {
@@ -86,8 +96,10 @@ model Item {
   gstPercentage    Float           @default(0.0)
   openingStock     Int             @default(0)
   minStockAlert    Int             @default(0)
+  isActive         Boolean         @default(true)
   invoiceItems     InvoiceItem[]
   stockMovements   StockMovement[]
+  returnItems      ReturnItem[]
 
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
@@ -139,7 +151,7 @@ model StockMovement {
   company        Company  @relation(fields: [companyId], references: [id])
   itemId         Int
   item           Item     @relation(fields: [itemId], references: [id])
-  movementType   String   // "IN" (increase, e.g. Purchase) or "OUT" (decrease, e.g. Sale)
+  movementType   String   // "IN" (increase, e.g. Purchase/SalesReturn) or "OUT" (decrease, e.g. Sale/PurchaseReturn)
   qty            Int
   reference      String   // e.g. "Sale Invoice INV-001"
   createdAt      DateTime @default(now())
@@ -147,3 +159,59 @@ model StockMovement {
   @@index([companyId, itemId])
 }
 
+// -- MONEY & RETURN LEDGERS (Sprint 3) --
+model FinancialTransaction {
+  id              Int       @id @default(autoincrement())
+  companyId       Int
+  company         Company   @relation(fields: [companyId], references: [id])
+  customerId      Int?
+  customer        Customer? @relation(fields: [customerId], references: [id])
+  vendorId        Int?
+  vendor          Vendor?   @relation(fields: [vendorId], references: [id])
+  transactionType String    // "DEBIT" or "CREDIT"
+  amount          Float
+  reference       String    // e.g. "Sale Invoice GY-0001"
+  createdAt       DateTime  @default(now())
+
+  @@index([companyId, customerId])
+  @@index([companyId, vendorId])
+}
+
+model Return {
+  id             Int          @id @default(autoincrement())
+  companyId      Int
+  company        Company      @relation(fields: [companyId], references: [id])
+  returnNo       String
+  returnType     String       // "SALE" or "PURCHASE"
+  returnDate     DateTime     @default(now())
+  invoiceNo      String?      // Reference to original invoice number
+  
+  customerId     Int?
+  customer       Customer?    @relation(fields: [customerId], references: [id])
+  vendorId       Int?
+  vendor         Vendor?      @relation(fields: [vendorId], references: [id])
+  
+  items          ReturnItem[]
+  totalItems     Int
+  totalQty       Int
+  grandTotal     Float
+  reason         String?
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([companyId, returnNo])
+}
+
+model ReturnItem {
+  id             Int      @id @default(autoincrement())
+  returnId       Int
+  return         Return   @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  itemId         Int
+  item           Item     @relation(fields: [itemId], references: [id])
+  qty            Int
+  price          Float
+  gstPercentage  Float    @default(0.0)
+  gstAmount      Float    @default(0.0)
+  total          Float
+}
