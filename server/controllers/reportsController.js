@@ -638,45 +638,201 @@ export const getDayBook = async (req, res) => {
   }
 };
 
-// Summary / Dashboard stats endpoint
+// Summary / Dashboard stats endpoint (fully functional with concurrent Promise.all)
 export const getSummary = async (req, res) => {
   try {
-    const salesSum = await prisma.invoice.aggregate({
-      where: { companyId: req.user.companyId, invoiceType: "SALE" },
-      _sum: { grandTotal: true },
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+
+    const [
+      salesSum,
+      purchaseSum,
+      activeCustomersCount,
+      activeVendorsCount,
+      itemsList,
+      recentCustomers,
+      recentVendors,
+      recentInvoices,
+      topCustTx,
+      topVendTx,
+      todaySalesSum,
+      todayPurchaseSum,
+      todayInvoiceCount,
+      monthlySalesSum,
+      monthlyPurchaseSum,
+      customerOutstandingSum,
+    ] = await Promise.all([
+      // Total Sales / Purchases
+      prisma.invoice.aggregate({
+        where: { companyId: req.user.companyId, invoiceType: "SALE" },
+        _sum: { grandTotal: true },
+      }),
+      prisma.invoice.aggregate({
+        where: { companyId: req.user.companyId, invoiceType: "PURCHASE" },
+        _sum: { grandTotal: true },
+      }),
+      // Counts
+      prisma.customer.count({
+        where: { companyId: req.user.companyId, isActive: true },
+      }),
+      prisma.vendor.count({
+        where: { companyId: req.user.companyId, isActive: true },
+      }),
+      // Items for low stock check
+      prisma.item.findMany({
+        where: { companyId: req.user.companyId, isActive: true },
+        select: { id: true, name: true, openingStock: true, minStockAlert: true },
+      }),
+      // Recent Activities queries
+      prisma.customer.findMany({
+        where: { companyId: req.user.companyId, isActive: true },
+        take: 3,
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.vendor.findMany({
+        where: { companyId: req.user.companyId, isActive: true },
+        take: 3,
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.invoice.findMany({
+        where: { companyId: req.user.companyId },
+        take: 3,
+        orderBy: { createdAt: "desc" },
+      }),
+      // Top Customers Group By DEBIT
+      prisma.financialTransaction.groupBy({
+        by: ['customerId'],
+        where: {
+          companyId: req.user.companyId,
+          transactionType: "DEBIT",
+          customerId: { not: null },
+        },
+        _sum: { amount: true },
+        orderBy: { _sum: { amount: 'desc' } },
+        take: 5
+      }),
+      // Top Vendors Group By CREDIT
+      prisma.financialTransaction.groupBy({
+        by: ['vendorId'],
+        where: {
+          companyId: req.user.companyId,
+          transactionType: "CREDIT",
+          vendorId: { not: null },
+        },
+        _sum: { amount: true },
+        orderBy: { _sum: { amount: 'desc' } },
+        take: 5
+      }),
+      // Today's Stats
+      prisma.invoice.aggregate({
+        where: { companyId: req.user.companyId, invoiceType: "SALE", invoiceDate: { gte: todayStart, lte: todayEnd } },
+        _sum: { grandTotal: true }
+      }),
+      prisma.invoice.aggregate({
+        where: { companyId: req.user.companyId, invoiceType: "PURCHASE", invoiceDate: { gte: todayStart, lte: todayEnd } },
+        _sum: { grandTotal: true }
+      }),
+      prisma.invoice.count({
+        where: { companyId: req.user.companyId, invoiceDate: { gte: todayStart, lte: todayEnd } }
+      }),
+      // Monthly Stats
+      prisma.invoice.aggregate({
+        where: { companyId: req.user.companyId, invoiceType: "SALE", invoiceDate: { gte: monthStart } },
+        _sum: { grandTotal: true }
+      }),
+      prisma.invoice.aggregate({
+        where: { companyId: req.user.companyId, invoiceType: "PURCHASE", invoiceDate: { gte: monthStart } },
+        _sum: { grandTotal: true }
+      }),
+      // Outstanding Sum
+      prisma.customer.aggregate({
+        where: { companyId: req.user.companyId, isActive: true },
+        _sum: { outstandingBalance: true }
+      })
+    ]);
+
+    // Fetch matching names for top customers/vendors
+    const customerIds = topCustTx.map(tx => tx.customerId);
+    const vendorIds = topVendTx.map(tx => tx.vendorId);
+
+    const [topDbCustomers, topDbVendors] = await Promise.all([
+      prisma.customer.findMany({ where: { id: { in: customerIds } } }),
+      prisma.vendor.findMany({ where: { id: { in: vendorIds } } })
+    ]);
+
+    const topCustomers = topCustTx.map(tx => {
+      const cust = topDbCustomers.find(c => c.id === tx.customerId);
+      return { name: cust ? cust.name : `Customer ID ${tx.customerId}`, amount: tx._sum.amount || 0 };
     });
 
-    const purchaseSum = await prisma.invoice.aggregate({
-      where: { companyId: req.user.companyId, invoiceType: "PURCHASE" },
-      _sum: { grandTotal: true },
+    const topVendors = topVendTx.map(tx => {
+      const vend = topDbVendors.find(v => v.id === tx.vendorId);
+      return { name: vend ? vend.name : `Vendor ID ${tx.vendorId}`, amount: tx._sum.amount || 0 };
     });
 
-    const activeCustomers = await prisma.customer.count({
-      where: { companyId: req.user.companyId, isActive: true },
-    });
+    // Low stock items filtering
+    const lowStockItems = itemsList
+      .filter(i => i.openingStock < (i.minStockAlert ?? 10))
+      .map(i => ({ name: i.name, stock: i.openingStock }));
 
-    const activeVendors = await prisma.vendor.count({
-      where: { companyId: req.user.companyId, isActive: true },
-    });
+    const lowStockItemsCount = lowStockItems.length;
 
-    const lowStockCount = await prisma.item.count({
-      where: {
-        companyId: req.user.companyId,
-        isActive: true,
-        openingStock: { lt: 10 },
-      },
+    // Recent activities formatting
+    const activities = [];
+    recentCustomers.forEach(c => {
+      activities.push({
+        id: `c_${c.id}`,
+        action: "Customer Added",
+        name: c.name,
+        createdAt: c.createdAt
+      });
     });
-
-    const totalSales = salesSum._sum.grandTotal || 0;
-    const totalPurchases = purchaseSum._sum.grandTotal || 0;
+    recentVendors.forEach(v => {
+      activities.push({
+        id: `v_${v.id}`,
+        action: "Vendor Added",
+        name: v.name,
+        createdAt: v.createdAt
+      });
+    });
+    recentInvoices.forEach(i => {
+      activities.push({
+        id: `i_${i.id}`,
+        action: i.invoiceType === "SALE" ? "Sales Invoice" : "Purchase Entry",
+        name: `Invoice ${i.invoiceNo}`,
+        createdAt: i.createdAt
+      });
+    });
+    activities.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const recentActivities = activities.slice(0, 5);
 
     res.status(200).json({
-      totalSales,
-      totalPurchases,
-      totalProfit: totalSales - totalPurchases,
-      activeCustomersCount: activeCustomers,
-      activeVendorsCount: activeVendors,
-      lowStockItemsCount: lowStockCount,
+      totalSales: salesSum._sum.grandTotal || 0,
+      totalPurchases: purchaseSum._sum.grandTotal || 0,
+      totalProfit: (salesSum._sum.grandTotal || 0) - (purchaseSum._sum.grandTotal || 0),
+      activeCustomersCount,
+      activeVendorsCount,
+      lowStockItemsCount,
+      lowStockItems,
+      recentActivities,
+      topCustomers,
+      topVendors,
+      todayStats: {
+        sales: todaySalesSum._sum.grandTotal || 0,
+        purchase: todayPurchaseSum._sum.grandTotal || 0,
+        orders: todayInvoiceCount
+      },
+      monthlyStats: {
+        sales: monthlySalesSum._sum.grandTotal || 0,
+        purchase: monthlyPurchaseSum._sum.grandTotal || 0,
+        outstanding: customerOutstandingSum._sum.outstandingBalance || 0
+      }
     });
   } catch (error) {
     console.error("Error fetching dashboard summary:", error);

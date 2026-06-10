@@ -7,6 +7,8 @@ function Customers() {
   const loading = useStore((state) => state.loadingCustomers);
   const fetchCustomers = useStore((state) => state.fetchCustomers);
   const addCustomerStore = useStore((state) => state.addCustomer);
+  const updateCustomerStore = useStore((state) => state.updateCustomer);
+  const deleteCustomerStore = useStore((state) => state.deleteCustomer);
 
   // Form State
   const [name, setName] = useState("");
@@ -71,32 +73,29 @@ function Customers() {
     }
 
     if (editId !== null) {
-      // Mock update locally since PUT is not on backend yet
-      const updatedCustomers = customers.map((customer) => {
-        if (customer.id === editId) {
-          return {
-            ...customer,
-            name,
-            mobile,
-            gstin,
-            address,
-            openingBalance: parseFloat(openingBalance) || 0.0,
-            creditLimit: parseFloat(creditLimit) || 0.0
-          };
-        }
-        return customer;
-      });
-
-      useStore.setState({ customers: updatedCustomers });
-      setEditId(null);
-      setName("");
-      setMobile("");
-      setGstin("");
-      setAddress("");
-      setOpeningBalance("");
-      setCreditLimit("");
-      setMessage("Customer Updated Successfully (Local)");
-      setMessageType("success");
+      try {
+        await updateCustomerStore(editId, {
+          name,
+          mobile,
+          address,
+          gstin,
+          openingBalance: parseFloat(openingBalance) || 0.0,
+          creditLimit: parseFloat(creditLimit) || 0.0
+        });
+        setEditId(null);
+        setName("");
+        setMobile("");
+        setGstin("");
+        setAddress("");
+        setOpeningBalance("");
+        setCreditLimit("");
+        setMessage("Customer Updated Successfully");
+        setMessageType("success");
+      } catch (err) {
+        console.error("Failed to update customer:", err);
+        setMessage(err.response?.data?.error || "Failed to update customer in database.");
+        setMessageType("error");
+      }
       return;
     }
 
@@ -126,7 +125,7 @@ function Customers() {
   };
 
   // Delete Customer Function
-  const deleteCustomer = (id) => {
+  const deleteCustomer = async (id) => {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this customer?"
     );
@@ -135,11 +134,15 @@ function Customers() {
       return;
     }
 
-    // Since backend does not have DELETE yet, delete locally in store for now
-    const updatedCustomers = customers.filter((customer) => customer.id !== id);
-    useStore.setState({ customers: updatedCustomers });
-    setMessage("Customer Deleted Successfully (Local)");
-    setMessageType("success");
+    try {
+      await deleteCustomerStore(id);
+      setMessage("Customer Deleted Successfully");
+      setMessageType("success");
+    } catch (err) {
+      console.error("Failed to delete customer:", err);
+      setMessage("Failed to delete customer from database.");
+      setMessageType("error");
+    }
   };
 
 

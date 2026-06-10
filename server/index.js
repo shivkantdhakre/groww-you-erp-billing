@@ -6,6 +6,7 @@ import authRouter from "./routes/auth.js";
 import mastersRouter from "./routes/masters.js";
 import transactionsRouter from "./routes/transactions.js";
 import reportsRouter from "./routes/reports.js";
+import companyRouter from "./routes/company.js";
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/masters", mastersRouter);
 app.use("/api/transactions", transactionsRouter);
 app.use("/api/reports", reportsRouter);
+app.use("/api/company", companyRouter);
 
 app.get("/", (req, res) => {
   res.send("Groww You ERP API Running 🚀");

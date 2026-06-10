@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
-import { comparePassword } from '../utils/password.js';
+import { comparePassword, hashPassword } from '../utils/password.js';
 
 const prisma = new PrismaClient();
 
@@ -50,5 +50,52 @@ export const login = async (req, res) => {
   } catch (error) {
     console.error('Login Error:', error);
     res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+// POST /api/auth/forgot-password (with Tenant Verification Factor)
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email, newPassword, gstNumber, mobileNumber } = req.body;
+
+    if (!email || !newPassword || (!gstNumber && !mobileNumber)) {
+      return res.status(400).json({ error: "Email, new password, and company verification factor (GST or Mobile) are required" });
+    }
+
+    // Find user and company details
+    const user = await prisma.user.findUnique({
+      where: { email },
+      include: { company: true },
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: "Invalid email or verification factor" });
+    }
+
+    // Tenant identity verification
+    const company = user.company;
+    let verified = false;
+    if (gstNumber && company.gstNumber === gstNumber) {
+      verified = true;
+    }
+    if (mobileNumber && company.mobileNumber === mobileNumber) {
+      verified = true;
+    }
+
+    if (!verified) {
+      return res.status(400).json({ error: "Invalid email or verification factor" });
+    }
+
+    // Hash password and update user record
+    const hashedPassword = await hashPassword(newPassword);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashedPassword },
+    });
+
+    res.status(200).json({ message: "Password reset successful" });
+  } catch (error) {
+    console.error("Forgot Password Error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };

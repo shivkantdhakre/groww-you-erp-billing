@@ -7,6 +7,8 @@ function Inventory() {
   const loading = useStore((state) => state.loadingItems);
   const fetchItems = useStore((state) => state.fetchItems);
   const addItemStore = useStore((state) => state.addItem);
+  const updateItemStore = useStore((state) => state.updateItem);
+  const deleteItemStore = useStore((state) => state.deleteItem);
 
   const [name, setName] = useState("");
   const [sku, setSku] = useState("");
@@ -72,40 +74,37 @@ function Inventory() {
     }
 
     if (editId !== null) {
-      // Mock update locally since PUT is not on backend yet
-      const updatedItems = items.map((item) => {
-        if (item.id === editId) {
-          return {
-            ...item,
-            name,
-            sku,
-            category,
-            hsnCode,
-            gstPercentage: parseFloat(gstPercentage) || 0.0,
-            unit,
-            purchasePrice: parseFloat(purchasePrice) || 0.0,
-            salePrice: parseFloat(salePrice) || 0.0,
-            openingStock: parseInt(openingStock) || 0,
-            minStockAlert: parseInt(minStockAlert) || 0,
-          };
-        }
-        return item;
-      });
-
-      useStore.setState({ items: updatedItems });
-      setEditId(null);
-      setName("");
-      setSku("");
-      setCategory("");
-      setHsnCode("");
-      setGstPercentage("");
-      setUnit("");
-      setPurchasePrice("");
-      setSalePrice("");
-      setOpeningStock("");
-      setMinStockAlert("10");
-      setMessage("Item Updated Successfully (Local)");
-      setMessageType("success");
+      try {
+        await updateItemStore(editId, {
+          name,
+          sku,
+          category,
+          unit,
+          purchasePrice: parseFloat(purchasePrice) || 0.0,
+          salePrice: parseFloat(salePrice) || 0.0,
+          gstPercentage: parseFloat(gstPercentage) || 0.0,
+          openingStock: parseInt(openingStock) || 0,
+          minStockAlert: parseInt(minStockAlert) || 0,
+          hsnCode,
+        });
+        setEditId(null);
+        setName("");
+        setSku("");
+        setCategory("");
+        setHsnCode("");
+        setGstPercentage("");
+        setUnit("");
+        setPurchasePrice("");
+        setSalePrice("");
+        setOpeningStock("");
+        setMinStockAlert("10");
+        setMessage("Item Updated Successfully");
+        setMessageType("success");
+      } catch (err) {
+        console.error("Failed to update item:", err);
+        setMessage(err.response?.data?.error || "Failed to update item in database.");
+        setMessageType("error");
+      }
       return;
     }
 
@@ -142,7 +141,7 @@ function Inventory() {
     }
   };
 
-  const deleteItem = (id) => {
+  const deleteItem = async (id) => {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this item?",
     );
@@ -151,11 +150,15 @@ function Inventory() {
       return;
     }
 
-    // Since backend does not have DELETE yet, delete locally in store for now
-    const updatedItems = items.filter((item) => item.id !== id);
-    useStore.setState({ items: updatedItems });
-    setMessage("Item Deleted Successfully (Local)");
-    setMessageType("success");
+    try {
+      await deleteItemStore(id);
+      setMessage("Item Deleted Successfully");
+      setMessageType("success");
+    } catch (err) {
+      console.error("Failed to delete item:", err);
+      setMessage("Failed to delete item from database.");
+      setMessageType("error");
+    }
   };
 
 

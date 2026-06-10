@@ -1,10 +1,13 @@
 import express from 'express';
-import { login } from '../controllers/authController.js';
+import { login, forgotPassword } from '../controllers/authController.js';
 
 const router = express.Router();
 
 // POST /api/auth/login
 router.post('/login', login);
+
+// POST /api/auth/forgot-password
+router.post('/forgot-password', forgotPassword);
 
 // GET /api/auth/status
 router.get('/status', (req, res) => {

@@ -16,11 +16,13 @@ export const useStore = create((set, get) => ({
   customers: [],
   vendors: [],
   items: [],
+  company: null,
 
   // Loading Flags
   loadingCustomers: false,
   loadingVendors: false,
   loadingItems: false,
+  loadingCompany: false,
 
   // Auth Actions
   login: (token, user) => {
@@ -38,6 +40,7 @@ export const useStore = create((set, get) => ({
       customers: [],
       vendors: [],
       items: [],
+      company: null,
     });
   },
 
@@ -124,6 +127,110 @@ export const useStore = create((set, get) => ({
       return fullItem;
     } catch (err) {
       console.error("Failed to create item and cache:", err);
+      throw err;
+    }
+  },
+
+  // Company Actions
+  fetchCompany: async () => {
+    set({ loadingCompany: true });
+    try {
+      const res = await api.get("/company");
+      set({ company: res.data });
+      return res.data;
+    } catch (err) {
+      console.error("Failed to fetch company settings:", err);
+      throw err;
+    } finally {
+      set({ loadingCompany: false });
+    }
+  },
+
+  updateCompany: async (companyData) => {
+    try {
+      const res = await api.put("/company", companyData);
+      set({ company: res.data });
+      return res.data;
+    } catch (err) {
+      console.error("Failed to update company settings:", err);
+      throw err;
+    }
+  },
+
+  // Customer Actions (PUT & DELETE)
+  updateCustomer: async (id, customerData) => {
+    try {
+      const res = await api.put(`/masters/customers/${id}`, customerData);
+      set((state) => ({
+        customers: state.customers.map((c) => (c.id === parseInt(id) ? res.data : c)),
+      }));
+      return res.data;
+    } catch (err) {
+      console.error("Failed to update customer:", err);
+      throw err;
+    }
+  },
+
+  deleteCustomer: async (id) => {
+    try {
+      await api.delete(`/masters/customers/${id}`);
+      set((state) => ({
+        customers: state.customers.filter((c) => c.id !== parseInt(id)),
+      }));
+    } catch (err) {
+      console.error("Failed to delete customer:", err);
+      throw err;
+    }
+  },
+
+  // Vendor Actions (PUT & DELETE)
+  updateVendor: async (id, vendorData) => {
+    try {
+      const res = await api.put(`/masters/vendors/${id}`, vendorData);
+      set((state) => ({
+        vendors: state.vendors.map((v) => (v.id === parseInt(id) ? res.data : v)),
+      }));
+      return res.data;
+    } catch (err) {
+      console.error("Failed to update vendor:", err);
+      throw err;
+    }
+  },
+
+  deleteVendor: async (id) => {
+    try {
+      await api.delete(`/masters/vendors/${id}`);
+      set((state) => ({
+        vendors: state.vendors.filter((v) => v.id !== parseInt(id)),
+      }));
+    } catch (err) {
+      console.error("Failed to delete vendor:", err);
+      throw err;
+    }
+  },
+
+  // Item Actions (PUT & DELETE)
+  updateItem: async (id, itemData) => {
+    try {
+      const res = await api.put(`/masters/items/${id}`, itemData);
+      set((state) => ({
+        items: state.items.map((i) => (i.id === parseInt(id) ? res.data : i)),
+      }));
+      return res.data;
+    } catch (err) {
+      console.error("Failed to update item:", err);
+      throw err;
+    }
+  },
+
+  deleteItem: async (id) => {
+    try {
+      await api.delete(`/masters/items/${id}`);
+      set((state) => ({
+        items: state.items.filter((i) => i.id !== parseInt(id)),
+      }));
+    } catch (err) {
+      console.error("Failed to delete item:", err);
       throw err;
     }
   },

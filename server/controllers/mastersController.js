@@ -215,3 +215,93 @@ export const deleteItem = async (req, res) => {
     res.status(500).json({ message: "Failed to delete item" });
   }
 };
+
+// Update Customer (tenant-isolated)
+export const updateCustomer = async (req, res) => {
+  const { id } = req.params;
+  const { name, mobile, address, gstin, openingBalance, creditLimit } = req.body;
+  try {
+    const customer = await prisma.customer.findFirst({
+      where: { id: parseInt(id), companyId: req.user.companyId }
+    });
+    if (!customer) {
+      return res.status(404).json({ error: "Customer not found" });
+    }
+    const updated = await prisma.customer.update({
+      where: { id: customer.id },
+      data: {
+        name,
+        mobile,
+        address,
+        gstin,
+        openingBalance: openingBalance !== undefined ? parseFloat(openingBalance) : undefined,
+        creditLimit: creditLimit !== undefined ? parseFloat(creditLimit) : undefined,
+      }
+    });
+    res.status(200).json(updated);
+  } catch (error) {
+    console.error("Error updating customer:", error);
+    res.status(500).json({ error: "Failed to update customer" });
+  }
+};
+
+// Update Vendor (tenant-isolated)
+export const updateVendor = async (req, res) => {
+  const { id } = req.params;
+  const { name, mobile, address, gstin, openingBalance } = req.body;
+  try {
+    const vendor = await prisma.vendor.findFirst({
+      where: { id: parseInt(id), companyId: req.user.companyId }
+    });
+    if (!vendor) {
+      return res.status(404).json({ error: "Vendor not found" });
+    }
+    const updated = await prisma.vendor.update({
+      where: { id: vendor.id },
+      data: {
+        name,
+        mobile,
+        address,
+        gstin,
+        openingBalance: openingBalance !== undefined ? parseFloat(openingBalance) : undefined,
+      }
+    });
+    res.status(200).json(updated);
+  } catch (error) {
+    console.error("Error updating vendor:", error);
+    res.status(500).json({ error: "Failed to update vendor" });
+  }
+};
+
+// Update Item (tenant-isolated)
+export const updateItem = async (req, res) => {
+  const { id } = req.params;
+  const { name, sku, category, unit, purchasePrice, salePrice, gstPercentage, openingStock, minStockAlert, hsnCode } = req.body;
+  try {
+    const item = await prisma.item.findFirst({
+      where: { id: parseInt(id), companyId: req.user.companyId }
+    });
+    if (!item) {
+      return res.status(404).json({ error: "Item not found" });
+    }
+    const updated = await prisma.item.update({
+      where: { id: item.id },
+      data: {
+        name,
+        sku,
+        category,
+        unit,
+        purchasePrice: purchasePrice !== undefined ? parseFloat(purchasePrice) : undefined,
+        salePrice: salePrice !== undefined ? parseFloat(salePrice) : undefined,
+        gstPercentage: gstPercentage !== undefined ? parseFloat(gstPercentage) : undefined,
+        openingStock: openingStock !== undefined ? parseInt(openingStock) : undefined,
+        minStockAlert: minStockAlert !== undefined ? parseInt(minStockAlert) : undefined,
+        hsnCode,
+      }
+    });
+    res.status(200).json(updated);
+  } catch (error) {
+    console.error("Error updating item:", error);
+    res.status(500).json({ error: "Failed to update item" });
+  }
+};

@@ -7,6 +7,8 @@ function Vendors() {
   const loading = useStore((state) => state.loadingVendors);
   const fetchVendors = useStore((state) => state.fetchVendors);
   const addVendorStore = useStore((state) => state.addVendor);
+  const updateVendorStore = useStore((state) => state.updateVendor);
+  const deleteVendorStore = useStore((state) => state.deleteVendor);
 
   // Form State
   const [name, setName] = useState("");
@@ -73,36 +75,33 @@ function Vendors() {
     }
 
     if (editId !== null) {
-      // Mock update locally since PUT is not on backend yet
-      const updatedVendors = vendors.map((vendor) => {
-        if (vendor.id === editId) {
-          return {
-            ...vendor,
-            name,
-            mobile,
-            gstin,
-            address,
-            openingBalance: parseFloat(openingBalance) || 0.0,
-            creditLimit: parseFloat(creditLimit) || 0.0,
-            contactPerson,
-            creditDays,
-          };
-        }
-        return vendor;
-      });
-
-      useStore.setState({ vendors: updatedVendors });
-      setEditId(null);
-      setName("");
-      setMobile("");
-      setGstin("");
-      setAddress("");
-      setOpeningBalance("");
-      setCreditLimit("");
-      setContactPerson("");
-      setCreditDays("");
-      setMessage("Vendor Updated Successfully (Local)");
-      setMessageType("success");
+      try {
+        await updateVendorStore(editId, {
+          name,
+          mobile,
+          address,
+          gstin,
+          openingBalance: parseFloat(openingBalance) || 0.0,
+          creditLimit: parseFloat(creditLimit) || 0.0,
+          contactPerson,
+          creditDays: parseInt(creditDays) || 0,
+        });
+        setEditId(null);
+        setName("");
+        setMobile("");
+        setGstin("");
+        setAddress("");
+        setOpeningBalance("");
+        setCreditLimit("");
+        setContactPerson("");
+        setCreditDays("");
+        setMessage("Vendor Updated Successfully");
+        setMessageType("success");
+      } catch (err) {
+        console.error("Failed to update vendor:", err);
+        setMessage(err.response?.data?.error || "Failed to update vendor in database.");
+        setMessageType("error");
+      }
       return;
     }
 
@@ -115,7 +114,7 @@ function Vendors() {
         openingBalance: parseFloat(openingBalance) || 0.0,
         creditLimit: parseFloat(creditLimit) || 0.0,
         contactPerson,
-        creditDays,
+        creditDays: parseInt(creditDays) || 0,
       });
 
       setName("");
@@ -136,7 +135,7 @@ function Vendors() {
   };
 
   // Delete Vendor Function
-  const deleteVendor = (id) => {
+  const deleteVendor = async (id) => {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this vendor?",
     );
@@ -145,11 +144,15 @@ function Vendors() {
       return;
     }
 
-    // Since backend does not have DELETE yet, delete locally in store for now
-    const updatedVendors = vendors.filter((vendor) => vendor.id !== id);
-    useStore.setState({ vendors: updatedVendors });
-    setMessage("Vendor Deleted Successfully (Local)");
-    setMessageType("success");
+    try {
+      await deleteVendorStore(id);
+      setMessage("Vendor Deleted Successfully");
+      setMessageType("success");
+    } catch (err) {
+      console.error("Failed to delete vendor:", err);
+      setMessage("Failed to delete vendor from database.");
+      setMessageType("error");
+    }
   };
 
   return (
