@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import CommonModal from "../../components/common/CommonModal";
+import api from "../../utils/api";
 
 function JournalVoucher() {
-  const [voucherNo, setVoucherNo] = useState("JV-001");
   const [date, setDate] = useState(
     new Date().toISOString().split("T")[0]
   );
@@ -16,43 +16,84 @@ function JournalVoucher() {
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleteIndex, setDeleteIndex] = useState(null);
+  const [deleteId, setDeleteId] = useState(null);
 
-  const saveVoucher = () => {
-    if (
-      !debitAccount ||
-      !creditAccount ||
-      !amount
-    ) {
+  useEffect(() => {
+    loadVouchers();
+  }, []);
+
+  const loadVouchers = async () => {
+    try {
+      const res = await api.get("/transactions/vouchers?type=JOURNAL");
+      setEntries(res.data);
+    } catch (err) {
+      console.error("Failed to load journal vouchers:", err);
+    }
+  };
+
+  const saveVoucher = async () => {
+    if (!debitAccount || !creditAccount || !amount) {
       setMessage("Please fill all required fields");
       setMessageType("error");
       return;
     }
-
+    if (Number(amount) <= 0) {
+      setMessage("Enter valid amount");
+      setMessageType("error");
+      return;
+    }
     if (debitAccount === creditAccount) {
       setMessage("Debit and Credit Account cannot be same");
       setMessageType("warning");
       return;
     }
 
-    const newEntry = {
-      voucherNo,
-      date,
-      debitAccount,
-      creditAccount,
-      amount,
-      narration,
-    };
+    try {
+      await api.post("/transactions/vouchers", {
+        type: "JOURNAL",
+        debitAccount,
+        creditAccount,
+        amount: parseFloat(amount),
+        remarks: narration,
+        voucherDate: date,
+      });
 
-    setEntries([...entries, newEntry]);
+      await loadVouchers();
 
-    setMessage("Voucher Saved Successfully");
-    setMessageType("success");
+      setMessage("Voucher Saved Successfully");
+      setMessageType("success");
+      setTimeout(() => {
+        setMessage("");
+        setMessageType("");
+      }, 3000);
 
-    setDebitAccount("");
-    setCreditAccount("");
-    setAmount("");
-    setNarration("");
+      setDebitAccount("");
+      setCreditAccount("");
+      setAmount("");
+      setNarration("");
+    } catch (err) {
+      setMessage(err.response?.data?.error || "Failed to save voucher");
+      setMessageType("error");
+    }
+  };
+
+  const handleCancel = async () => {
+    try {
+      await api.post(`/transactions/vouchers/${deleteId}/cancel`);
+      await loadVouchers();
+      setShowDeleteModal(false);
+      setDeleteId(null);
+      setMessage("Voucher Voided Successfully");
+      setMessageType("success");
+      setTimeout(() => {
+        setMessage("");
+        setMessageType("");
+      }, 3000);
+    } catch (err) {
+      setShowDeleteModal(false);
+      setMessage(err.response?.data?.error || "Failed to void voucher");
+      setMessageType("error");
+    }
   };
 
   return (
@@ -85,9 +126,9 @@ function JournalVoucher() {
 
           <input
             type="text"
-            value={voucherNo}
+            value="Auto Generated"
             readOnly
-            className="border p-3 rounded-lg bg-gray-100"
+            className="border p-3 rounded-lg bg-gray-100 text-gray-500 font-medium"
           />
 
           <input
@@ -140,7 +181,7 @@ function JournalVoucher() {
 
         <button
           onClick={saveVoucher}
-          className="bg-blue-600 text-white px-6 py-3 rounded-lg mt-4"
+          className="bg-blue-600 text-white px-6 py-3 rounded-lg mt-4 cursor-pointer hover:bg-blue-700"
         >
           Save Voucher
         </button>
@@ -151,8 +192,10 @@ function JournalVoucher() {
             setCreditAccount("");
             setAmount("");
             setNarration("");
+            setMessage("");
+            setMessageType("");
           }}
-          className="bg-gray-500 text-white px-6 py-3 rounded-lg mt-4 ml-3"
+          className="bg-gray-500 text-white px-6 py-3 rounded-lg mt-4 ml-3 cursor-pointer hover:bg-gray-600"
         >
           Clear
         </button>
@@ -163,7 +206,7 @@ function JournalVoucher() {
 
       <div className="bg-white p-5 rounded-xl shadow mt-6">
 
-        <table className="w-full">
+        <table className="w-full text-center">
 
           <thead className="bg-blue-600 text-white">
             <tr>
@@ -177,23 +220,27 @@ function JournalVoucher() {
           </thead>
 
           <tbody>
-            {entries.map((item, index) => (
-              <tr key={index} className="border-t">
+            {entries.map((item) => (
+              <tr key={item.id} className={`border-t ${item.isCancelled ? "bg-red-50 text-gray-400 line-through" : ""}`}>
                 <td className="p-3">{item.voucherNo}</td>
-                <td className="p-3">{item.date}</td>
+                <td className="p-3">{item.voucherDate.split("T")[0]}</td>
                 <td className="p-3">{item.debitAccount}</td>
                 <td className="p-3">{item.creditAccount}</td>
                 <td className="p-3">₹ {item.amount}</td>
                 <td className="p-3">
-                  <button
-                    onClick={() => {
-                      setDeleteIndex(index);
-                      setShowDeleteModal(true);
-                    }}
-                    className="bg-red-500 text-white px-3 py-1 rounded"
-                  >
-                    Delete
-                  </button>
+                  {item.isCancelled ? (
+                    <span className="text-red-500 font-semibold text-sm">Voided</span>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setDeleteId(item.id);
+                        setShowDeleteModal(true);
+                      }}
+                      className="bg-red-500 text-white px-3 py-1 rounded cursor-pointer hover:bg-red-600"
+                    >
+                      Void
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -204,36 +251,28 @@ function JournalVoucher() {
       </div>
       <CommonModal
         isOpen={showDeleteModal}
-        title="Delete Confirmation"
+        title="Void Confirmation"
       >
         <p className="mb-4">
-          Are you sure you want to delete this voucher?
+          Are you sure you want to void this journal voucher?
         </p>
 
         <div className="flex justify-end gap-2">
           <button
-            onClick={() => setShowDeleteModal(false)}
-            className="bg-gray-500 text-white px-4 py-2 rounded"
+            onClick={() => {
+              setShowDeleteModal(false);
+              setDeleteId(null);
+            }}
+            className="bg-gray-500 text-white px-4 py-2 rounded cursor-pointer hover:bg-gray-600"
           >
             Cancel
           </button>
 
           <button
-            onClick={() => {
-              const updatedEntries = entries.filter(
-                (_, i) => i !== deleteIndex
-              );
-
-              setEntries(updatedEntries);
-
-              setShowDeleteModal(false);
-
-              setMessage("Voucher Deleted Successfully");
-              setMessageType("success");
-            }}
-            className="bg-red-600 text-white px-4 py-2 rounded"
+            onClick={handleCancel}
+            className="bg-red-600 text-white px-4 py-2 rounded cursor-pointer hover:bg-red-700"
           >
-            Delete
+            Void Voucher
           </button>
         </div>
       </CommonModal>

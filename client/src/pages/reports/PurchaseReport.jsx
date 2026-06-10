@@ -1,73 +1,59 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useStore } from "../../store/useStore";
+import api from "../../utils/api";
+
 function PurchaseReport() {
+    const vendors = useStore((state) => state.vendors);
+    const fetchVendors = useStore((state) => state.fetchVendors);
 
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
-    const [vendor, setVendor] = useState("");
-    const purchaseData = [
-        {
-            invoice: "PUR-001",
-            date: "2026-06-01",
-            vendor: "ABC Traders",
-            amount: 12000,
-            status: "Paid",
-        },
-        {
-            invoice: "PUR-002",
-            date: "2026-06-02",
-            vendor: "XYZ Suppliers",
-            amount: 18000,
-            status: "Pending",
-        },
-        {
-            invoice: "PUR-003",
-            date: "2026-06-03",
-            vendor: "ABC Traders",
-            amount: 15000,
-            status: "Paid",
-        },
-        {
-            invoice: "PUR-004",
-            date: "2026-06-04",
-            vendor: "XYZ Suppliers",
-            amount: 22000,
-            status: "Pending",
-        },
-        {
-            invoice: "PUR-005",
-            date: "2026-06-05",
-            vendor: "ABC Traders",
-            amount: 17000,
-            status: "Paid",
-        },
-    ];
+    const [vendorId, setVendorId] = useState("");
+
+    const [purchaseData, setPurchaseData] = useState([]);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        fetchVendors();
+        loadPurchaseReport();
+    }, []);
+
+    const loadPurchaseReport = async () => {
+        setLoading(true);
+        try {
+            const res = await api.get(
+                `/reports/purchase?vendorId=${vendorId}&fromDate=${fromDate}&toDate=${toDate}`
+            );
+            setPurchaseData(res.data || []);
+        } catch (err) {
+            console.error("Failed to load purchase report:", err);
+            alert("Failed to load purchase report");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const totalPurchase = purchaseData.reduce(
-        (total, item) => total + item.amount,
+        (total, item) => total + item.grandTotal,
         0
     );
 
     const totalInvoices = purchaseData.length;
 
-    const averagePurchase =
-        totalPurchase / totalInvoices;
+    const averageInvoiceValue =
+        totalInvoices > 0
+            ? Math.round(totalPurchase / totalInvoices)
+            : 0;
 
     return (
         <div>
-            <>
-                <h1 className="text-3xl font-bold">
-                    Purchase Report
-                </h1>
+            <h1 className="text-3xl font-bold mb-6">
+                Purchase Report
+            </h1>
 
-                <p className="text-gray-500 mb-6">
-                    Track all purchase transactions
-                </p>
-            </>
-
-
-            <div className="bg-white p-5 rounded-xl shadow mb-6">
-
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-
+            {/* Filters */}
+            <div className="bg-white p-5 rounded-xl shadow">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <input
                         type="date"
                         value={fromDate}
@@ -83,88 +69,96 @@ function PurchaseReport() {
                     />
 
                     <select
-                        value={vendor}
-                        onChange={(e) => setVendor(e.target.value)}
+                        value={vendorId}
+                        onChange={(e) => setVendorId(e.target.value)}
                         className="border p-3 rounded-lg"
                     >
                         <option value="">
-                            Select Vendor
+                            All Vendors
                         </option>
-
-                        <option>ABC Traders</option>
-                        <option>XYZ Suppliers</option>
+                        {vendors.filter(v => v.isActive).map((v) => (
+                            <option key={v.id} value={v.id}>
+                                {v.name}
+                            </option>
+                        ))}
                     </select>
 
-                    <button className="bg-blue-600 text-white rounded-lg">
+                    <button
+                        onClick={loadPurchaseReport}
+                        className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg cursor-pointer"
+                    >
                         Search
                     </button>
-
-                    <button
-                        className="bg-gray-500 text-white rounded-lg"
-                        onClick={() => {
-                            setFromDate("");
-                            setToDate("");
-                            setVendor("");
-                        }}
-                    >
-                        Reset
-                    </button>
-
                 </div>
-
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-
-                <div className="bg-white p-5 rounded-xl shadow">
-                    <p>Total Purchase</p>
-                    <p className="text-2xl font-bold text-blue-600">
-                        ₹ {totalPurchase}
-                    </p>
+            {loading && (
+                <div className="text-center mt-6 text-gray-500 font-semibold">
+                    Loading purchase report...
                 </div>
+            )}
 
-                <div className="bg-white p-5 rounded-xl shadow">
-                    <p>Total Purchase Invoices</p>
-                    <p className="text-2xl font-bold text-green-600">
-                        {totalInvoices}
-                    </p>
-                </div>
+            {!loading && (
+                <>
+                    {/* Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                        <div className="bg-white p-5 rounded-xl shadow">
+                            <p className="text-gray-500">Total Purchases</p>
+                            <p className="text-2xl font-bold text-green-600">
+                                ₹ {totalPurchase.toFixed(2)}
+                            </p>
+                        </div>
 
-                <div className="bg-white p-5 rounded-xl shadow">
-                    <p>Average Purchase Value</p>
-                    <p className="text-2xl font-bold text-purple-600">
-                        ₹ {averagePurchase}
-                    </p>
-                </div>
+                        <div className="bg-white p-5 rounded-xl shadow">
+                            <p className="text-gray-500">Total Invoices</p>
+                            <p className="text-2xl font-bold text-blue-600">
+                                {totalInvoices}
+                            </p>
+                        </div>
 
-            </div>
+                        <div className="bg-white p-5 rounded-xl shadow">
+                            <p className="text-gray-500">Average Invoice Value</p>
+                            <p className="text-2xl font-bold text-purple-600">
+                                ₹ {averageInvoiceValue.toFixed(2)}
+                            </p>
+                        </div>
+                    </div>
 
+                    {/* Table */}
+                    <div className="bg-white p-5 rounded-xl shadow mt-6">
+                        <table className="w-full text-center">
+                            <thead className="bg-blue-600 text-white">
+                                <tr>
+                                    <th className="p-3">Invoice No</th>
+                                    <th className="p-3">Date</th>
+                                    <th className="p-3">Vendor</th>
+                                    <th className="p-3">Qty</th>
+                                    <th className="p-3">Amount</th>
+                                </tr>
+                            </thead>
 
-            <div className="bg-white p-5 rounded-xl shadow">
-                <table className="w-full">
-                    <thead className="bg-green-600 text-white">
-                        <tr>
-                            <th className="p-3">Invoice No</th>
-                            <th className="p-3">Date</th>
-                            <th className="p-3">Vendor</th>
-                            <th className="p-3">Amount</th>
-                            <th className="p-3">Status</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {purchaseData.map((purchase, index) => (
-                            <tr key={index} className="border-t">
-                                <td className="p-3">{purchase.invoice}</td>
-                                <td className="p-3">{purchase.date}</td>
-                                <td className="p-3">{purchase.vendor}</td>
-                                <td className="p-3">₹ {purchase.amount}</td>
-                                <td className="p-3">{purchase.status}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                            <tbody>
+                                {purchaseData.map((purchase) => (
+                                    <tr key={purchase.id} className="border-t">
+                                        <td className="p-3">{purchase.invoiceNo}</td>
+                                        <td className="p-3">{purchase.invoiceDate.split("T")[0]}</td>
+                                        <td className="p-3 text-left">{purchase.vendor?.name}</td>
+                                        <td className="p-3">{purchase.totalQty}</td>
+                                        <td className="p-3 font-semibold">₹ {purchase.grandTotal.toFixed(2)}</td>
+                                    </tr>
+                                ))}
+                                {purchaseData.length === 0 && (
+                                    <tr>
+                                        <td colSpan="5" className="p-6 text-gray-500 text-center">
+                                            No purchase invoices found for this period.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </>
+            )}
         </div>
     );
 }

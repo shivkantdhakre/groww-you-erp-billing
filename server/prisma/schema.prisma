@@ -24,6 +24,7 @@ model Company {
   stockMovements       StockMovement[]
   financialTransactions FinancialTransaction[]
   returns              Return[]
+  vouchers             Voucher[]
   
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
@@ -57,6 +58,7 @@ model Customer {
   invoices           Invoice[]
   returns            Return[]
   financialTransactions FinancialTransaction[]
+  vouchers           Voucher[]
 
   createdAt          DateTime               @default(now())
   updatedAt          DateTime               @updatedAt
@@ -78,6 +80,7 @@ model Vendor {
   invoices           Invoice[]
   returns            Return[]
   financialTransactions FinancialTransaction[]
+  vouchers           Voucher[]
 
   createdAt          DateTime               @default(now())
   updatedAt          DateTime               @updatedAt
@@ -171,10 +174,37 @@ model FinancialTransaction {
   transactionType String    // "DEBIT" or "CREDIT"
   amount          Float
   reference       String    // e.g. "Sale Invoice GY-0001"
+  voucherId       Int?
+  voucher         Voucher?  @relation(fields: [voucherId], references: [id], onDelete: Restrict)
   createdAt       DateTime  @default(now())
 
   @@index([companyId, customerId])
   @@index([companyId, vendorId])
+}
+
+model Voucher {
+  id                    Int                    @id @default(autoincrement())
+  companyId             Int
+  company               Company                @relation(fields: [companyId], references: [id])
+  voucherNo             String
+  voucherDate           DateTime               @default(now())
+  type                  String                 // "PAYMENT", "RECEIPT", "CONTRA", "JOURNAL"
+  customerId            Int?
+  customer              Customer?              @relation(fields: [customerId], references: [id])
+  vendorId              Int?
+  vendor                Vendor?                @relation(fields: [vendorId], references: [id])
+  debitAccount          String?                // e.g. "Cash", "HDFC Bank", "ICICI Bank"
+  creditAccount         String?                // e.g. "Cash", "HDFC Bank", "ICICI Bank"
+  amount                Float
+  paymentMode           String?                // "Cash", "Bank", "UPI"
+  referenceNo           String?
+  remarks               String?                // Narration / Remarks
+  isCancelled           Boolean                @default(false)
+  financialTransactions FinancialTransaction[]
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+
+  @@index([companyId, type])
 }
 
 model Return {

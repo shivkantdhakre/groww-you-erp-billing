@@ -19,6 +19,7 @@ import PurchaseInvoice from "./pages/purchase/PurchaseInvoice";
 import PurchaseReturn from "./pages/purchase/PurchaseReturn";
 
 import VendorLedger from "./pages/books/VendorLedger";
+import CustomerLedger from "./pages/books/CustomerLedger";
 
 import SalesReport from "./pages/reports/SalesReport";
 import PurchaseReport from "./pages/reports/PurchaseReport";
@@ -106,6 +107,7 @@ function App() {
               <Route path="/sales-report" element={<SalesReport />} />
               <Route path="/purchase-report" element={<PurchaseReport />} />
               <Route path="/vendor-ledger" element={<VendorLedger />} />
+              <Route path="/customer-ledger" element={<CustomerLedger />} />
               <Route
                 path="/cash-book"
                 element={<CashBook />}

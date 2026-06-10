@@ -1,13 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useStore } from "../../store/useStore";
+import api from "../../utils/api";
 
-function PaymentVoucher() {
-    const [voucherNo] = useState("PV-001");
+function ReceiptVoucher() {
+    const customers = useStore((state) => state.customers);
+    const fetchCustomers = useStore((state) => state.fetchCustomers);
+
     const [voucherDate, setVoucherDate] = useState(
         new Date().toISOString().split("T")[0]
     );
 
-    const [customer, setcustomer] = useState("");
-    const [ReceiptMode, setReceiptMode] = useState("");
+    const [customerId, setCustomerId] = useState("");
+    const [receiptMode, setReceiptMode] = useState("");
     const [amount, setAmount] = useState("");
     const [referenceNo, setReferenceNo] = useState("");
     const [remarks, setRemarks] = useState("");
@@ -15,8 +19,22 @@ function PaymentVoucher() {
     const [payments, setPayments] = useState([]);
     const [search, setSearch] = useState("");
 
-    const savePayment = () => {
-        if (!customer || !ReceiptMode || !amount) {
+    useEffect(() => {
+        fetchCustomers();
+        loadVouchers();
+    }, []);
+
+    const loadVouchers = async () => {
+        try {
+            const res = await api.get("/transactions/vouchers?type=RECEIPT");
+            setPayments(res.data);
+        } catch (err) {
+            console.error("Failed to load receipt vouchers:", err);
+        }
+    };
+
+    const saveReceipt = async () => {
+        if (!customerId || !receiptMode || !amount) {
             alert("Please fill all required fields");
             return;
         }
@@ -25,25 +43,42 @@ function PaymentVoucher() {
             return;
         }
 
-        const newPayment = {
-            voucherNo,
-            voucherDate,
-            customer,
-            amount,
-            ReceiptMode,
-            referenceNo,
-            remarks,
-        };
+        try {
+            await api.post("/transactions/vouchers", {
+                type: "RECEIPT",
+                customerId: parseInt(customerId),
+                amount: parseFloat(amount),
+                paymentMode: receiptMode,
+                referenceNo,
+                remarks,
+                voucherDate,
+            });
 
-        setPayments([...payments, newPayment]);
+            await fetchCustomers(true);
+            await loadVouchers();
 
-        setcustomer("");
-        setReceiptMode("");
-        setAmount("");
-        setReferenceNo("");
-        setRemarks("");
+            setCustomerId("");
+            setReceiptMode("");
+            setAmount("");
+            setReferenceNo("");
+            setRemarks("");
 
-        alert("Receipt Voucher Saved");
+            alert("Receipt Voucher Saved");
+        } catch (err) {
+            alert(err.response?.data?.error || "Failed to save voucher");
+        }
+    };
+
+    const handleCancel = async (id) => {
+        if (!window.confirm("Are you sure you want to void this voucher?")) return;
+        try {
+            await api.post(`/transactions/vouchers/${id}/cancel`);
+            await fetchCustomers(true);
+            await loadVouchers();
+            alert("Voucher voided successfully");
+        } catch (err) {
+            alert(err.response?.data?.error || "Failed to void voucher");
+        }
     };
 
     return (
@@ -57,9 +92,9 @@ function PaymentVoucher() {
 
                     <input
                         type="text"
-                        value={voucherNo}
+                        value="Auto Generated"
                         readOnly
-                        className="border p-3 rounded-lg bg-gray-100"
+                        className="border p-3 rounded-lg bg-gray-100 text-gray-500 font-medium"
                     />
 
                     <input
@@ -70,18 +105,20 @@ function PaymentVoucher() {
                     />
 
                     <select
-                        value={customer}
-                        onChange={(e) => setcustomer(e.target.value)}
+                        value={customerId}
+                        onChange={(e) => setCustomerId(e.target.value)}
                         className="border p-3 rounded-lg"
                     >
-                        <option value="">Select customer</option>
-                        <option>Rahul Sharma</option>
-                        <option>Amit Kumar</option>
-                        <option>Priya Enterprises</option>
+                        <option value="">Select Customer</option>
+                        {customers.filter(c => c.isActive).map((c) => (
+                            <option key={c.id} value={c.id}>
+                                {c.name} (Bal: ₹{c.outstandingBalance})
+                            </option>
+                        ))}
                     </select>
 
                     <select
-                        value={ReceiptMode}
+                        value={receiptMode}
                         onChange={(e) => setReceiptMode(e.target.value)}
                         className="border p-3 rounded-lg"
                     >
@@ -117,24 +154,26 @@ function PaymentVoucher() {
                 />
 
                 <button
-                    onClick={savePayment}
-                    className="bg-blue-600 text-white px-6 py-3 rounded-lg mt-4"
+                    onClick={saveReceipt}
+                    className="bg-blue-600 text-white px-6 py-3 rounded-lg mt-4 cursor-pointer hover:bg-blue-700 transition-colors"
                 >
                     Save Voucher
                 </button>
             </div>
+            
             <div className="bg-white p-5 rounded-xl shadow mt-6 mb-4 w-72">
                 <h3 className="text-gray-500">
-                    Total Receipts
+                    Total Active Receipts (Last 30 Days)
                 </h3>
 
                 <p className="text-3xl font-bold text-green-600">
                     ₹{" "}
-                    {payments.reduce(
-                        (total, payment) =>
-                            total + Number(payment.amount),
-                        0
-                    )}
+                    {payments
+                        .filter(p => !p.isCancelled)
+                        .reduce(
+                            (total, payment) => total + Number(payment.amount),
+                            0
+                        )}
                 </p>
             </div>
 
@@ -145,7 +184,7 @@ function PaymentVoucher() {
 
                 <input
                     type="text"
-                    placeholder="Search customer"
+                    placeholder="Search Customer"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="border p-3 rounded-lg mb-4 w-full"
@@ -155,7 +194,7 @@ function PaymentVoucher() {
                         <tr>
                             <th className="p-3">Voucher No</th>
                             <th className="p-3">Date</th>
-                            <th className="p-3">customer</th>
+                            <th className="p-3">Customer</th>
                             <th className="p-3">Amount</th>
                             <th className="p-3">Mode</th>
                             <th className="p-3">Action</th>
@@ -165,30 +204,29 @@ function PaymentVoucher() {
                     <tbody>
                         {payments
                             .filter((payment) =>
-                                payment.customer
+                                (payment.customer?.name || "")
                                     .toLowerCase()
                                     .includes(search.toLowerCase())
                             )
-                            .map((payment, index) => (
-                                <tr key={index} className="border-t">
+                            .map((payment) => (
+                                <tr key={payment.id} className={`border-t text-center ${payment.isCancelled ? "bg-red-50 text-gray-400 line-through" : ""}`}>
                                     <td className="p-3">{payment.voucherNo}</td>
-                                    <td className="p-3">{payment.voucherDate}</td>
-                                    <td className="p-3">{payment.customer}</td>
+                                    <td className="p-3">{payment.voucherDate.split("T")[0]}</td>
+                                    <td className="p-3">{payment.customer?.name}</td>
                                     <td className="p-3">₹ {payment.amount}</td>
-                                    <td className="p-3">{payment.ReceiptMode}</td>
+                                    <td className="p-3">{payment.paymentMode}</td>
 
                                     <td className="p-3">
-                                        <button
-                                            onClick={() => {
-                                                const updatedPayments = payments.filter(
-                                                    (_, i) => i !== index
-                                                );
-                                                setPayments(updatedPayments);
-                                            }}
-                                            className="bg-red-500 text-white px-3 py-1 rounded"
-                                        >
-                                            Delete
-                                        </button>
+                                        {payment.isCancelled ? (
+                                            <span className="text-red-500 font-semibold text-sm">Voided</span>
+                                        ) : (
+                                            <button
+                                                onClick={() => handleCancel(payment.id)}
+                                                className="bg-red-500 text-white px-3 py-1 rounded cursor-pointer hover:bg-red-600"
+                                            >
+                                                Void
+                                            </button>
+                                        )}
                                     </td>
                                 </tr>
                             ))}
@@ -200,4 +238,4 @@ function PaymentVoucher() {
     );
 }
 
-export default PaymentVoucher;
+export default ReceiptVoucher;

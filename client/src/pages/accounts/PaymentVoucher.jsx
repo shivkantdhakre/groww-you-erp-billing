@@ -1,12 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useStore } from "../../store/useStore";
+import api from "../../utils/api";
 
 function PaymentVoucher() {
-    const [voucherNo] = useState("PV-001");
+    const vendors = useStore((state) => state.vendors);
+    const fetchVendors = useStore((state) => state.fetchVendors);
+
     const [voucherDate, setVoucherDate] = useState(
         new Date().toISOString().split("T")[0]
     );
 
-    const [vendor, setVendor] = useState("");
+    const [vendorId, setVendorId] = useState("");
     const [paymentMode, setPaymentMode] = useState("");
     const [amount, setAmount] = useState("");
     const [referenceNo, setReferenceNo] = useState("");
@@ -15,8 +19,22 @@ function PaymentVoucher() {
     const [payments, setPayments] = useState([]);
     const [search, setSearch] = useState("");
 
-    const savePayment = () => {
-        if (!vendor || !paymentMode || !amount) {
+    useEffect(() => {
+        fetchVendors();
+        loadVouchers();
+    }, []);
+
+    const loadVouchers = async () => {
+        try {
+            const res = await api.get("/transactions/vouchers?type=PAYMENT");
+            setPayments(res.data);
+        } catch (err) {
+            console.error("Failed to load payment vouchers:", err);
+        }
+    };
+
+    const savePayment = async () => {
+        if (!vendorId || !paymentMode || !amount) {
             alert("Please fill all required fields");
             return;
         }
@@ -25,25 +43,42 @@ function PaymentVoucher() {
             return;
         }
 
-        const newPayment = {
-            voucherNo,
-            voucherDate,
-            vendor,
-            amount,
-            paymentMode,
-            referenceNo,
-            remarks,
-        };
+        try {
+            await api.post("/transactions/vouchers", {
+                type: "PAYMENT",
+                vendorId: parseInt(vendorId),
+                amount: parseFloat(amount),
+                paymentMode,
+                referenceNo,
+                remarks,
+                voucherDate,
+            });
 
-        setPayments([...payments, newPayment]);
+            await fetchVendors(true);
+            await loadVouchers();
 
-        setVendor("");
-        setPaymentMode("");
-        setAmount("");
-        setReferenceNo("");
-        setRemarks("");
+            setVendorId("");
+            setPaymentMode("");
+            setAmount("");
+            setReferenceNo("");
+            setRemarks("");
 
-        alert("Payment Voucher Saved");
+            alert("Payment Voucher Saved");
+        } catch (err) {
+            alert(err.response?.data?.error || "Failed to save voucher");
+        }
+    };
+
+    const handleCancel = async (id) => {
+        if (!window.confirm("Are you sure you want to void this voucher?")) return;
+        try {
+            await api.post(`/transactions/vouchers/${id}/cancel`);
+            await fetchVendors(true);
+            await loadVouchers();
+            alert("Voucher voided successfully");
+        } catch (err) {
+            alert(err.response?.data?.error || "Failed to void voucher");
+        }
     };
 
     return (
@@ -57,9 +92,9 @@ function PaymentVoucher() {
 
                     <input
                         type="text"
-                        value={voucherNo}
+                        value="Auto Generated"
                         readOnly
-                        className="border p-3 rounded-lg bg-gray-100"
+                        className="border p-3 rounded-lg bg-gray-100 text-gray-500 font-medium"
                     />
 
                     <input
@@ -70,14 +105,16 @@ function PaymentVoucher() {
                     />
 
                     <select
-                        value={vendor}
-                        onChange={(e) => setVendor(e.target.value)}
+                        value={vendorId}
+                        onChange={(e) => setVendorId(e.target.value)}
                         className="border p-3 rounded-lg"
                     >
                         <option value="">Select Vendor</option>
-                        <option>ABC Traders</option>
-                        <option>XYZ Suppliers</option>
-                        <option>Sharma Agency</option>
+                        {vendors.filter(v => v.isActive).map((v) => (
+                            <option key={v.id} value={v.id}>
+                                {v.name} (Bal: ₹{v.outstandingBalance})
+                            </option>
+                        ))}
                     </select>
 
                     <select
@@ -118,23 +155,25 @@ function PaymentVoucher() {
 
                 <button
                     onClick={savePayment}
-                    className="bg-blue-600 text-white px-6 py-3 rounded-lg mt-4"
+                    className="bg-blue-600 text-white px-6 py-3 rounded-lg mt-4 cursor-pointer hover:bg-blue-700 transition-colors"
                 >
                     Save Voucher
                 </button>
             </div>
+            
             <div className="bg-white p-5 rounded-xl shadow mt-6 mb-4 w-72">
                 <h3 className="text-gray-500">
-                    Total Payments
+                    Total Active Payments (Last 30 Days)
                 </h3>
 
                 <p className="text-3xl font-bold text-green-600">
                     ₹{" "}
-                    {payments.reduce(
-                        (total, payment) =>
-                            total + Number(payment.amount),
-                        0
-                    )}
+                    {payments
+                        .filter(p => !p.isCancelled)
+                        .reduce(
+                            (total, payment) => total + Number(payment.amount),
+                            0
+                        )}
                 </p>
             </div>
 
@@ -165,30 +204,29 @@ function PaymentVoucher() {
                     <tbody>
                         {payments
                             .filter((payment) =>
-                                payment.vendor
+                                (payment.vendor?.name || "")
                                     .toLowerCase()
                                     .includes(search.toLowerCase())
                             )
-                            .map((payment, index) => (
-                                <tr key={index} className="border-t">
+                            .map((payment) => (
+                                <tr key={payment.id} className={`border-t text-center ${payment.isCancelled ? "bg-red-50 text-gray-400 line-through" : ""}`}>
                                     <td className="p-3">{payment.voucherNo}</td>
-                                    <td className="p-3">{payment.voucherDate}</td>
-                                    <td className="p-3">{payment.vendor}</td>
+                                    <td className="p-3">{payment.voucherDate.split("T")[0]}</td>
+                                    <td className="p-3">{payment.vendor?.name}</td>
                                     <td className="p-3">₹ {payment.amount}</td>
                                     <td className="p-3">{payment.paymentMode}</td>
 
                                     <td className="p-3">
-                                        <button
-                                            onClick={() => {
-                                                const updatedPayments = payments.filter(
-                                                    (_, i) => i !== index
-                                                );
-                                                setPayments(updatedPayments);
-                                            }}
-                                            className="bg-red-500 text-white px-3 py-1 rounded"
-                                        >
-                                            Delete
-                                        </button>
+                                        {payment.isCancelled ? (
+                                            <span className="text-red-500 font-semibold text-sm">Voided</span>
+                                        ) : (
+                                            <button
+                                                onClick={() => handleCancel(payment.id)}
+                                                className="bg-red-500 text-white px-3 py-1 rounded cursor-pointer hover:bg-red-600"
+                                            >
+                                                Void
+                                            </button>
+                                        )}
                                     </td>
                                 </tr>
                             ))}

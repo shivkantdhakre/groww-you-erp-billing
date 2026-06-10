@@ -130,6 +130,10 @@ function Sidebar() {
 
             {books && (
                 <div className="ml-4">
+                    <Link to="/customer-ledger" className="block p-2 hover:text-blue-400">
+                        Customer Ledger
+                    </Link>
+
                     <Link to="/vendor-ledger" className="block p-2 hover:text-blue-400">
                         Vendor Ledger
                     </Link>
