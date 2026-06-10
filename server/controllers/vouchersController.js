@@ -1,6 +1,4 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "../utils/prisma.js";
 
 // Get vouchers with optional filters and date bounding
 export const getVouchers = async (req, res) => {

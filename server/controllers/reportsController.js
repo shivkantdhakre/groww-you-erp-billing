@@ -1,6 +1,4 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "../utils/prisma.js";
 
 // Helper to get date filters with 30-day bounding default
 const parseDateFilter = (fromDate, toDate) => {

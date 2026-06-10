@@ -7,6 +7,7 @@ import mastersRouter from "./routes/masters.js";
 import transactionsRouter from "./routes/transactions.js";
 import reportsRouter from "./routes/reports.js";
 import companyRouter from "./routes/company.js";
+import prisma from "./utils/prisma.js";
 
 const app = express();
 
@@ -42,4 +43,13 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+// Graceful shutdown database connection management
+const gracefulShutdown = async (signal) => {
+  console.log(`Received ${signal}. Shutting down gracefully...`);
+  await prisma.$disconnect();
+  process.exit(0);
+};
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 

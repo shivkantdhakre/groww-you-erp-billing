@@ -1,8 +1,6 @@
-import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import { comparePassword, hashPassword } from '../utils/password.js';
-
-const prisma = new PrismaClient();
+import prisma from '../utils/prisma.js';
 
 export const login = async (req, res) => {
   try {
