@@ -51,6 +51,14 @@ export const createSalesInvoice = async (req, res) => {
         throw new Error("Company not found");
       }
 
+      // Check if Financial Year is locked
+      if (company.financialYearLocked && company.currentFinancialYearStart) {
+        const invDate = invoiceDate ? new Date(invoiceDate) : new Date();
+        if (invDate < new Date(company.currentFinancialYearStart)) {
+          throw new Error("Transaction blocked: Financial year is locked.");
+        }
+      }
+
       // 2. Verify Customer (must be active)
       const customer = await tx.customer.findFirst({
         where: { id: parseInt(customerId), companyId: req.user.companyId, isActive: true }
@@ -252,6 +260,14 @@ export const createPurchaseInvoice = async (req, res) => {
         throw new Error("Company not found");
       }
 
+      // Check if Financial Year is locked
+      if (company.financialYearLocked && company.currentFinancialYearStart) {
+        const invDate = invoiceDate ? new Date(invoiceDate) : new Date();
+        if (invDate < new Date(company.currentFinancialYearStart)) {
+          throw new Error("Transaction blocked: Financial year is locked.");
+        }
+      }
+
       // 2. Verify Vendor (must be active)
       const vendor = await tx.vendor.findFirst({
         where: { id: parseInt(vendorId), companyId: req.user.companyId, isActive: true }
@@ -442,6 +458,14 @@ export const createSalesReturn = async (req, res) => {
         throw new Error("Company not found");
       }
 
+      // Check if Financial Year is locked
+      if (company.financialYearLocked && company.currentFinancialYearStart) {
+        const retDate = returnDate ? new Date(returnDate) : new Date();
+        if (retDate < new Date(company.currentFinancialYearStart)) {
+          throw new Error("Transaction blocked: Financial year is locked.");
+        }
+      }
+
       // 2. Customer details (must be active)
       const customer = await tx.customer.findFirst({
         where: { id: parseInt(customerId), companyId: req.user.companyId, isActive: true }
@@ -603,6 +627,14 @@ export const createPurchaseReturn = async (req, res) => {
       });
       if (!company) {
         throw new Error("Company not found");
+      }
+
+      // Check if Financial Year is locked
+      if (company.financialYearLocked && company.currentFinancialYearStart) {
+        const retDate = returnDate ? new Date(returnDate) : new Date();
+        if (retDate < new Date(company.currentFinancialYearStart)) {
+          throw new Error("Transaction blocked: Financial year is locked.");
+        }
       }
 
       // 2. Vendor details (must be active)

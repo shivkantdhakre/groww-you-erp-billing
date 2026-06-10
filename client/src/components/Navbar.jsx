@@ -62,7 +62,7 @@ function Navbar() {
     };
 
     return (
-        <div className="bg-white shadow px-6 py-4 flex justify-between items-center relative">
+        <div className="bg-white shadow px-6 py-4 flex justify-between items-center relative no-print">
 
             {/* Search */}
 

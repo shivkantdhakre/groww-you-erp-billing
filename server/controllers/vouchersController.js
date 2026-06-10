@@ -70,6 +70,20 @@ export const createVoucher = async (req, res) => {
   }
 
   try {
+    // Check if Financial Year is locked for the company
+    const company = await prisma.company.findUnique({
+      where: { id: req.user.companyId }
+    });
+    if (!company) {
+      return res.status(404).json({ error: "Company not found" });
+    }
+    if (company.financialYearLocked && company.currentFinancialYearStart) {
+      const vDate = voucherDate ? new Date(voucherDate) : new Date();
+      if (vDate < new Date(company.currentFinancialYearStart)) {
+        return res.status(400).json({ error: "Transaction blocked: Financial year is locked." });
+      }
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       // 1. Verify customer/vendor active status if selected
       if (customerId) {
@@ -176,21 +190,42 @@ export const cancelVoucher = async (req, res) => {
   const { id } = req.params;
 
   try {
+    // 1. Fetch Voucher and check cancellation status and company ownership first
+    const voucher = await prisma.voucher.findUnique({
+      where: { id: parseInt(id) },
+    });
+
+    if (!voucher || voucher.companyId !== req.user.companyId) {
+      return res.status(404).json({ error: "Voucher not found" });
+    }
+
+    if (voucher.isCancelled) {
+      return res.status(400).json({ error: "Voucher is already cancelled." });
+    }
+
+    // 2. Check if Financial Year is locked
+    const company = await prisma.company.findUnique({
+      where: { id: req.user.companyId }
+    });
+    if (!company) {
+      return res.status(404).json({ error: "Company not found" });
+    }
+    if (company.financialYearLocked && company.currentFinancialYearStart) {
+      if (new Date(voucher.voucherDate) < new Date(company.currentFinancialYearStart)) {
+        return res.status(400).json({ error: "Transaction blocked: Financial year is locked." });
+      }
+    }
+
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Fetch Voucher
-      const voucher = await tx.voucher.findUnique({
+      // Re-fetch inside transaction for concurrency safety
+      const txVoucher = await tx.voucher.findUnique({
         where: { id: parseInt(id) },
       });
-
-      if (!voucher || voucher.companyId !== req.user.companyId) {
-        throw new Error("Voucher not found");
+      if (txVoucher.isCancelled) {
+        throw new Error("Voucher is already cancelled.");
       }
 
-      if (voucher.isCancelled) {
-        throw new Error("Voucher is already cancelled");
-      }
-
-      // 2. Perform reversals based on type
+      // Perform reversals based on type
       if (voucher.type === "RECEIPT" && voucher.customerId) {
         // Reverse customer outstanding decrement (increase it back)
         await tx.customer.update({

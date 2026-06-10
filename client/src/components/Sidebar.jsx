@@ -14,7 +14,7 @@ function Sidebar() {
 
 
     return (
-        <div className="w-64 bg-slate-900 text-white min-h-screen p-4 overflow-y-auto">
+        <div className="w-64 bg-slate-900 text-white min-h-screen p-4 overflow-y-auto no-print">
 
             <h1 className="text-2xl font-bold mb-8">
                 Groww You ERP

@@ -25,6 +25,8 @@ model Company {
   financialTransactions FinancialTransaction[]
   returns              Return[]
   vouchers             Voucher[]
+  currentFinancialYearStart DateTime?
+  financialYearLocked        Boolean                @default(false)
   
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
