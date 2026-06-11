@@ -3,6 +3,7 @@ import CommonModal from "../../components/common/CommonModal";
 import Autocomplete from "../../components/common/Autocomplete";
 import { useStore } from "../../store/useStore";
 import api from "../../utils/api";
+import { useBarcodeScanner } from "../../hooks/useBarcodeScanner";
 
 function SalesInvoice() {
   const [invoiceDate, setInvoiceDate] = useState(
@@ -54,6 +55,22 @@ function SalesInvoice() {
     }
   };
 
+  const handlePrintInvoice = async (invoiceId, layout) => {
+    try {
+      const res = await api.get(`/pdf/invoices/${invoiceId}?layout=${layout}`);
+      if (res.data.pdfUrl) {
+        window.open(res.data.pdfUrl, '_blank');
+      } else {
+        setMessage("Failed to retrieve PDF invoice link.");
+        setMessageType("error");
+      }
+    } catch (err) {
+      console.error("Print Error:", err);
+      setMessage("Error generating PDF invoice.");
+      setMessageType("error");
+    }
+  };
+
   const addRow = () => {
     const newRow = {
       id: Date.now(),
@@ -100,6 +117,78 @@ function SalesInvoice() {
     });
     setInvoiceItems(updatedItems);
   };
+
+  const handleBarcodeScanned = (dbItem) => {
+    // Check if item already exists in current rows
+    const existingIndex = invoiceItems.findIndex(item => item.itemId === dbItem.id);
+    if (existingIndex > -1) {
+      const updated = [...invoiceItems];
+      const item = updated[existingIndex];
+      const newQty = item.qty + 1;
+      
+      // Stock warning check
+      if (newQty > dbItem.openingStock) {
+        setMessage(`Cannot add. Insufficient stock for ${dbItem.name}. Available: ${dbItem.openingStock}`);
+        setMessageType("error");
+        return;
+      }
+      
+      const subtotal = item.rate * newQty;
+      const gstAmount = Math.round((subtotal * item.gstPercentage / 100) * 100) / 100;
+      updated[existingIndex] = {
+        ...item,
+        qty: newQty,
+        amount: Math.round((subtotal + gstAmount) * 100) / 100
+      };
+      setInvoiceItems(updated);
+      setMessage(`Incremented ${dbItem.name} quantity.`);
+      setMessageType("success");
+    } else {
+      // Stock check
+      if (dbItem.openingStock < 1) {
+        setMessage(`Cannot add ${dbItem.name}: Out of stock.`);
+        setMessageType("error");
+        return;
+      }
+
+      const lastRow = invoiceItems[invoiceItems.length - 1];
+      const rate = Number(dbItem.salePrice) || 0;
+      const gstPct = Number(dbItem.gstPercentage) || 0;
+      const subtotal = rate * 1;
+      const gstAmount = Math.round((subtotal * gstPct / 100) * 100) / 100;
+      const filledRow = {
+        id: lastRow && !lastRow.itemId ? lastRow.id : Date.now(),
+        itemId: dbItem.id,
+        itemName: dbItem.name,
+        qty: 1,
+        rate,
+        gstPercentage: gstPct,
+        amount: Math.round((subtotal + gstAmount) * 100) / 100,
+        currentStock: dbItem.openingStock
+      };
+
+      if (lastRow && !lastRow.itemId) {
+        setInvoiceItems([...invoiceItems.slice(0, -1), filledRow]);
+      } else {
+        setInvoiceItems([...invoiceItems, filledRow]);
+      }
+      setMessage(`Added ${dbItem.name} to invoice.`);
+      setMessageType("success");
+    }
+  };
+
+  // Register global hardware-accelerated barcode interceptor
+  useBarcodeScanner((barcode) => {
+    const matchedItem = items.find(
+      (item) => item.sku === barcode || item.sku?.toLowerCase() === barcode.toLowerCase()
+    );
+    if (matchedItem) {
+      handleBarcodeScanned(matchedItem);
+    } else {
+      setMessage(`Barcode "${barcode}" not matched in inventory.`);
+      setMessageType("warning");
+    }
+  });
 
   const clearItemDetails = (id) => {
     const updatedItems = invoiceItems.map((item) => {
@@ -445,6 +534,7 @@ function SalesInvoice() {
                   <th className="p-3 text-left font-semibold text-sm">Items count</th>
                   <th className="p-3 text-left font-semibold text-sm">Qty</th>
                   <th className="p-3 text-left font-semibold text-sm">Grand Total</th>
+                  <th className="p-3 text-center font-semibold text-sm w-48">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -463,6 +553,20 @@ function SalesInvoice() {
                     <td className="p-3 text-gray-600">{invoice.totalQty}</td>
                     <td className="p-3 text-emerald-600 font-bold">
                       ₹ {invoice.grandTotal}
+                    </td>
+                    <td className="p-3 text-center flex justify-center gap-2">
+                      <button
+                        onClick={() => handlePrintInvoice(invoice.id, 'A4')}
+                        className="bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100 transition text-xs font-semibold"
+                      >
+                        Print A4
+                      </button>
+                      <button
+                        onClick={() => handlePrintInvoice(invoice.id, 'Thermal')}
+                        className="bg-amber-50 text-amber-600 px-2 py-1 rounded hover:bg-amber-100 transition text-xs font-semibold"
+                      >
+                        Thermal
+                      </button>
                     </td>
                   </tr>
                 ))}

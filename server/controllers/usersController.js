@@ -13,6 +13,7 @@ export const getUserProfile = async (req, res) => {
         role: true,
         subRole: true,
         isActive: true,
+        branchId: true,
         createdAt: true,
       },
     });
@@ -128,6 +129,7 @@ export const getUsers = async (req, res) => {
         role: true,
         subRole: true,
         isActive: true,
+        branchId: true,
       },
     });
     res.status(200).json(users);
@@ -139,7 +141,7 @@ export const getUsers = async (req, res) => {
 
 // POST /api/users - Add a new user
 export const createUser = async (req, res) => {
-  const { name, email, password, role, subRole } = req.body;
+  const { name, email, password, role, subRole, branchId } = req.body;
 
   if (!name || !email || !password || !role) {
     return res.status(400).json({ error: "Name, email, password, and role are required" });
@@ -156,10 +158,22 @@ export const createUser = async (req, res) => {
       return res.status(400).json({ error: "Email already exists" });
     }
 
+    // Resolve branchId (use HQ - Main Branch as default if not specified)
+    let assignedBranchId = branchId ? parseInt(branchId) : null;
+    if (!assignedBranchId) {
+      const defaultBranch = await prisma.branch.findFirst({
+        where: { companyId: req.user.companyId, name: "HQ - Main Branch" }
+      });
+      if (defaultBranch) {
+        assignedBranchId = defaultBranch.id;
+      }
+    }
+
     const hashed = await hashPassword(password);
     const user = await prisma.user.create({
       data: {
         companyId: req.user.companyId,
+        branchId: assignedBranchId,
         name,
         email,
         password: hashed,
@@ -174,6 +188,7 @@ export const createUser = async (req, res) => {
         role: true,
         subRole: true,
         isActive: true,
+        branchId: true,
       },
     });
 
@@ -195,7 +210,7 @@ export const createUser = async (req, res) => {
 // PUT /api/users/:id - Update user details
 export const updateUser = async (req, res) => {
   const userId = parseInt(req.params.id);
-  const { name, email, password, role, subRole } = req.body;
+  const { name, email, password, role, subRole, branchId } = req.body;
 
   if (isNaN(userId)) {
     return res.status(400).json({ error: "Invalid User ID" });
@@ -223,6 +238,7 @@ export const updateUser = async (req, res) => {
     }
     if (role !== undefined) updateData.role = role;
     if (subRole !== undefined) updateData.subRole = subRole || null;
+    if (branchId !== undefined) updateData.branchId = branchId ? parseInt(branchId) : null;
     if (password) {
       if (password.length < 6) {
         return res.status(400).json({ error: "Password must be at least 6 characters long" });
@@ -240,6 +256,7 @@ export const updateUser = async (req, res) => {
         role: true,
         subRole: true,
         isActive: true,
+        branchId: true,
       },
     });
 

@@ -33,7 +33,8 @@ export const login = async (req, res) => {
         id: user.id, 
         role: user.role,
         subRole: user.subRole,
-        companyId: user.companyId 
+        companyId: user.companyId,
+        branchId: user.branchId
       },
       process.env.JWT_SECRET,
       { expiresIn: '12h' } // Token expires in 12 hours
@@ -49,7 +50,8 @@ export const login = async (req, res) => {
         email: user.email,
         role: user.role,
         subRole: user.subRole,
-        companyId: user.companyId
+        companyId: user.companyId,
+        branchId: user.branchId
       }
     });
   } catch (error) {

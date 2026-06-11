@@ -28,6 +28,7 @@ model Company {
   currentFinancialYearStart DateTime?
   financialYearLocked        Boolean                @default(false)
   notifications        Notification[]
+  branches             Branch[]
   
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
@@ -43,6 +44,8 @@ model User {
   role       String   // "SUPER_ADMIN", "COMPANY_ADMIN", "STAFF"
   subRole    String?  // "MANAGER" or "ACCOUNTANT"
   isActive   Boolean  @default(true)
+  branchId   Int?
+  branch     Branch?  @relation(fields: [branchId], references: [id])
   
   createdAt  DateTime @default(now())
 }
@@ -133,11 +136,15 @@ model Invoice {
   totalItems     Int
   totalQty       Int
   grandTotal     Float
+  branchId       Int
+  branch         Branch        @relation(fields: [branchId], references: [id])
+  pdfUrl         String?
 
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
   @@index([companyId, invoiceNo])
+  @@index([companyId, branchId])
 }
 
 model InvoiceItem {
@@ -162,9 +169,12 @@ model StockMovement {
   movementType   String   // "IN" (increase, e.g. Purchase/SalesReturn) or "OUT" (decrease, e.g. Sale/PurchaseReturn)
   qty            Int
   reference      String   // e.g. "Sale Invoice INV-001"
+  branchId       Int
+  branch         Branch   @relation(fields: [branchId], references: [id])
   createdAt      DateTime @default(now())
 
   @@index([companyId, itemId])
+  @@index([companyId, branchId])
 }
 
 // -- MONEY & RETURN LEDGERS (Sprint 3) --
@@ -181,10 +191,13 @@ model FinancialTransaction {
   reference       String    // e.g. "Sale Invoice GY-0001"
   voucherId       Int?
   voucher         Voucher?  @relation(fields: [voucherId], references: [id], onDelete: Restrict)
+  branchId        Int
+  branch          Branch    @relation(fields: [branchId], references: [id])
   createdAt       DateTime  @default(now())
 
   @@index([companyId, customerId])
   @@index([companyId, vendorId])
+  @@index([companyId, branchId])
 }
 
 model Voucher {
@@ -206,10 +219,13 @@ model Voucher {
   remarks               String?                // Narration / Remarks
   isCancelled           Boolean                @default(false)
   financialTransactions FinancialTransaction[]
+  branchId              Int
+  branch                Branch                 @relation(fields: [branchId], references: [id])
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
 
   @@index([companyId, type])
+  @@index([companyId, branchId])
 }
 
 model Return {
@@ -231,11 +247,14 @@ model Return {
   totalQty       Int
   grandTotal     Float
   reason         String?
+  branchId       Int
+  branch         Branch       @relation(fields: [branchId], references: [id])
 
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
   @@index([companyId, returnNo])
+  @@index([companyId, branchId])
 }
 
 model ReturnItem {
@@ -259,5 +278,28 @@ model Notification {
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
 
+  @@index([companyId])
+}
+
+model Branch {
+  id                    Int                    @id @default(autoincrement())
+  companyId             Int
+  company               Company                @relation(fields: [companyId], references: [id])
+  name                  String
+  address               String?
+  mobileNumber          String?
+  isActive              Boolean                @default(true)
+  
+  users                 User[]
+  invoices              Invoice[]
+  stockMovements        StockMovement[]
+  financialTransactions FinancialTransaction[]
+  vouchers              Voucher[]
+  returns               Return[]
+  
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+
+  @@unique([companyId, name])
   @@index([companyId])
 }

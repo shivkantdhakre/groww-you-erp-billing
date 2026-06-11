@@ -12,12 +12,23 @@ export const verifyTokenAndTenant = (req, res, next) => {
     // Verify the user's identity
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
+    // Determine the branch ID: use x-branch-id header if admin, otherwise use token's branchId
+    let branchId = decoded.branchId;
+    
+    if (req.headers['x-branch-id'] && (decoded.role === 'SUPER_ADMIN' || decoded.role === 'COMPANY_ADMIN')) {
+      const headerBranchId = parseInt(req.headers['x-branch-id']);
+      if (!isNaN(headerBranchId)) {
+        branchId = headerBranchId;
+      }
+    }
+
     // Extract the tenant ID (companyId) and user details
     req.user = {
       id: decoded.id,
       role: decoded.role,
       subRole: decoded.subRole,
-      companyId: decoded.companyId 
+      companyId: decoded.companyId,
+      branchId: branchId
     };
 
     next();

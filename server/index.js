@@ -10,7 +10,10 @@ import companyRouter from "./routes/company.js";
 import searchRouter from "./routes/search.js";
 import notificationsRouter from "./routes/notifications.js";
 import usersRouter from "./routes/users.js";
+import pdfRouter from "./routes/pdf.js";
 import prisma from "./utils/prisma.js";
+import pdfService from "./utils/pdfService.js";
+import path from "path";
 
 const app = express();
 
@@ -30,6 +33,10 @@ app.use("/api/company", companyRouter);
 app.use("/api/search", searchRouter);
 app.use("/api/notifications", notificationsRouter);
 app.use("/api/users", usersRouter);
+app.use("/api/pdf", pdfRouter);
+
+// Serve local generated PDFs in development fallback
+app.use("/public", express.static(path.join(process.cwd(), "public")));
 
 app.get("/", (req, res) => {
   res.send("Groww You ERP API Running 🚀");
@@ -54,6 +61,12 @@ app.listen(PORT, () => {
 const gracefulShutdown = async (signal) => {
   console.log(`Received ${signal}. Shutting down gracefully...`);
   await prisma.$disconnect();
+  try {
+    await pdfService.closeBrowser();
+    console.log("Puppeteer browser closed.");
+  } catch (err) {
+    console.error("Error closing Puppeteer browser:", err);
+  }
   process.exit(0);
 };
 process.on("SIGINT", () => gracefulShutdown("SIGINT"));

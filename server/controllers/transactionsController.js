@@ -10,6 +10,7 @@ export const getSalesInvoices = async (req, res) => {
     const invoices = await prisma.invoice.findMany({
       where: {
         companyId: req.user.companyId,
+        branchId: req.user.branchId,
         invoiceType: "SALE"
       },
       include: {
@@ -67,7 +68,7 @@ export const createSalesInvoice = async (req, res) => {
 
       // 3. Generate sequential invoice number
       const invoiceCount = await tx.invoice.count({
-        where: { companyId: req.user.companyId, invoiceType: "SALE" }
+        where: { companyId: req.user.companyId, branchId: req.user.branchId, invoiceType: "SALE" }
       });
       const prefix = company.invoicePrefix || "GY-";
       const invoiceNo = `${prefix}${String(invoiceCount + 1).padStart(4, "0")}`;
@@ -150,6 +151,7 @@ export const createSalesInvoice = async (req, res) => {
       const invoice = await tx.invoice.create({
         data: {
           companyId: req.user.companyId,
+          branchId: req.user.branchId,
           invoiceNo,
           invoiceType: "SALE",
           invoiceDate: invoiceDate ? new Date(invoiceDate) : new Date(),
@@ -183,6 +185,7 @@ export const createSalesInvoice = async (req, res) => {
         await tx.stockMovement.create({
           data: {
             companyId: req.user.companyId,
+            branchId: req.user.branchId,
             itemId: item.itemId,
             movementType: "OUT",
             qty: item.qty,
@@ -203,6 +206,7 @@ export const createSalesInvoice = async (req, res) => {
       await tx.financialTransaction.create({
         data: {
           companyId: req.user.companyId,
+          branchId: req.user.branchId,
           customerId: customer.id,
           transactionType: "DEBIT",
           amount: grandTotal,
@@ -248,6 +252,7 @@ export const getPurchaseInvoices = async (req, res) => {
     const invoices = await prisma.invoice.findMany({
       where: {
         companyId: req.user.companyId,
+        branchId: req.user.branchId,
         invoiceType: "PURCHASE"
       },
       include: {
@@ -307,7 +312,7 @@ export const createPurchaseInvoice = async (req, res) => {
       let invoiceNo = customInvoiceNo;
       if (!invoiceNo) {
         const invoiceCount = await tx.invoice.count({
-          where: { companyId: req.user.companyId, invoiceType: "PURCHASE" }
+          where: { companyId: req.user.companyId, branchId: req.user.branchId, invoiceType: "PURCHASE" }
         });
         const prefix = company.invoicePrefix || "GY-";
         invoiceNo = `${prefix}PUR-${String(invoiceCount + 1).padStart(4, "0")}`;
@@ -366,6 +371,7 @@ export const createPurchaseInvoice = async (req, res) => {
       const invoice = await tx.invoice.create({
         data: {
           companyId: req.user.companyId,
+          branchId: req.user.branchId,
           invoiceNo,
           invoiceType: "PURCHASE",
           invoiceDate: invoiceDate ? new Date(invoiceDate) : new Date(),
@@ -399,6 +405,7 @@ export const createPurchaseInvoice = async (req, res) => {
         await tx.stockMovement.create({
           data: {
             companyId: req.user.companyId,
+            branchId: req.user.branchId,
             itemId: item.itemId,
             movementType: "IN",
             qty: item.qty,
@@ -419,6 +426,7 @@ export const createPurchaseInvoice = async (req, res) => {
       await tx.financialTransaction.create({
         data: {
           companyId: req.user.companyId,
+          branchId: req.user.branchId,
           vendorId: vendor.id,
           transactionType: "CREDIT",
           amount: grandTotal,
@@ -446,6 +454,7 @@ export const getSalesReturns = async (req, res) => {
     const returns = await prisma.return.findMany({
       where: {
         companyId: req.user.companyId,
+        branchId: req.user.branchId,
         returnType: "SALE"
       },
       include: {
@@ -511,7 +520,7 @@ export const createSalesReturn = async (req, res) => {
 
       // 4. Generate return number
       const returnCount = await tx.return.count({
-        where: { companyId: req.user.companyId, returnType: "SALE" }
+        where: { companyId: req.user.companyId, branchId: req.user.branchId, returnType: "SALE" }
       });
       const prefix = company.invoicePrefix || "GY-";
       const returnNo = `${prefix}SRT-${String(returnCount + 1).padStart(4, "0")}`;
@@ -528,6 +537,7 @@ export const createSalesReturn = async (req, res) => {
       await tx.stockMovement.create({
         data: {
           companyId: req.user.companyId,
+          branchId: req.user.branchId,
           itemId: dbItem.id,
           movementType: "IN",
           qty: parseInt(qty),
@@ -546,6 +556,7 @@ export const createSalesReturn = async (req, res) => {
       const salesReturn = await tx.return.create({
         data: {
           companyId: req.user.companyId,
+          branchId: req.user.branchId,
           returnNo,
           returnType: "SALE",
           returnDate: returnDate ? new Date(returnDate) : new Date(),
@@ -590,6 +601,7 @@ export const createSalesReturn = async (req, res) => {
       await tx.financialTransaction.create({
         data: {
           companyId: req.user.companyId,
+          branchId: req.user.branchId,
           customerId: customer.id,
           transactionType: "CREDIT",
           amount: total,
@@ -617,6 +629,7 @@ export const getPurchaseReturns = async (req, res) => {
     const returns = await prisma.return.findMany({
       where: {
         companyId: req.user.companyId,
+        branchId: req.user.branchId,
         returnType: "PURCHASE"
       },
       include: {
@@ -682,7 +695,7 @@ export const createPurchaseReturn = async (req, res) => {
 
       // 4. Generate return number
       const returnCount = await tx.return.count({
-        where: { companyId: req.user.companyId, returnType: "PURCHASE" }
+        where: { companyId: req.user.companyId, branchId: req.user.branchId, returnType: "PURCHASE" }
       });
       const prefix = company.invoicePrefix || "GY-";
       const returnNo = `${prefix}PRT-${String(returnCount + 1).padStart(4, "0")}`;
@@ -718,6 +731,7 @@ export const createPurchaseReturn = async (req, res) => {
       await tx.stockMovement.create({
         data: {
           companyId: req.user.companyId,
+          branchId: req.user.branchId,
           itemId: dbItem.id,
           movementType: "OUT",
           qty: parseInt(qty),
@@ -736,6 +750,7 @@ export const createPurchaseReturn = async (req, res) => {
       const purchaseReturn = await tx.return.create({
         data: {
           companyId: req.user.companyId,
+          branchId: req.user.branchId,
           returnNo,
           returnType: "PURCHASE",
           returnDate: returnDate ? new Date(returnDate) : new Date(),
@@ -780,6 +795,7 @@ export const createPurchaseReturn = async (req, res) => {
       await tx.financialTransaction.create({
         data: {
           companyId: req.user.companyId,
+          branchId: req.user.branchId,
           vendorId: vendor.id,
           transactionType: "DEBIT",
           amount: total,

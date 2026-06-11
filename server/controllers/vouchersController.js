@@ -23,6 +23,7 @@ export const getVouchers = async (req, res) => {
 
     const whereClause = {
       companyId: req.user.companyId,
+      branchId: req.user.branchId,
       voucherDate: dateFilter,
     };
 
@@ -104,7 +105,7 @@ export const createVoucher = async (req, res) => {
 
       // 2. Generate sequential voucher number inside transaction block
       const count = await tx.voucher.count({
-        where: { companyId: req.user.companyId, type },
+        where: { companyId: req.user.companyId, branchId: req.user.branchId, type },
       });
 
       const prefixes = {
@@ -120,6 +121,7 @@ export const createVoucher = async (req, res) => {
       const voucher = await tx.voucher.create({
         data: {
           companyId: req.user.companyId,
+          branchId: req.user.branchId,
           voucherNo,
           voucherDate: voucherDate ? new Date(voucherDate) : new Date(),
           type,
@@ -146,6 +148,7 @@ export const createVoucher = async (req, res) => {
         await tx.financialTransaction.create({
           data: {
             companyId: req.user.companyId,
+            branchId: req.user.branchId,
             customerId: parseInt(customerId),
             transactionType: "CREDIT",
             amount: parseFloat(amount),
@@ -164,6 +167,7 @@ export const createVoucher = async (req, res) => {
         await tx.financialTransaction.create({
           data: {
             companyId: req.user.companyId,
+            branchId: req.user.branchId,
             vendorId: parseInt(vendorId),
             transactionType: "DEBIT",
             amount: parseFloat(amount),
@@ -237,6 +241,7 @@ export const cancelVoucher = async (req, res) => {
         await tx.financialTransaction.create({
           data: {
             companyId: req.user.companyId,
+            branchId: req.user.branchId,
             customerId: voucher.customerId,
             transactionType: "DEBIT",
             amount: voucher.amount,
@@ -257,6 +262,7 @@ export const cancelVoucher = async (req, res) => {
         await tx.financialTransaction.create({
           data: {
             companyId: req.user.companyId,
+            branchId: req.user.branchId,
             vendorId: voucher.vendorId,
             transactionType: "CREDIT",
             amount: voucher.amount,

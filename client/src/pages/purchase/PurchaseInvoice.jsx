@@ -55,6 +55,22 @@ function PurchaseInvoice() {
     }
   };
 
+  const handlePrintInvoice = async (invoiceId, layout) => {
+    try {
+      const res = await api.get(`/pdf/invoices/${invoiceId}?layout=${layout}`);
+      if (res.data.pdfUrl) {
+        window.open(res.data.pdfUrl, '_blank');
+      } else {
+        setMessage("Failed to retrieve PDF invoice link.");
+        setMessageType("error");
+      }
+    } catch (err) {
+      console.error("Print Error:", err);
+      setMessage("Error generating PDF invoice.");
+      setMessageType("error");
+    }
+  };
+
   const selectedVendor = vendors.find((v) => v.id === vendorId);
 
   const addRow = () => {
@@ -445,6 +461,7 @@ function PurchaseInvoice() {
                   <th className="p-3 text-left font-semibold text-sm">Items count</th>
                   <th className="p-3 text-left font-semibold text-sm">Qty</th>
                   <th className="p-3 text-left font-semibold text-sm">Grand Total</th>
+                  <th className="p-3 text-center font-semibold text-sm w-48">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -463,6 +480,20 @@ function PurchaseInvoice() {
                     <td className="p-3 text-gray-600">{purchase.totalQty}</td>
                     <td className="p-3 text-emerald-600 font-bold">
                       ₹ {purchase.grandTotal}
+                    </td>
+                    <td className="p-3 text-center flex justify-center gap-2">
+                      <button
+                        onClick={() => handlePrintInvoice(purchase.id, 'A4')}
+                        className="bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100 transition text-xs font-semibold"
+                      >
+                        Print A4
+                      </button>
+                      <button
+                        onClick={() => handlePrintInvoice(purchase.id, 'Thermal')}
+                        className="bg-amber-50 text-amber-600 px-2 py-1 rounded hover:bg-amber-100 transition text-xs font-semibold"
+                      >
+                        Thermal
+                      </button>
                     </td>
                   </tr>
                 ))}
