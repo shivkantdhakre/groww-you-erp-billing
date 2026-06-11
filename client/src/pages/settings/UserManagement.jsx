@@ -1,232 +1,282 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useStore } from "../../store/useStore";
 import ValidationMessage from "../../components/common/ValidationMessage";
 
 function UserManagement() {
-    const [name, setName] = useState("");
-    const [email, setEmail] = useState("");
-    const [mobile, setMobile] = useState("");
-    const [username, setUsername] = useState("");
-    const [password, setPassword] = useState("");
-    const [role, setRole] = useState("");
-    const [message, setMessage] = useState("");
-    const [messageType, setMessageType] = useState("");
+  const users = useStore((state) => state.users);
+  const fetchUsers = useStore((state) => state.fetchUsers);
+  const addUserAction = useStore((state) => state.addUser);
+  const updateUserAction = useStore((state) => state.updateUser);
+  const deleteUserAction = useStore((state) => state.deleteUser);
+  const currentUser = useStore((state) => state.user);
 
-    const [users, setUsers] = useState([
+  // Form fields
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [selectedRole, setSelectedRole] = useState(""); // UI selected role: "Administrator", "Manager", "Accountant"
 
-        {
-            name: "Admin User",
-            username: "admin",
-            role: "Administrator",
-            status: "Active",
-        },
-    ]);
-    const [editIndex, setEditIndex] = useState(null);
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("");
+  const [editUserId, setEditUserId] = useState(null);
 
+  useEffect(() => {
+    fetchUsers().catch((err) => {
+      console.error("Failed to load users:", err);
+    });
+  }, [fetchUsers]);
 
-    const addUser = () => {
-        if (!name) {
-            setMessage("Name is required");
-            setMessageType("error");
-            return;
-        }
-        const newUser = {
-            name,
-            email,
-            mobile,
-            username,
-            password,
-            role,
-            status: "Active",
-        };
+  const clearForm = () => {
+    setName("");
+    setEmail("");
+    setPassword("");
+    setSelectedRole("");
+    setEditUserId(null);
+  };
 
-        if (editIndex !== null) {
-            const updatedUsers = [...users];
+  const handleSaveUser = async () => {
+    setMessage("");
+    setMessageType("");
 
-            updatedUsers[editIndex] = newUser;
+    if (!name.trim()) {
+      setMessage("Name is required");
+      setMessageType("error");
+      return;
+    }
+    if (!email.trim()) {
+      setMessage("Email is required");
+      setMessageType("error");
+      return;
+    }
+    if (!selectedRole) {
+      setMessage("Please select a role");
+      setMessageType("error");
+      return;
+    }
+    if (editUserId === null && (!password || password.length < 6)) {
+      setMessage("Password must be at least 6 characters long");
+      setMessageType("error");
+      return;
+    }
 
-            setUsers(updatedUsers);
+    // Role mapping based on matrix:
+    // Administrator -> role: "COMPANY_ADMIN", subRole: null
+    // Manager -> role: "STAFF", subRole: "MANAGER"
+    // Accountant -> role: "STAFF", subRole: "ACCOUNTANT"
+    let role = "STAFF";
+    let subRole = null;
 
-            setEditIndex(null);
-        } else {
-            setUsers([...users, newUser]);
-        }
+    if (selectedRole === "Administrator") {
+      role = "COMPANY_ADMIN";
+    } else if (selectedRole === "Manager") {
+      subRole = "MANAGER";
+    } else if (selectedRole === "Accountant") {
+      subRole = "ACCOUNTANT";
+    }
 
-        setName("");
-        setEmail("");
-        setMobile("");
-        setUsername("");
-        setPassword("");
-        setRole("");
-        setMessage("User Added Successfully");
+    const payload = {
+      name,
+      email,
+      role,
+      subRole,
+    };
+
+    if (password) {
+      payload.password = password;
+    }
+
+    try {
+      if (editUserId !== null) {
+        await updateUserAction(editUserId, payload);
+        setMessage("User updated successfully");
         setMessageType("success");
-    };
+      } else {
+        await addUserAction(payload);
+        setMessage("User created successfully");
+        setMessageType("success");
+      }
+      clearForm();
+    } catch (err) {
+      setMessage(err.response?.data?.error || "Failed to save user");
+      setMessageType("error");
+    }
+  };
 
+  const handleEditClick = (user) => {
+    setName(user.name);
+    setEmail(user.email);
+    setPassword(""); // Keep password blank unless changing
 
-    const deleteUser = (index) => {
-        const updatedUsers = users.filter(
-            (_, i) => i !== index
-        );
+    // Map DB role back to UI Selected Role
+    if (user.role === "COMPANY_ADMIN") {
+      setSelectedRole("Administrator");
+    } else if (user.role === "STAFF" && user.subRole === "MANAGER") {
+      setSelectedRole("Manager");
+    } else if (user.role === "STAFF" && user.subRole === "ACCOUNTANT") {
+      setSelectedRole("Accountant");
+    } else {
+      setSelectedRole("");
+    }
 
-        setUsers(updatedUsers);
-    };
-    const editUser = (index) => {
-        const user = users[index];
+    setEditUserId(user.id);
+    setMessage("");
+    setMessageType("");
+  };
 
-        setName(user.name);
-        setUsername(user.username);
-        setRole(user.role);
-        setEmail(user.email || "");
-        setMobile(user.mobile || "");
-        setPassword(user.password || "");
-        setEditIndex(index);
-    };
+  const handleDeleteClick = async (userId) => {
+    if (userId === currentUser?.id) {
+      setMessage("You cannot deactivate your own logged-in account");
+      setMessageType("error");
+      return;
+    }
 
-    return (
-        <div>
-            <h1 className="text-3xl font-bold mb-2">
-                User Management
-            </h1>
+    if (!window.confirm("Are you sure you want to deactivate this user account?")) {
+      return;
+    }
 
-            <p className="text-gray-500 mb-6">
-                Manage ERP Users
-            </p>
+    try {
+      await deleteUserAction(userId);
+      setMessage("User account deactivated successfully");
+      setMessageType("success");
+      if (editUserId === userId) {
+        clearForm();
+      }
+    } catch (err) {
+      setMessage(err.response?.data?.error || "Failed to deactivate user");
+      setMessageType("error");
+    }
+  };
 
-            {/* Form */}
+  return (
+    <div>
+      <h1 className="text-3xl font-bold mb-2">User Management</h1>
+      <p className="text-gray-500 mb-6">Manage ERP staff members and deactivations</p>
 
-            <div className="bg-white p-6 rounded-xl shadow">
+      {/* Form */}
+      <div className="bg-white p-6 rounded-xl shadow">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <input
+            type="text"
+            placeholder="Full Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="border p-3 rounded-lg"
+          />
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <input
+            type="email"
+            placeholder="Email Address"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="border p-3 rounded-lg"
+          />
 
-                    <input
-                        type="text"
-                        placeholder="Name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="border p-3 rounded-lg"
-                    />
+          <input
+            type="password"
+            placeholder={editUserId ? "New Password (Optional)" : "Password (Min 6 chars)"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="border p-3 rounded-lg"
+          />
 
-                    <input
-                        type="email"
-                        placeholder="Email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="border p-3 rounded-lg"
-                    />
+          <select
+            value={selectedRole}
+            onChange={(e) => setSelectedRole(e.target.value)}
+            className="border p-3 rounded-lg text-gray-700 bg-white"
+          >
+            <option value="">Select Role</option>
+            <option value="Administrator">Administrator (Admin)</option>
+            <option value="Manager">Manager (Staff - Inventory & Sales)</option>
+            <option value="Accountant">Accountant (Staff - Accounts & Ledgers)</option>
+          </select>
+        </div>
 
-                    <input
-                        type="text"
-                        placeholder="Mobile"
-                        value={mobile}
-                        onChange={(e) => setMobile(e.target.value)}
-                        className="border p-3 rounded-lg"
-                    />
+        <div className="flex gap-3 mt-5">
+          <button
+            onClick={handleSaveUser}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-semibold transition-colors cursor-pointer"
+          >
+            {editUserId !== null ? "Update User" : "Add User"}
+          </button>
+          {editUserId !== null && (
+            <button
+              onClick={clearForm}
+              className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2.5 rounded-lg font-semibold transition-colors cursor-pointer"
+            >
+              Cancel Edit
+            </button>
+          )}
+        </div>
 
-                    <input
-                        type="text"
-                        placeholder="Username"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        className="border p-3 rounded-lg"
-                    />
+        <div className="mt-4">
+          <ValidationMessage type={messageType} message={message} />
+        </div>
+      </div>
 
-                    <input
-                        type="password"
-                        placeholder="Password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="border p-3 rounded-lg"
-                    />
+      {/* Users Table */}
+      <div className="bg-white p-6 rounded-xl shadow mt-6 overflow-x-auto">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-blue-600 text-white">
+              <th className="p-3 font-semibold rounded-tl-lg">Name</th>
+              <th className="p-3 font-semibold">Email</th>
+              <th className="p-3 font-semibold">Role Designation</th>
+              <th className="p-3 font-semibold">Access Level</th>
+              <th className="p-3 font-semibold rounded-tr-lg">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.length > 0 ? (
+              users.map((u) => {
+                // UI Role display
+                let roleDisplay = "Staff";
+                if (u.role === "COMPANY_ADMIN") {
+                  roleDisplay = "Administrator";
+                } else if (u.role === "STAFF" && u.subRole === "MANAGER") {
+                  roleDisplay = "Manager";
+                } else if (u.role === "STAFF" && u.subRole === "ACCOUNTANT") {
+                  roleDisplay = "Accountant";
+                }
 
-                    <select
-                        value={role}
-                        onChange={(e) => setRole(e.target.value)}
-                        className="border p-3 rounded-lg"
-                    >
-                        <option value="">
-                            Select Role
-                        </option>
-                        <option>Administrator</option>
-                        <option>Manager</option>
-                        <option>Accountant</option>
-                    </select>
-
-                </div>
-
-                <div className="flex gap-3 mt-5">
-
-                    <button
-                        onClick={addUser}
-                        className="bg-blue-600 text-white px-5 py-2 rounded-lg"
-                    >
-                        {editIndex !== null ? "Update User" : "Add User"}
-                    </button>
-
-                </div>
-                <ValidationMessage
-                    type={messageType}
-                    message={message}
-                />
-
-            </div>
-
-            {/* Table */}
-
-            <div className="bg-white p-6 rounded-xl shadow mt-6">
-
-                <table className="w-full">
-
-                    <thead className="bg-blue-600 text-white">
-
-                        <tr>
-                            <th className="p-3">Name</th>
-                            <th className="p-3">Username</th>
-                            <th className="p-3">Role</th>
-                            <th className="p-3">Status</th>
-                            <th className="p-3">Action</th>
-                        </tr>
-
-                    </thead>
-
-                    <tbody>
-
-                        {users.map((user, index) => (
-                            <tr key={index} className="border-t">
-
-                                <td className="p-3">{user.name}</td>
-                                <td className="p-3">{user.username}</td>
-                                <td className="p-3">{user.role}</td>
-                                <td className="p-3">{user.status}</td>
-
-                                <td className="p-3">
-
-                                    <button
-                                        onClick={() => editUser(index)}
-                                        className="bg-green-500 text-white px-3 py-1 rounded mr-2"
-                                    >
-                                        Edit
-                                    </button>
-
-
-                                    <button
-                                        onClick={() => deleteUser(index)}
-                                        className="bg-red-500 text-white px-3 py-1 rounded"
-                                    >
-                                        Delete
-                                    </button>
-
-                                </td>
-
-                            </tr>
-                        ))}
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-        </div >
-    );
+                return (
+                  <tr key={u.id} className="border-t hover:bg-gray-50">
+                    <td className="p-3 text-gray-800 font-medium">{u.name}</td>
+                    <td className="p-3 text-gray-600">{u.email}</td>
+                    <td className="p-3 text-gray-600 font-semibold">{roleDisplay}</td>
+                    <td className="p-3 text-xs">
+                      <span className="px-2.5 py-1 bg-gray-100 text-gray-700 rounded-full font-bold uppercase">
+                        {u.role}{u.subRole ? `:${u.subRole}` : ""}
+                      </span>
+                    </td>
+                    <td className="p-3">
+                      <button
+                        onClick={() => handleEditClick(u)}
+                        className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded mr-2 text-xs font-semibold transition-colors cursor-pointer"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(u.id)}
+                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded text-xs font-semibold transition-colors cursor-pointer"
+                      >
+                        Deactivate
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan="5" className="p-6 text-center text-gray-500">
+                  No Users Found
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 }
 
 export default UserManagement;

@@ -15,6 +15,11 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
+    // Check if user account is deactivated
+    if (!user.isActive) {
+      return res.status(403).json({ message: 'Account deactivated. Please contact your administrator.' });
+    }
+
     // 2. Verify the password matches the hash
     const isPasswordValid = await comparePassword(password, user.password);
     
@@ -26,7 +31,8 @@ export const login = async (req, res) => {
     const token = jwt.sign(
       { 
         id: user.id, 
-        role: user.role, 
+        role: user.role,
+        subRole: user.subRole,
         companyId: user.companyId 
       },
       process.env.JWT_SECRET,
@@ -42,6 +48,7 @@ export const login = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        subRole: user.subRole,
         companyId: user.companyId
       }
     });

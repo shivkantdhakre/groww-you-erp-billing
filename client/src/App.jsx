@@ -39,6 +39,7 @@ import CompanySettings from "./pages/settings/CompanySettings";
 import UserManagement from "./pages/settings/UserManagement";
 import RoleManagement from "./pages/settings/RoleManagement";
 import BackupRestore from "./pages/settings/BackupRestore";
+import ProfileSettings from "./pages/settings/ProfileSettings";
 import SalesInvoicePrint from "./pages/print/SalesInvoicePrint";
 import PurchaseInvoicePrint from "./pages/print/PurchaseInvoicePrint";
 import PaymentVoucherPrint from "./pages/print/PaymentVoucherPrint";
@@ -49,6 +50,7 @@ function App() {
   const fetchCustomers = useStore((state) => state.fetchCustomers);
   const fetchVendors = useStore((state) => state.fetchVendors);
   const fetchItems = useStore((state) => state.fetchItems);
+  const fetchNotifications = useStore((state) => state.fetchNotifications);
 
   // Global cache preloading immediately after authentication
   useEffect(() => {
@@ -56,8 +58,9 @@ function App() {
       fetchCustomers().catch(() => {});
       fetchVendors().catch(() => {});
       fetchItems().catch(() => {});
+      fetchNotifications().catch(() => {});
     }
-  }, [token, fetchCustomers, fetchVendors, fetchItems]);
+  }, [token, fetchCustomers, fetchVendors, fetchItems, fetchNotifications]);
 
   if (!token) {
     return (
@@ -143,6 +146,10 @@ function App() {
               <Route
                 path="/user-management"
                 element={<UserManagement />}
+              />
+              <Route
+                path="/profile-settings"
+                element={<ProfileSettings />}
               />
               <Route
                 path="/role-management"

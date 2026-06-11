@@ -27,6 +27,7 @@ model Company {
   vouchers             Voucher[]
   currentFinancialYearStart DateTime?
   financialYearLocked        Boolean                @default(false)
+  notifications        Notification[]
   
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
@@ -40,6 +41,8 @@ model User {
   email      String   @unique
   password   String
   role       String   // "SUPER_ADMIN", "COMPANY_ADMIN", "STAFF"
+  subRole    String?  // "MANAGER" or "ACCOUNTANT"
+  isActive   Boolean  @default(true)
   
   createdAt  DateTime @default(now())
 }
@@ -246,4 +249,15 @@ model ReturnItem {
   gstPercentage  Float    @default(0.0)
   gstAmount      Float    @default(0.0)
   total          Float
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  companyId Int
+  company   Company  @relation(fields: [companyId], references: [id])
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
 }

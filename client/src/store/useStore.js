@@ -17,6 +17,8 @@ export const useStore = create((set, get) => ({
   vendors: [],
   items: [],
   company: null,
+  notifications: [],
+  users: [],
 
   // Loading Flags
   loadingCustomers: false,
@@ -41,6 +43,8 @@ export const useStore = create((set, get) => ({
       vendors: [],
       items: [],
       company: null,
+      notifications: [],
+      users: [],
     });
   },
 
@@ -231,6 +235,110 @@ export const useStore = create((set, get) => ({
       }));
     } catch (err) {
       console.error("Failed to delete item:", err);
+      throw err;
+    }
+  },
+
+  // Notifications Actions
+  fetchNotifications: async () => {
+    try {
+      const res = await api.get("/notifications");
+      set({ notifications: res.data });
+    } catch (err) {
+      console.error("Failed to fetch notifications:", err);
+    }
+  },
+
+  markNotificationRead: async (id) => {
+    try {
+      await api.put(`/notifications/${id}/read`);
+      set((state) => ({
+        notifications: state.notifications.map((n) =>
+          n.id === id ? { ...n, read: true } : n
+        ),
+      }));
+    } catch (err) {
+      console.error("Failed to mark notification read:", err);
+    }
+  },
+
+  clearNotifications: async () => {
+    try {
+      await api.delete("/notifications/clear");
+      set({ notifications: [] });
+    } catch (err) {
+      console.error("Failed to clear notifications:", err);
+    }
+  },
+
+  // Users Management Actions
+  fetchUsers: async () => {
+    try {
+      const res = await api.get("/users");
+      set({ users: res.data });
+    } catch (err) {
+      console.error("Failed to fetch users:", err);
+      throw err;
+    }
+  },
+
+  addUser: async (userData) => {
+    try {
+      const res = await api.post("/users", userData);
+      set((state) => ({ users: [...state.users, res.data] }));
+      return res.data;
+    } catch (err) {
+      console.error("Failed to add user:", err);
+      throw err;
+    }
+  },
+
+  updateUser: async (userId, userData) => {
+    try {
+      const res = await api.put(`/users/${userId}`, userData);
+      set((state) => ({
+        users: state.users.map((u) => (u.id === userId ? res.data : u)),
+      }));
+      return res.data;
+    } catch (err) {
+      console.error("Failed to update user:", err);
+      throw err;
+    }
+  },
+
+  deleteUser: async (userId) => {
+    try {
+      await api.delete(`/users/${userId}`);
+      set((state) => ({
+        users: state.users.filter((u) => u.id !== userId),
+      }));
+    } catch (err) {
+      console.error("Failed to delete user:", err);
+      throw err;
+    }
+  },
+
+  // Profile Settings Actions
+  updateProfile: async (profileData) => {
+    try {
+      const res = await api.put("/users/profile", profileData);
+      const currentUser = get().user;
+      const updatedUser = { ...currentUser, ...res.data };
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      set({ user: updatedUser });
+      return res.data;
+    } catch (err) {
+      console.error("Failed to update profile:", err);
+      throw err;
+    }
+  },
+
+  changePassword: async (passwordData) => {
+    try {
+      const res = await api.put("/users/change-password", passwordData);
+      return res.data;
+    } catch (err) {
+      console.error("Failed to change password:", err);
       throw err;
     }
   },

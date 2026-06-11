@@ -16,6 +16,7 @@ export const verifyTokenAndTenant = (req, res, next) => {
     req.user = {
       id: decoded.id,
       role: decoded.role,
+      subRole: decoded.subRole,
       companyId: decoded.companyId 
     };
 

@@ -39,6 +39,14 @@ export const updateCompanySettings = async (req, res) => {
       },
     });
 
+    // Create system notification for company configuration changes
+    await prisma.notification.create({
+      data: {
+        companyId: req.user.companyId,
+        message: `Company Settings updated: ${updatedCompany.name}`,
+      },
+    });
+
     res.status(200).json(updatedCompany);
   } catch (error) {
     console.error("Error updating company settings:", error);

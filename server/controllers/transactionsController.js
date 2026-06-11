@@ -107,6 +107,17 @@ export const createSalesInvoice = async (req, res) => {
           throw new Error(`Insufficient stock for item: ${dbItem.name}. Available: ${dbItem.openingStock}, Requested: ${qty}`);
         }
 
+        // Check and log Low Stock Warning inside transaction
+        const newStock = dbItem.openingStock - qty;
+        if (newStock < dbItem.minStockAlert) {
+          await tx.notification.create({
+            data: {
+              companyId: req.user.companyId,
+              message: `Low Stock Warning: Item "${dbItem.name}" has dropped to ${newStock} units (Threshold: ${dbItem.minStockAlert})`
+            }
+          });
+        }
+
         // Zero-trust math using DB values
         const price = dbItem.salePrice;
         const gstPercentage = dbItem.gstPercentage;
@@ -205,6 +216,24 @@ export const createSalesInvoice = async (req, res) => {
     res.status(201).json(result);
   } catch (error) {
     console.error("Error in createSalesInvoice transaction:", error);
+    
+    // Log credit limit breach notification outside transaction
+    if (error.message.includes("credit limit exceeded")) {
+      try {
+        const customer = await prisma.customer.findUnique({
+          where: { id: parseInt(customerId) }
+        });
+        await prisma.notification.create({
+          data: {
+            companyId: req.user.companyId,
+            message: `Alert: Credit limit breach attempted for customer "${customer?.name || 'Unknown'}" (Attempted projected balance exceeded limit of ₹${customer?.creditLimit || 0})`
+          }
+        });
+      } catch (err) {
+        console.error("Failed to log credit limit breach notification:", err);
+      }
+    }
+    
     res.status(400).json({ error: error.message });
   }
 };
@@ -672,6 +701,17 @@ export const createPurchaseReturn = async (req, res) => {
 
       if (updated.count === 0) {
         throw new Error(`Insufficient stock to return ${dbItem.name}. Available: ${dbItem.openingStock}, Requested: ${qty}`);
+      }
+
+      // Check and log Low Stock Warning inside transaction
+      const newStock = dbItem.openingStock - parseInt(qty);
+      if (newStock < dbItem.minStockAlert) {
+        await tx.notification.create({
+          data: {
+            companyId: req.user.companyId,
+            message: `Low Stock Warning: Item "${dbItem.name}" has dropped to ${newStock} units (Threshold: ${dbItem.minStockAlert})`
+          }
+        });
       }
 
       // 6. Log Stock Movement

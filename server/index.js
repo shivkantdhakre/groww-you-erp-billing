@@ -7,6 +7,9 @@ import mastersRouter from "./routes/masters.js";
 import transactionsRouter from "./routes/transactions.js";
 import reportsRouter from "./routes/reports.js";
 import companyRouter from "./routes/company.js";
+import searchRouter from "./routes/search.js";
+import notificationsRouter from "./routes/notifications.js";
+import usersRouter from "./routes/users.js";
 import prisma from "./utils/prisma.js";
 
 const app = express();
@@ -24,6 +27,9 @@ app.use("/api/masters", mastersRouter);
 app.use("/api/transactions", transactionsRouter);
 app.use("/api/reports", reportsRouter);
 app.use("/api/company", companyRouter);
+app.use("/api/search", searchRouter);
+app.use("/api/notifications", notificationsRouter);
+app.use("/api/users", usersRouter);
 
 app.get("/", (req, res) => {
   res.send("Groww You ERP API Running 🚀");
