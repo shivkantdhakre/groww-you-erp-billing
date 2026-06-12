@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { contextStorage } from '../utils/context.js';
 
 // 1. JWT Authentication & 3. Tenant ID Extraction
 export const verifyTokenAndTenant = (req, res, next) => {
@@ -31,8 +32,11 @@ export const verifyTokenAndTenant = (req, res, next) => {
       branchId: branchId
     };
 
-    next();
+    contextStorage.run({ user: req.user }, () => {
+      next();
+    });
   } catch (error) {
+
     return res.status(403).json({ message: 'Invalid or Expired Token' });
   }
 };

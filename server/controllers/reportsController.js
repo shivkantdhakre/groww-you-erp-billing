@@ -106,19 +106,34 @@ export const getStockReport = async (req, res) => {
 
     const dbItems = await prisma.item.findMany({
       where: whereClause,
+      include: {
+        branchStocks: {
+          where: req.user.branchId ? { branchId: req.user.branchId } : {}
+        }
+      },
       orderBy: {
         name: "asc",
       },
     });
 
-    let itemsData = dbItems.map((item) => ({
-      id: item.id,
-      itemName: item.name,
-      category: item.category || "General",
-      currentStock: item.openingStock,
-      purchaseRate: item.purchasePrice,
-      saleRate: item.salePrice,
-    }));
+    let itemsData = dbItems.map((item) => {
+      let currentStock = 0;
+      if (req.user.branchId) {
+        const bs = item.branchStocks.find((b) => b.branchId === req.user.branchId);
+        currentStock = bs ? bs.stock : 0;
+      } else {
+        currentStock = item.branchStocks.reduce((sum, bs) => sum + bs.stock, 0);
+      }
+
+      return {
+        id: item.id,
+        itemName: item.name,
+        category: item.category || "General",
+        currentStock: currentStock,
+        purchaseRate: item.purchasePrice,
+        saleRate: item.salePrice,
+      };
+    });
 
     if (stockStatus) {
       if (stockStatus === "Low Stock") {

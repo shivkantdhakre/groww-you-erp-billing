@@ -219,12 +219,20 @@ export const cancelVoucher = async (req, res) => {
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      // Re-fetch inside transaction for concurrency safety
-      const txVoucher = await tx.voucher.findUnique({
-        where: { id: parseInt(id) },
+      // 1. Atomically mark as cancelled. If already cancelled, count will be 0.
+      const updateResult = await tx.voucher.updateMany({
+        where: {
+          id: parseInt(id),
+          isCancelled: false,
+          ...(req.user.branchId ? { branchId: req.user.branchId } : {})
+        },
+        data: {
+          isCancelled: true,
+        },
       });
-      if (txVoucher.isCancelled) {
-        throw new Error("Voucher is already cancelled.");
+
+      if (updateResult.count === 0) {
+        throw new Error("Voucher not found, already cancelled, or unauthorized");
       }
 
       // Perform reversals based on type
@@ -272,12 +280,9 @@ export const cancelVoucher = async (req, res) => {
         });
       }
 
-      // 3. Mark Voucher as cancelled
-      const updatedVoucher = await tx.voucher.update({
-        where: { id: voucher.id },
-        data: {
-          isCancelled: true,
-        },
+      // Fetch and return the updated voucher
+      const updatedVoucher = await tx.voucher.findUnique({
+        where: { id: parseInt(id) },
       });
 
       return updatedVoucher;

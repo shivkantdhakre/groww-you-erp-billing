@@ -92,24 +92,48 @@ export const createSalesInvoice = async (req, res) => {
           throw new Error(`Item with ID ${itemId} not found or is inactive`);
         }
 
-        // Concurrency-safe check & decrement
-        const updated = await tx.item.updateMany({
+        // Ensure BranchStock record exists (concurrency-safe)
+        const branchStock = await tx.branchStock.upsert({
           where: {
-            id: itemId,
-            companyId: req.user.companyId,
-            openingStock: { gte: qty }
+            branchId_itemId: {
+              branchId: req.user.branchId,
+              itemId
+            }
+          },
+          create: {
+            branchId: req.user.branchId,
+            itemId,
+            stock: 0
+          },
+          update: {}
+        });
+
+        // Concurrency-safe check & decrement
+        const updated = await tx.branchStock.updateMany({
+          where: {
+            itemId,
+            branchId: req.user.branchId,
+            stock: { gte: qty }
           },
           data: {
-            openingStock: { decrement: qty }
+            stock: { decrement: qty }
           }
         });
 
         if (updated.count === 0) {
-          throw new Error(`Insufficient stock for item: ${dbItem.name}. Available: ${dbItem.openingStock}, Requested: ${qty}`);
+          const latestBs = await tx.branchStock.findUnique({
+            where: {
+              branchId_itemId: {
+                branchId: req.user.branchId,
+                itemId
+              }
+            }
+          });
+          throw new Error(`Insufficient stock for item: ${dbItem.name}. Available: ${latestBs?.stock || 0}, Requested: ${qty}`);
         }
 
         // Check and log Low Stock Warning inside transaction
-        const newStock = dbItem.openingStock - qty;
+        const newStock = branchStock.stock - qty;
         if (newStock < dbItem.minStockAlert) {
           await tx.notification.create({
             data: {
@@ -337,11 +361,21 @@ export const createPurchaseInvoice = async (req, res) => {
           throw new Error(`Item with ID ${itemId} not found or is inactive`);
         }
 
-        // Increment stock
-        await tx.item.update({
-          where: { id: itemId },
-          data: {
-            openingStock: { increment: qty }
+        // Increment branch-specific stock atomically
+        await tx.branchStock.upsert({
+          where: {
+            branchId_itemId: {
+              branchId: req.user.branchId,
+              itemId
+            }
+          },
+          create: {
+            branchId: req.user.branchId,
+            itemId,
+            stock: qty
+          },
+          update: {
+            stock: { increment: qty }
           }
         });
 
@@ -526,10 +560,20 @@ export const createSalesReturn = async (req, res) => {
       const returnNo = `${prefix}SRT-${String(returnCount + 1).padStart(4, "0")}`;
 
       // 5. Update Inventory (Sales Return: item returned back into stock)
-      await tx.item.update({
-        where: { id: dbItem.id },
-        data: {
-          openingStock: { increment: parseInt(qty) }
+      await tx.branchStock.upsert({
+        where: {
+          branchId_itemId: {
+            branchId: req.user.branchId,
+            itemId: dbItem.id
+          }
+        },
+        create: {
+          branchId: req.user.branchId,
+          itemId: dbItem.id,
+          stock: parseInt(qty)
+        },
+        update: {
+          stock: { increment: parseInt(qty) }
         }
       });
 
@@ -700,24 +744,48 @@ export const createPurchaseReturn = async (req, res) => {
       const prefix = company.invoicePrefix || "GY-";
       const returnNo = `${prefix}PRT-${String(returnCount + 1).padStart(4, "0")}`;
 
-      // 5. Update Inventory (Purchase Return: item leaves stock, must verify stock gte qty)
-      const updated = await tx.item.updateMany({
+      // Ensure BranchStock record exists (concurrency-safe)
+      const branchStock = await tx.branchStock.upsert({
         where: {
-          id: dbItem.id,
-          companyId: req.user.companyId,
-          openingStock: { gte: parseInt(qty) }
+          branchId_itemId: {
+            branchId: req.user.branchId,
+            itemId: dbItem.id
+          }
+        },
+        create: {
+          branchId: req.user.branchId,
+          itemId: dbItem.id,
+          stock: 0
+        },
+        update: {}
+      });
+
+      // 5. Update Inventory (Purchase Return: item leaves stock, must verify stock gte qty)
+      const updated = await tx.branchStock.updateMany({
+        where: {
+          itemId: dbItem.id,
+          branchId: req.user.branchId,
+          stock: { gte: parseInt(qty) }
         },
         data: {
-          openingStock: { decrement: parseInt(qty) }
+          stock: { decrement: parseInt(qty) }
         }
       });
 
       if (updated.count === 0) {
-        throw new Error(`Insufficient stock to return ${dbItem.name}. Available: ${dbItem.openingStock}, Requested: ${qty}`);
+        const latestBs = await tx.branchStock.findUnique({
+          where: {
+            branchId_itemId: {
+              branchId: req.user.branchId,
+              itemId: dbItem.id
+            }
+          }
+        });
+        throw new Error(`Insufficient stock to return ${dbItem.name}. Available: ${latestBs?.stock || 0}, Requested: ${qty}`);
       }
 
       // Check and log Low Stock Warning inside transaction
-      const newStock = dbItem.openingStock - parseInt(qty);
+      const newStock = branchStock.stock - parseInt(qty);
       if (newStock < dbItem.minStockAlert) {
         await tx.notification.create({
           data: {
