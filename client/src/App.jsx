@@ -48,20 +48,17 @@ import ReceiptVoucherPrint from "./pages/print/ReceiptVoucherPrint";
 
 function App() {
   const token = useStore((state) => state.token);
-  const fetchCustomers = useStore((state) => state.fetchCustomers);
-  const fetchVendors = useStore((state) => state.fetchVendors);
-  const fetchItems = useStore((state) => state.fetchItems);
-  const fetchNotifications = useStore((state) => state.fetchNotifications);
 
   // Global cache preloading immediately after authentication
   useEffect(() => {
     if (token) {
+      const { fetchCustomers, fetchVendors, fetchItems, fetchNotifications } = useStore.getState();
       fetchCustomers().catch(() => {});
       fetchVendors().catch(() => {});
       fetchItems().catch(() => {});
       fetchNotifications().catch(() => {});
     }
-  }, [token, fetchCustomers, fetchVendors, fetchItems, fetchNotifications]);
+  }, [token]);
 
   if (!token) {
     return (

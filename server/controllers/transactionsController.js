@@ -1,4 +1,5 @@
 import prisma from "../utils/prisma.js";
+import { paginate } from "../utils/pagination.js";
 
 // ==========================================
 // SALES INVOICE CONTROLLERS
@@ -7,25 +8,21 @@ import prisma from "../utils/prisma.js";
 // Fetch all sales invoices for the tenant
 export const getSalesInvoices = async (req, res) => {
   try {
-    const invoices = await prisma.invoice.findMany({
-      where: {
-        companyId: req.user.companyId,
-        branchId: req.user.branchId,
-        invoiceType: "SALE"
-      },
-      include: {
-        customer: true,
-        items: {
-          include: {
-            item: true
-          }
+    const whereClause = {
+      companyId: req.user.companyId,
+      branchId: req.user.branchId,
+      invoiceType: "SALE"
+    };
+    const include = {
+      customer: true,
+      items: {
+        include: {
+          item: true
         }
-      },
-      orderBy: {
-        createdAt: "desc"
       }
-    });
-    res.status(200).json(invoices);
+    };
+    const result = await paginate(prisma.invoice, whereClause, req.query, include, { createdAt: "desc" });
+    res.status(200).json(result);
   } catch (error) {
     console.error("Error fetching sales invoices:", error);
     res.status(500).json({ error: "Failed to fetch sales invoices" });
@@ -273,25 +270,21 @@ export const createSalesInvoice = async (req, res) => {
 // Fetch all purchase invoices for the tenant
 export const getPurchaseInvoices = async (req, res) => {
   try {
-    const invoices = await prisma.invoice.findMany({
-      where: {
-        companyId: req.user.companyId,
-        branchId: req.user.branchId,
-        invoiceType: "PURCHASE"
-      },
-      include: {
-        vendor: true,
-        items: {
-          include: {
-            item: true
-          }
+    const whereClause = {
+      companyId: req.user.companyId,
+      branchId: req.user.branchId,
+      invoiceType: "PURCHASE"
+    };
+    const include = {
+      vendor: true,
+      items: {
+        include: {
+          item: true
         }
-      },
-      orderBy: {
-        createdAt: "desc"
       }
-    });
-    res.status(200).json(invoices);
+    };
+    const result = await paginate(prisma.invoice, whereClause, req.query, include, { createdAt: "desc" });
+    res.status(200).json(result);
   } catch (error) {
     console.error("Error fetching purchase invoices:", error);
     res.status(500).json({ error: "Failed to fetch purchase invoices" });
@@ -485,25 +478,21 @@ export const createPurchaseInvoice = async (req, res) => {
 // Fetch sales returns
 export const getSalesReturns = async (req, res) => {
   try {
-    const returns = await prisma.return.findMany({
-      where: {
-        companyId: req.user.companyId,
-        branchId: req.user.branchId,
-        returnType: "SALE"
-      },
-      include: {
-        customer: true,
-        items: {
-          include: {
-            item: true
-          }
+    const whereClause = {
+      companyId: req.user.companyId,
+      branchId: req.user.branchId,
+      returnType: "SALE"
+    };
+    const include = {
+      customer: true,
+      items: {
+        include: {
+          item: true
         }
-      },
-      orderBy: {
-        createdAt: "desc"
       }
-    });
-    res.status(200).json(returns);
+    };
+    const result = await paginate(prisma.return, whereClause, req.query, include, { createdAt: "desc" });
+    res.status(200).json(result);
   } catch (error) {
     console.error("Error fetching sales returns:", error);
     res.status(500).json({ error: "Failed to fetch sales returns" });
@@ -670,25 +659,21 @@ export const createSalesReturn = async (req, res) => {
 // Fetch purchase returns
 export const getPurchaseReturns = async (req, res) => {
   try {
-    const returns = await prisma.return.findMany({
-      where: {
-        companyId: req.user.companyId,
-        branchId: req.user.branchId,
-        returnType: "PURCHASE"
-      },
-      include: {
-        vendor: true,
-        items: {
-          include: {
-            item: true
-          }
+    const whereClause = {
+      companyId: req.user.companyId,
+      branchId: req.user.branchId,
+      returnType: "PURCHASE"
+    };
+    const include = {
+      vendor: true,
+      items: {
+        include: {
+          item: true
         }
-      },
-      orderBy: {
-        createdAt: "desc"
       }
-    });
-    res.status(200).json(returns);
+    };
+    const result = await paginate(prisma.return, whereClause, req.query, include, { createdAt: "desc" });
+    res.status(200).json(result);
   } catch (error) {
     console.error("Error fetching purchase returns:", error);
     res.status(500).json({ error: "Failed to fetch purchase returns" });

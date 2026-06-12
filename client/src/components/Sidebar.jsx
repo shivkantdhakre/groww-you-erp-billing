@@ -104,15 +104,15 @@ function Sidebar() {
         `w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer hover:bg-secondary text-foreground`;
 
     return (
-        <div className="w-64 glass-panel-blur min-h-screen p-5 flex flex-col justify-between border-r border-border text-foreground no-print shadow-xl">
-            <div>
+        <div className="w-64 glass-panel-blur h-screen sticky top-0 self-start p-5 flex flex-col justify-between border-r border-border text-foreground no-print shadow-xl">
+            <div className="flex flex-col flex-1 min-h-0">
                 {/* Brand Logo */}
-                <div className="flex items-center gap-3 mb-8 px-2">
+                <div className="flex items-center gap-3 mb-8 px-2 shrink-0">
                     <BrandLogo size={34} showText={true} />
                 </div>
 
                 {/* Navigation Items */}
-                <div className="space-y-1.5 overflow-y-auto max-h-[calc(100vh-180px)] pr-1 scrollbar-thin">
+                <div className="space-y-1.5 overflow-y-auto flex-1 min-h-0 pr-1 scrollbar-thin">
                     
                     {/* Dashboard */}
                     <Link to="/" className={linkClass("/")}>
@@ -129,7 +129,7 @@ function Sidebar() {
                             </div>
                             <NavIcon icon={ChevronDown} className={`w-4 h-4 transition-transform duration-200 ${masters ? "rotate-180" : ""}`} />
                         </button>
-                        <div className={`ml-4 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${masters ? "max-h-40 opacity-100" : "max-h-0 opacity-0"}`}>
+                        <div className={`ml-4 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${masters ? "max-h-60 opacity-100" : "max-h-0 opacity-0"}`}>
                             <Link to="/customers" className={linkClass("/customers")}>
                                 <NavIcon icon={Users} isSubLink />
                                 <span>Customer Master</span>
@@ -154,7 +154,7 @@ function Sidebar() {
                             </div>
                             <NavIcon icon={ChevronDown} className={`w-4 h-4 transition-transform duration-200 ${sales ? "rotate-180" : ""}`} />
                         </button>
-                        <div className={`ml-4 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${sales ? "max-h-32 opacity-100" : "max-h-0 opacity-0"}`}>
+                        <div className={`ml-4 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${sales ? "max-h-48 opacity-100" : "max-h-0 opacity-0"}`}>
                             <Link to="/sales-invoice" className={linkClass("/sales-invoice")}>
                                 <NavIcon icon={FileText} isSubLink />
                                 <span>Sales Invoice</span>
@@ -175,7 +175,7 @@ function Sidebar() {
                             </div>
                             <NavIcon icon={ChevronDown} className={`w-4 h-4 transition-transform duration-200 ${purchase ? "rotate-180" : ""}`} />
                         </button>
-                        <div className={`ml-4 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${purchase ? "max-h-32 opacity-100" : "max-h-0 opacity-0"}`}>
+                        <div className={`ml-4 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${purchase ? "max-h-48 opacity-100" : "max-h-0 opacity-0"}`}>
                             <Link to="/purchase-invoice" className={linkClass("/purchase-invoice")}>
                                 <NavIcon icon={FileInput} isSubLink />
                                 <span>Purchase Invoice</span>
@@ -196,7 +196,7 @@ function Sidebar() {
                             </div>
                             <NavIcon icon={ChevronDown} className={`w-4 h-4 transition-transform duration-200 ${accounts ? "rotate-180" : ""}`} />
                         </button>
-                        <div className={`ml-4 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${accounts ? "max-h-48 opacity-100" : "max-h-0 opacity-0"}`}>
+                        <div className={`ml-4 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${accounts ? "max-h-80 opacity-100" : "max-h-0 opacity-0"}`}>
                             <Link to="/payment-voucher" className={linkClass("/payment-voucher")}>
                                 <NavIcon icon={CreditCard} isSubLink />
                                 <span>Payment Voucher</span>
@@ -225,7 +225,7 @@ function Sidebar() {
                             </div>
                             <NavIcon icon={ChevronDown} className={`w-4 h-4 transition-transform duration-200 ${books ? "rotate-180" : ""}`} />
                         </button>
-                        <div className={`ml-4 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${books ? "max-h-60 opacity-100" : "max-h-0 opacity-0"}`}>
+                        <div className={`ml-4 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${books ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>
                             <Link to="/customer-ledger" className={linkClass("/customer-ledger")}>
                                 <NavIcon icon={BookMarked} isSubLink />
                                 <span>Customer Ledger</span>
@@ -258,7 +258,7 @@ function Sidebar() {
                             </div>
                             <NavIcon icon={ChevronDown} className={`w-4 h-4 transition-transform duration-200 ${reports ? "rotate-180" : ""}`} />
                         </button>
-                        <div className={`ml-4 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${reports ? "max-h-72 opacity-100" : "max-h-0 opacity-0"}`}>
+                        <div className={`ml-4 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${reports ? "max-h-[400px] opacity-100" : "max-h-0 opacity-0"}`}>
                             <Link to="/reports-dashboard" className={linkClass("/reports-dashboard")}>
                                 <NavIcon icon={PieChart} isSubLink />
                                 <span>Reports Dashboard</span>
@@ -295,7 +295,7 @@ function Sidebar() {
                             </div>
                             <NavIcon icon={ChevronDown} className={`w-4 h-4 transition-transform duration-200 ${settings ? "rotate-180" : ""}`} />
                         </button>
-                        <div className={`ml-4 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${settings ? "max-h-48 opacity-100" : "max-h-0 opacity-0"}`}>
+                        <div className={`ml-4 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${settings ? "max-h-80 opacity-100" : "max-h-0 opacity-0"}`}>
                             <Link to="/company-settings" className={linkClass("/company-settings")}>
                                 <NavIcon icon={Building} isSubLink />
                                 <span>Company Settings</span>
@@ -319,7 +319,7 @@ function Sidebar() {
             </div>
 
             {/* Logout Button */}
-            <div className="pt-4 border-t border-border mt-auto">
+            <div className="pt-4 border-t border-border mt-auto shrink-0">
                 <button
                     onClick={logout}
                     className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl font-semibold shadow-lg shadow-destructive/10 transition-all duration-200 cursor-pointer active:scale-95"

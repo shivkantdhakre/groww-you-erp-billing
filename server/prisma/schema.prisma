@@ -75,6 +75,7 @@ model Customer {
   updatedAt          DateTime               @updatedAt
 
   @@index([companyId, mobile])
+  @@index([companyId, createdAt])
 }
 
 model Vendor {
@@ -96,6 +97,8 @@ model Vendor {
 
   createdAt          DateTime               @default(now())
   updatedAt          DateTime               @updatedAt
+
+  @@index([companyId, createdAt])
 }
 
 model Item {
@@ -164,6 +167,8 @@ model Invoice {
 
   @@index([companyId, invoiceNo])
   @@index([companyId, branchId])
+  @@index([companyId, invoiceDate])
+  @@index([companyId, invoiceType, invoiceDate])
 }
 
 model InvoiceItem {
@@ -194,6 +199,7 @@ model StockMovement {
 
   @@index([companyId, itemId])
   @@index([companyId, branchId])
+  @@index([companyId, createdAt])
 }
 
 // -- MONEY & RETURN LEDGERS (Sprint 3) --
@@ -217,6 +223,7 @@ model FinancialTransaction {
   @@index([companyId, customerId])
   @@index([companyId, vendorId])
   @@index([companyId, branchId])
+  @@index([companyId, createdAt])
 }
 
 model Voucher {
@@ -245,6 +252,7 @@ model Voucher {
 
   @@index([companyId, type])
   @@index([companyId, branchId])
+  @@index([companyId, voucherDate])
 }
 
 model Return {
@@ -279,6 +287,7 @@ model Return {
 
   @@index([companyId, returnNo])
   @@index([companyId, branchId])
+  @@index([companyId, returnDate])
 }
 
 model ReturnItem {

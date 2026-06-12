@@ -1,4 +1,5 @@
 import prisma from "../utils/prisma.js";
+import { paginate } from "../utils/pagination.js";
 
 // Get vouchers with optional filters and date bounding
 export const getVouchers = async (req, res) => {
@@ -31,18 +32,15 @@ export const getVouchers = async (req, res) => {
     if (customerId) whereClause.customerId = parseInt(customerId);
     if (vendorId) whereClause.vendorId = parseInt(vendorId);
 
-    const vouchers = await prisma.voucher.findMany({
-      where: whereClause,
-      include: {
-        customer: true,
-        vendor: true,
-      },
-      orderBy: {
-        voucherDate: "desc",
-      },
-    });
+    const result = await paginate(
+      prisma.voucher,
+      whereClause,
+      req.query,
+      { customer: true, vendor: true },
+      { voucherDate: "desc" }
+    );
 
-    res.status(200).json(vouchers);
+    res.status(200).json(result);
   } catch (error) {
     console.error("Error fetching vouchers:", error);
     res.status(500).json({ error: "Failed to fetch vouchers" });

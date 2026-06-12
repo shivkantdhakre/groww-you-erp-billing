@@ -1,4 +1,5 @@
 import express from "express";
+import rateLimit from "express-rate-limit";
 import {
   getSalesReport,
   getPurchaseReport,
@@ -16,6 +17,16 @@ const router = express.Router();
 
 // Apply security middleware to all routes in this file
 router.use(verifyTokenAndTenant);
+
+const reportsLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 20, // 20 requests per minute
+  message: { error: 'Too many report requests. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.use(reportsLimiter);
 
 router.get("/sales", getSalesReport);
 router.get("/purchase", getPurchaseReport);

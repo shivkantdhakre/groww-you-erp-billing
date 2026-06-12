@@ -297,7 +297,7 @@ function SalesInvoice() {
     setLoadingInvoices(true);
     try {
       const res = await api.get("/transactions/sales-invoices");
-      setSavedInvoices(res.data);
+      setSavedInvoices(res.data.data);
     } catch (err) {
       console.error("Failed to fetch sales invoices:", err);
     } finally {

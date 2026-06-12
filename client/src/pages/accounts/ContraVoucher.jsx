@@ -25,7 +25,7 @@ function ContraVoucher() {
     const loadVouchers = async () => {
         try {
             const res = await api.get("/transactions/vouchers?type=CONTRA");
-            setEntries(res.data);
+            setEntries(res.data.data);
         } catch (err) {
             console.error("Failed to load contra vouchers:", err);
         }

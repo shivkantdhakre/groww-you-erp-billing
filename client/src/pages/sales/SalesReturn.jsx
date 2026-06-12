@@ -38,7 +38,7 @@ function SalesReturn() {
     setLoadingReturns(true);
     try {
       const res = await api.get("/transactions/sales-returns");
-      setReturns(res.data);
+      setReturns(res.data.data);
     } catch (err) {
       console.error("Failed to fetch sales returns:", err);
     } finally {

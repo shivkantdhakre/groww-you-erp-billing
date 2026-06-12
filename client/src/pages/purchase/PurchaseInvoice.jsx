@@ -307,7 +307,7 @@ function PurchaseInvoice() {
     setLoadingPurchases(true);
     try {
       const res = await api.get("/transactions/purchase-invoices");
-      setSavedPurchases(res.data);
+      setSavedPurchases(res.data.data);
     } catch (err) {
       console.error("Failed to fetch purchase invoices:", err);
     } finally {

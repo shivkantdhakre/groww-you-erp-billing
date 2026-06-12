@@ -54,8 +54,8 @@ export const useStore = create((set, get) => ({
     if (get().customers.length > 0 && !force) return;
     set({ loadingCustomers: true });
     try {
-      const res = await api.get("/masters/customers");
-      set({ customers: res.data });
+      const res = await api.get("/masters/customers?limit=1000&page=1");
+      set({ customers: res.data.data });
     } catch (err) {
       console.error("Failed to fetch/cache customers:", err);
       throw err;
@@ -81,8 +81,8 @@ export const useStore = create((set, get) => ({
     if (get().vendors.length > 0 && !force) return;
     set({ loadingVendors: true });
     try {
-      const res = await api.get("/masters/vendors");
-      set({ vendors: res.data });
+      const res = await api.get("/masters/vendors?limit=1000&page=1");
+      set({ vendors: res.data.data });
     } catch (err) {
       console.error("Failed to fetch/cache vendors:", err);
       throw err;
@@ -110,8 +110,8 @@ export const useStore = create((set, get) => ({
     if (get().items.length > 0 && !force) return;
     set({ loadingItems: true });
     try {
-      const res = await api.get("/masters/items");
-      set({ items: res.data });
+      const res = await api.get("/masters/items?limit=1000&page=1");
+      set({ items: res.data.data });
     } catch (err) {
       console.error("Failed to fetch/cache items:", err);
       throw err;

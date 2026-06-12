@@ -49,10 +49,36 @@ if (isS3Configured) {
   });
 }
 
+class SimpleSemaphore {
+  constructor(max) {
+    this.max = max;
+    this.current = 0;
+    this.queue = [];
+  }
+
+  async acquire() {
+    if (this.current < this.max) {
+      this.current++;
+      return;
+    }
+    await new Promise((resolve) => this.queue.push(resolve));
+  }
+
+  release() {
+    if (this.queue.length > 0) {
+      const next = this.queue.shift();
+      next();
+    } else {
+      this.current--;
+    }
+  }
+}
+
 // Singleton browser helper class
 class PDFService {
   constructor() {
     this.browser = null;
+    this.semaphore = new SimpleSemaphore(3);
   }
 
   async initBrowser() {
@@ -448,12 +474,12 @@ class PDFService {
 
   // Render HTML buffer into PDF
   async generatePDF(invoice, layout) {
-    const htmlContent = this.getHTMLContent(invoice, layout);
-    const browser = await this.initBrowser();
-    const page = await browser.newPage();
-
+    await this.semaphore.acquire();
+    let page = null;
     try {
-      await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+      const htmlContent = this.getHTMLContent(invoice, layout);
+      const browser = await this.initBrowser();
+      page = await browser.newPage();
 
       let pdfOptions = {
         printBackground: true
@@ -472,10 +498,26 @@ class PDFService {
         pdfOptions.margin = { top: '15mm', bottom: '15mm', left: '10mm', right: '10mm' };
       }
 
-      const buffer = await page.pdf(pdfOptions);
+      const renderPromise = (async () => {
+        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+        return await page.pdf(pdfOptions);
+      })();
+
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('PDF generation timed out')), 30000)
+      );
+
+      const buffer = await Promise.race([renderPromise, timeoutPromise]);
       return buffer;
     } finally {
-      await page.close();
+      if (page) {
+        try {
+          await page.close();
+        } catch (e) {
+          console.error("Error closing Puppeteer page:", e);
+        }
+      }
+      this.semaphore.release();
     }
   }
 

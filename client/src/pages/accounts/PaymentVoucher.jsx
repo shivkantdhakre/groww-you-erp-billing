@@ -27,7 +27,7 @@ function PaymentVoucher() {
     const loadVouchers = async () => {
         try {
             const res = await api.get("/transactions/vouchers?type=PAYMENT");
-            setPayments(res.data);
+            setPayments(res.data.data);
         } catch (err) {
             console.error("Failed to load payment vouchers:", err);
         }

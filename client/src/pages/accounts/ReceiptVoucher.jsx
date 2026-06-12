@@ -27,7 +27,7 @@ function ReceiptVoucher() {
     const loadVouchers = async () => {
         try {
             const res = await api.get("/transactions/vouchers?type=RECEIPT");
-            setPayments(res.data);
+            setPayments(res.data.data);
         } catch (err) {
             console.error("Failed to load receipt vouchers:", err);
         }

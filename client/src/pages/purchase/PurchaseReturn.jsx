@@ -38,7 +38,7 @@ function PurchaseReturn() {
     setLoadingReturns(true);
     try {
       const res = await api.get("/transactions/purchase-returns");
-      setReturns(res.data);
+      setReturns(res.data.data);
     } catch (err) {
       console.error("Failed to fetch purchase returns:", err);
     } finally {

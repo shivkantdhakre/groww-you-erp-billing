@@ -1,4 +1,5 @@
 import prisma from "../utils/prisma.js";
+import { paginate } from "../utils/pagination.js";
 
 // ==========================================
 // CUSTOMER CONTROLLERS
@@ -7,15 +8,12 @@ import prisma from "../utils/prisma.js";
 // Fetch all active customers for the logged-in user's company
 export const getCustomers = async (req, res) => {
   try {
-    const customers = await prisma.customer.findMany({
-      where: {
-        companyId: req.user.companyId,
-        isActive: true
-      },
-      orderBy: { name: "asc" } // Alphabetical order for the frontend
-    });
-    
-    res.status(200).json(customers);
+    const whereClause = {
+      companyId: req.user.companyId,
+      isActive: true
+    };
+    const result = await paginate(prisma.customer, whereClause, req.query, null, { name: "asc" });
+    res.status(200).json(result);
   } catch (error) {
     console.error("Error fetching customers:", error);
     res.status(500).json({ message: "Failed to fetch customers" });
@@ -51,23 +49,16 @@ export const createCustomer = async (req, res) => {
 // Soft delete customer safely (tenant-isolated)
 export const deleteCustomer = async (req, res) => {
   try {
-    const customer = await prisma.customer.findFirst({
-      where: {
-        id: parseInt(req.params.id),
-        companyId: req.user.companyId
-      }
-    });
-    if (!customer) {
-      return res.status(404).json({ message: "Customer not found" });
-    }
-
     await prisma.customer.update({
-      where: { id: customer.id },
+      where: { id: parseInt(req.params.id) },
       data: { isActive: false }
     });
 
     res.status(200).json({ message: "Customer soft-deleted successfully" });
   } catch (error) {
+    if (error.status === 404 || error.code === 'P2025') {
+      return res.status(404).json({ message: "Customer not found" });
+    }
     console.error("Error soft-deleting customer:", error);
     res.status(500).json({ message: "Failed to delete customer" });
   }
@@ -80,14 +71,12 @@ export const deleteCustomer = async (req, res) => {
 // Fetch active vendors
 export const getVendors = async (req, res) => {
   try {
-    const vendors = await prisma.vendor.findMany({
-      where: {
-        companyId: req.user.companyId,
-        isActive: true
-      },
-      orderBy: { name: "asc" }
-    });
-    res.status(200).json(vendors);
+    const whereClause = {
+      companyId: req.user.companyId,
+      isActive: true
+    };
+    const result = await paginate(prisma.vendor, whereClause, req.query, null, { name: "asc" });
+    res.status(200).json(result);
   } catch (error) {
     console.error("Error fetching vendors:", error);
     res.status(500).json({ message: "Failed to fetch vendors" });
@@ -120,23 +109,16 @@ export const createVendor = async (req, res) => {
 // Soft delete vendor safely (tenant-isolated)
 export const deleteVendor = async (req, res) => {
   try {
-    const vendor = await prisma.vendor.findFirst({
-      where: {
-        id: parseInt(req.params.id),
-        companyId: req.user.companyId
-      }
-    });
-    if (!vendor) {
-      return res.status(404).json({ message: "Vendor not found" });
-    }
-
     await prisma.vendor.update({
-      where: { id: vendor.id },
+      where: { id: parseInt(req.params.id) },
       data: { isActive: false }
     });
 
     res.status(200).json({ message: "Vendor soft-deleted successfully" });
   } catch (error) {
+    if (error.status === 404 || error.code === 'P2025') {
+      return res.status(404).json({ message: "Vendor not found" });
+    }
     console.error("Error soft-deleting vendor:", error);
     res.status(500).json({ message: "Failed to delete vendor" });
   }
@@ -149,14 +131,12 @@ export const deleteVendor = async (req, res) => {
 // Fetch active items
 export const getItems = async (req, res) => {
   try {
-    const items = await prisma.item.findMany({
-      where: {
-        companyId: req.user.companyId,
-        isActive: true
-      },
-      orderBy: { name: "asc" }
-    });
-    res.status(200).json(items);
+    const whereClause = {
+      companyId: req.user.companyId,
+      isActive: true
+    };
+    const result = await paginate(prisma.item, whereClause, req.query, null, { name: "asc" });
+    res.status(200).json(result);
   } catch (error) {
     console.error("Error fetching items:", error);
     res.status(500).json({ message: "Failed to fetch items" });
@@ -192,23 +172,16 @@ export const createItem = async (req, res) => {
 // Soft delete item safely (tenant-isolated)
 export const deleteItem = async (req, res) => {
   try {
-    const item = await prisma.item.findFirst({
-      where: {
-        id: parseInt(req.params.id),
-        companyId: req.user.companyId
-      }
-    });
-    if (!item) {
-      return res.status(404).json({ message: "Item not found" });
-    }
-
     await prisma.item.update({
-      where: { id: item.id },
+      where: { id: parseInt(req.params.id) },
       data: { isActive: false }
     });
 
     res.status(200).json({ message: "Item soft-deleted successfully" });
   } catch (error) {
+    if (error.status === 404 || error.code === 'P2025') {
+      return res.status(404).json({ message: "Item not found" });
+    }
     console.error("Error soft-deleting item:", error);
     res.status(500).json({ message: "Failed to delete item" });
   }
@@ -219,14 +192,8 @@ export const updateCustomer = async (req, res) => {
   const { id } = req.params;
   const { name, mobile, address, gstin, openingBalance, creditLimit } = req.body;
   try {
-    const customer = await prisma.customer.findFirst({
-      where: { id: parseInt(id), companyId: req.user.companyId }
-    });
-    if (!customer) {
-      return res.status(404).json({ error: "Customer not found" });
-    }
     const updated = await prisma.customer.update({
-      where: { id: customer.id },
+      where: { id: parseInt(id) },
       data: {
         name,
         mobile,
@@ -238,6 +205,9 @@ export const updateCustomer = async (req, res) => {
     });
     res.status(200).json(updated);
   } catch (error) {
+    if (error.status === 404 || error.code === 'P2025') {
+      return res.status(404).json({ error: "Customer not found" });
+    }
     console.error("Error updating customer:", error);
     res.status(500).json({ error: "Failed to update customer" });
   }
@@ -248,14 +218,8 @@ export const updateVendor = async (req, res) => {
   const { id } = req.params;
   const { name, mobile, address, gstin, openingBalance } = req.body;
   try {
-    const vendor = await prisma.vendor.findFirst({
-      where: { id: parseInt(id), companyId: req.user.companyId }
-    });
-    if (!vendor) {
-      return res.status(404).json({ error: "Vendor not found" });
-    }
     const updated = await prisma.vendor.update({
-      where: { id: vendor.id },
+      where: { id: parseInt(id) },
       data: {
         name,
         mobile,
@@ -266,6 +230,9 @@ export const updateVendor = async (req, res) => {
     });
     res.status(200).json(updated);
   } catch (error) {
+    if (error.status === 404 || error.code === 'P2025') {
+      return res.status(404).json({ error: "Vendor not found" });
+    }
     console.error("Error updating vendor:", error);
     res.status(500).json({ error: "Failed to update vendor" });
   }
@@ -276,14 +243,8 @@ export const updateItem = async (req, res) => {
   const { id } = req.params;
   const { name, sku, category, unit, purchasePrice, salePrice, gstPercentage, openingStock, minStockAlert, hsnCode } = req.body;
   try {
-    const item = await prisma.item.findFirst({
-      where: { id: parseInt(id), companyId: req.user.companyId }
-    });
-    if (!item) {
-      return res.status(404).json({ error: "Item not found" });
-    }
     const updated = await prisma.item.update({
-      where: { id: item.id },
+      where: { id: parseInt(id) },
       data: {
         name,
         sku,
@@ -299,6 +260,9 @@ export const updateItem = async (req, res) => {
     });
     res.status(200).json(updated);
   } catch (error) {
+    if (error.status === 404 || error.code === 'P2025') {
+      return res.status(404).json({ error: "Item not found" });
+    }
     console.error("Error updating item:", error);
     res.status(500).json({ error: "Failed to update item" });
   }

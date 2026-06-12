@@ -66,47 +66,40 @@ export const prisma = basePrisma.$extends({
         // 2. Write Protections (update, delete, updateMany, deleteMany)
         if (['update', 'delete', 'updateMany', 'deleteMany'].includes(operation)) {
           if (user) {
-            const clientModelName = model.charAt(0).toLowerCase() + model.slice(1);
             const isCompanyOrSuperAdmin = user?.role === 'SUPER_ADMIN' || user?.role === 'COMPANY_ADMIN';
 
-            // For update and delete (single record), check ownership before writing (concurrency-safe via base client)
-            if (['update', 'delete'].includes(operation) && args.where?.id) {
-              const recordId = parseInt(args.where.id);
-              if (!isNaN(recordId)) {
-                const record = await basePrisma[clientModelName].findFirst({
-                  where: {
-                    id: recordId,
-                    ...(modelsWithCompany.includes(model) && user.companyId ? { companyId: user.companyId } : {}),
-                    ...(modelsWithBranch.includes(model) && !isCompanyOrSuperAdmin ? { branchId: user.branchId } : {}),
-                    ...(modelsWithBranch.includes(model) && isCompanyOrSuperAdmin && user.branchId ? { branchId: user.branchId } : {})
-                  }
-                });
+            args.where = args.where || {};
 
-                if (!record) {
-                  const err = new Error(`${model} not found or unauthorized`);
-                  err.status = 404;
+            // Apply Company ID Filter (RLS)
+            if (modelsWithCompany.includes(model) && user.companyId) {
+              args.where.companyId = user.companyId;
+            }
+
+            // Apply Branch ID Filter (RLS)
+            if (modelsWithBranch.includes(model)) {
+              if (!isCompanyOrSuperAdmin) {
+                if (!user.branchId) {
+                  const err = new Error('Access Denied: Missing branch context');
+                  err.status = 403;
                   throw err;
                 }
+                args.where.branchId = user.branchId;
+              } else if (user.branchId) {
+                args.where.branchId = user.branchId;
               }
             }
 
-            // For updateMany and deleteMany, inject the filters directly into args.where
-            if (['updateMany', 'deleteMany'].includes(operation)) {
-              args.where = args.where || {};
-              if (modelsWithCompany.includes(model) && user.companyId) {
-                args.where.companyId = user.companyId;
-              }
-              if (modelsWithBranch.includes(model)) {
-                if (!isCompanyOrSuperAdmin) {
-                  if (!user.branchId) {
-                    const err = new Error('Access Denied: Missing branch context');
-                    err.status = 403;
-                    throw err;
-                  }
-                  args.where.branchId = user.branchId;
-                } else if (user.branchId) {
-                  args.where.branchId = user.branchId;
+            // For single updates/deletes, map missing/unauthorized records to 404
+            if (['update', 'delete'].includes(operation)) {
+              try {
+                return await query(args);
+              } catch (err) {
+                if (err.code === 'P2025') {
+                  const customErr = new Error(`${model} not found or unauthorized`);
+                  customErr.status = 404;
+                  throw customErr;
                 }
+                throw err;
               }
             }
           }
