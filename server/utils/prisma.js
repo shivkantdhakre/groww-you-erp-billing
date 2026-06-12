@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { contextStorage } from "./context.js";
 
 const basePrisma = new PrismaClient();
@@ -58,8 +58,27 @@ export const prisma = basePrisma.$extends({
 
           // Convert findUnique to findFirst to support non-unique filtering (like companyId / branchId)
           if (operation === 'findUnique') {
+            const newArgs = { ...args };
+            if (newArgs.where) {
+              newArgs.where = { ...newArgs.where };
+              for (const key of Object.keys(newArgs.where)) {
+                if (key.includes('_') && typeof newArgs.where[key] === 'object' && newArgs.where[key] !== null) {
+                  Object.assign(newArgs.where, newArgs.where[key]);
+                  delete newArgs.where[key];
+                }
+              }
+            }
+            
+            const internalParams = arguments[0].__internalParams;
+            const transaction = internalParams?.transaction;
             const clientModelName = model.charAt(0).toLowerCase() + model.slice(1);
-            return basePrisma[clientModelName].findFirst(args);
+
+            if (transaction && transaction.kind === 'itx') {
+              const transactionClient = prisma._createItxClient(transaction);
+              return transactionClient[clientModelName].findFirst(newArgs);
+            } else {
+              return prisma[clientModelName].findFirst(newArgs);
+            }
           }
         }
 
