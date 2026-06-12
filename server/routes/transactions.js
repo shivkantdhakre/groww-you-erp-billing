@@ -2,8 +2,10 @@ import express from "express";
 import {
   getSalesInvoices,
   createSalesInvoice,
+  getSalesInvoiceById,
   getPurchaseInvoices,
   createPurchaseInvoice,
+  getPurchaseInvoiceById,
   getSalesReturns,
   createSalesReturn,
   getPurchaseReturns,
@@ -24,10 +26,12 @@ router.use(verifyTokenAndTenant);
 // --- SALES INVOICES ---
 router.get("/sales-invoices", getSalesInvoices);
 router.post("/sales-invoices", createSalesInvoice);
+router.get("/sales-invoices/:id", getSalesInvoiceById);
 
 // --- PURCHASE INVOICES ---
 router.get("/purchase-invoices", getPurchaseInvoices);
 router.post("/purchase-invoices", createPurchaseInvoice);
+router.get("/purchase-invoices/:id", getPurchaseInvoiceById);
 
 // --- RETURNS ---
 router.get("/sales-returns", getSalesReturns);

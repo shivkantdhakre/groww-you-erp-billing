@@ -24,8 +24,11 @@ function ProfileSettings() {
 
   useEffect(() => {
     if (user) {
-      setName(user.name || "");
-      setEmail(user.email || "");
+      const timer = setTimeout(() => {
+        setName(user.name || "");
+        setEmail(user.email || "");
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [user]);
 
@@ -90,12 +93,12 @@ function ProfileSettings() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto text-foreground">
       <h1 className="text-3xl font-bold mb-2">My Settings</h1>
-      <p className="text-gray-500 mb-6">Manage your ERP profile and password credentials</p>
+      <p className="text-muted-foreground mb-6">Manage your ERP profile and password credentials</p>
 
       {/* Tabs Header */}
-      <div className="flex border-b border-gray-200 mb-6">
+      <div className="flex border-b border-border mb-6">
         <button
           onClick={() => {
             setActiveTab("profile");
@@ -103,8 +106,8 @@ function ProfileSettings() {
           }}
           className={`py-3 px-6 font-semibold border-b-2 transition-colors ${
             activeTab === "profile"
-              ? "border-blue-600 text-blue-600"
-              : "border-transparent text-gray-500 hover:text-gray-700"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
           👤 Profile Details
@@ -116,8 +119,8 @@ function ProfileSettings() {
           }}
           className={`py-3 px-6 font-semibold border-b-2 transition-colors ${
             activeTab === "password"
-              ? "border-blue-600 text-blue-600"
-              : "border-transparent text-gray-500 hover:text-gray-700"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
           🔑 Change Password
@@ -130,53 +133,53 @@ function ProfileSettings() {
       </div>
 
       {/* Tab Panels */}
-      <div className="bg-white rounded-xl shadow p-6">
+      <div className="bg-card border border-border rounded-xl shadow p-6">
         {activeTab === "profile" ? (
           <form onSubmit={handleUpdateProfile} className="space-y-6">
-            <h2 className="text-xl font-semibold text-gray-800">Edit Profile Info</h2>
-            <hr />
+            <h2 className="text-xl font-semibold text-foreground">Edit Profile Info</h2>
+            <hr className="border-border" />
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-2">Full Name</label>
+                <label className="text-sm font-medium text-muted-foreground mb-2">Full Name</label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="bg-card text-foreground border border-border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Enter full name"
                 />
               </div>
 
               <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-2">Email Address</label>
+                <label className="text-sm font-medium text-muted-foreground mb-2">Email Address</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="bg-card text-foreground border border-border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Enter email address"
                 />
               </div>
 
               <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-400 mb-2 font-semibold">User Role (Read Only)</label>
+                <label className="text-sm font-medium text-muted-foreground/60 mb-2 font-semibold">User Role (Read Only)</label>
                 <input
                   type="text"
                   value={user?.role || ""}
                   disabled
-                  className="bg-gray-100 border border-gray-200 rounded-lg p-3 text-gray-500 cursor-not-allowed uppercase"
+                  className="bg-muted border border-border rounded-lg p-3 text-muted-foreground cursor-not-allowed uppercase"
                 />
               </div>
 
               {user?.subRole && (
                 <div className="flex flex-col">
-                  <label className="text-sm font-medium text-gray-400 mb-2 font-semibold">Staff Designation (Read Only)</label>
+                  <label className="text-sm font-medium text-muted-foreground/60 mb-2 font-semibold">Staff Designation (Read Only)</label>
                   <input
-                    type="text"
-                    value={user.subRole}
-                    disabled
-                    className="bg-gray-100 border border-gray-200 rounded-lg p-3 text-gray-500 cursor-not-allowed uppercase"
+                     type="text"
+                     value={user.subRole}
+                     disabled
+                     className="bg-muted border border-border rounded-lg p-3 text-muted-foreground cursor-not-allowed uppercase"
                   />
                 </div>
               )}
@@ -184,46 +187,46 @@ function ProfileSettings() {
 
             <button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors cursor-pointer"
+              className="bg-primary hover:bg-primary/95 text-primary-foreground font-semibold py-2 px-6 rounded-lg transition-colors cursor-pointer shadow-md"
             >
               Save Changes
             </button>
           </form>
         ) : (
           <form onSubmit={handleChangePassword} className="space-y-6">
-            <h2 className="text-xl font-semibold text-gray-800">Update Password</h2>
-            <hr />
+            <h2 className="text-xl font-semibold text-foreground">Update Password</h2>
+            <hr className="border-border" />
 
             <div className="max-w-md space-y-4">
               <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-2">Current Password</label>
+                <label className="text-sm font-medium text-muted-foreground mb-2">Current Password</label>
                 <input
                   type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="bg-card text-foreground border border-border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="••••••••"
                 />
               </div>
 
               <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-2">New Password</label>
+                <label className="text-sm font-medium text-muted-foreground mb-2">New Password</label>
                 <input
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="bg-card text-foreground border border-border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Min 6 characters"
                 />
               </div>
 
               <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-2">Confirm New Password</label>
+                <label className="text-sm font-medium text-muted-foreground mb-2">Confirm New Password</label>
                 <input
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="bg-card text-foreground border border-border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="••••••••"
                 />
               </div>
@@ -231,7 +234,7 @@ function ProfileSettings() {
 
             <button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors cursor-pointer"
+              className="bg-primary hover:bg-primary/95 text-primary-foreground font-semibold py-2 px-6 rounded-lg transition-colors cursor-pointer shadow-md"
             >
               Change Password
             </button>

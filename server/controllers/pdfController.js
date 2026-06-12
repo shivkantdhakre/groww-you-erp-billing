@@ -32,9 +32,8 @@ export const generateInvoicePDF = async (req, res) => {
       return res.status(404).json({ error: 'Invoice not found or unauthorized' });
     }
 
-    // 2. Return cached PDF URL if already generated and forceRegenerate is false
-    // (Note: we generate/cache separate URLs if needed, but here we cache standard format)
-    if (invoice.pdfUrl && !forceRegenerate && req.query.download !== 'true') {
+    // 2. Return cached PDF URL if already generated, forceRegenerate is false, and A4 is requested
+    if (layout === 'A4' && invoice.pdfUrl && !forceRegenerate && req.query.download !== 'true') {
       return res.status(200).json({ pdfUrl: invoice.pdfUrl });
     }
 
@@ -51,11 +50,13 @@ export const generateInvoicePDF = async (req, res) => {
     // 5. Upload buffer to cloud storage (or local storage fallback)
     const pdfUrl = await pdfService.uploadPDF(invoice, pdfBuffer);
 
-    // 6. Update database record
-    await prisma.invoice.update({
-      where: { id: invoice.id },
-      data: { pdfUrl }
-    });
+    // 6. Update database record only for A4
+    if (layout === 'A4') {
+      await prisma.invoice.update({
+        where: { id: invoice.id },
+        data: { pdfUrl }
+      });
+    }
 
     res.status(200).json({ pdfUrl });
   } catch (error) {

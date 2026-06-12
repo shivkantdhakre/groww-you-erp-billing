@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useStore } from "./store/useStore";
 
 import Navbar from "./components/Navbar";
@@ -23,6 +23,7 @@ import CustomerLedger from "./pages/books/CustomerLedger";
 
 import SalesReport from "./pages/reports/SalesReport";
 import PurchaseReport from "./pages/reports/PurchaseReport";
+import ProfitReport from "./pages/reports/ProfitReport";
 import ReportsDashboard from "./pages/ReportsDashboard";
 
 import PaymentVoucher from "./pages/accounts/PaymentVoucher";
@@ -45,6 +46,79 @@ import SalesInvoicePrint from "./pages/print/SalesInvoicePrint";
 import PurchaseInvoicePrint from "./pages/print/PurchaseInvoicePrint";
 import PaymentVoucherPrint from "./pages/print/PaymentVoucherPrint";
 import ReceiptVoucherPrint from "./pages/print/ReceiptVoucherPrint";
+import ThermalInvoicePrint from "./pages/print/ThermalInvoicePrint";
+
+function AppContent() {
+  const location = useLocation();
+  const isPrintPage = location.pathname.startsWith("/print");
+
+  const routes = (
+    <Routes>
+      <Route path="/" element={<Dashboard />} />
+
+      <Route path="/customers" element={<Customers />} />
+      <Route path="/vendors" element={<Vendors />} />
+      <Route path="/inventory" element={<Inventory />} />
+
+      <Route path="/sales-invoice" element={<SalesInvoice />} />
+      <Route path="/sales-return" element={<SalesReturn />} />
+
+      <Route path="/purchase-invoice" element={<PurchaseInvoice />} />
+      <Route path="/purchase-return" element={<PurchaseReturn />} />
+
+      <Route path="/payment-voucher" element={<PaymentVoucher />} />
+      <Route path="/receipt-voucher" element={<ReceiptVoucher />} />
+
+      <Route path="/reports-dashboard" element={<ReportsDashboard />} />
+      <Route path="/sales-report" element={<SalesReport />} />
+      <Route path="/purchase-report" element={<PurchaseReport />} />
+      <Route path="/profit-report" element={<ProfitReport />} />
+      <Route path="/vendor-ledger" element={<VendorLedger />} />
+      <Route path="/customer-ledger" element={<CustomerLedger />} />
+      <Route path="/cash-book" element={<CashBook />} />
+      <Route path="/bank-book" element={<BankBook />} />
+      <Route path="/day-book" element={<DayBook />} />
+      <Route path="/journal-voucher" element={<JournalVoucher />} />
+      <Route path="/contra-voucher" element={<ContraVoucher />} />
+      <Route path="/stock-report" element={<StockReport />} />
+      <Route path="/outstanding-report" element={<OutstandingReport />} />
+      <Route path="/compliance-dashboard" element={<ComplianceDashboard />} />
+      <Route path="/company-settings" element={<CompanySettings />} />
+      <Route path="/user-management" element={<UserManagement />} />
+      <Route path="/profile-settings" element={<ProfileSettings />} />
+      <Route path="/role-management" element={<RoleManagement />} />
+      <Route path="/backup-restore" element={<BackupRestore />} />
+      
+      {/* Print Templates */}
+      <Route path="/print/sales-invoice" element={<SalesInvoicePrint />} />
+      <Route path="/print/purchase-invoice" element={<PurchaseInvoicePrint />} />
+      <Route path="/print/payment-voucher" element={<PaymentVoucherPrint />} />
+      <Route path="/print/receipt-voucher" element={<ReceiptVoucherPrint />} />
+      <Route path="/print/thermal-invoice/:id" element={<ThermalInvoicePrint />} />
+
+      <Route path="/login" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+
+  if (isPrintPage) {
+    return routes;
+  }
+
+  return (
+    <div className="flex min-h-screen bg-background text-foreground transition-colors duration-300">
+      {/* Sidebar */}
+      <Sidebar />
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <Navbar />
+        <div className="p-6 flex-1 overflow-y-auto">
+          <Breadcrumb />
+          {routes}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function App() {
   const token = useStore((state) => state.token);
@@ -73,115 +147,7 @@ function App() {
 
   return (
     <BrowserRouter>
-      <div className="flex min-h-screen bg-background text-foreground transition-colors duration-300">
-
-        {/* Sidebar */}
-        <Sidebar />
-        {/* Main Content */}
-        <div className="flex-1">
-
-          <Navbar />
-
-
-          <div className="p-6">
-
-
-            <Breadcrumb />
-
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-
-              <Route path="/customers" element={<Customers />} />
-              <Route path="/vendors" element={<Vendors />} />
-              <Route path="/inventory" element={<Inventory />} />
-
-              <Route path="/sales-invoice" element={<SalesInvoice />} />
-              <Route path="/sales-return" element={<SalesReturn />} />
-
-              <Route path="/purchase-invoice" element={<PurchaseInvoice />} />
-              <Route path="/purchase-return" element={<PurchaseReturn />} />
-
-              <Route path="/payment-voucher" element={<PaymentVoucher />} />
-              <Route path="/receipt-voucher" element={<ReceiptVoucher />} />
-
-              <Route path="/reports-dashboard" element={<ReportsDashboard />} />
-              <Route path="/sales-report" element={<SalesReport />} />
-              <Route path="/purchase-report" element={<PurchaseReport />} />
-              <Route path="/vendor-ledger" element={<VendorLedger />} />
-              <Route path="/customer-ledger" element={<CustomerLedger />} />
-              <Route
-                path="/cash-book"
-                element={<CashBook />}
-              />
-              <Route
-                path="/bank-book"
-                element={<BankBook />}
-              />
-              <Route
-                path="/day-book"
-                element={<DayBook />}
-              />
-              <Route
-                path="/journal-voucher"
-                element={<JournalVoucher />}
-              />
-              <Route
-                path="/contra-voucher"
-                element={<ContraVoucher />}
-              />
-              <Route
-                path="/stock-report"
-                element={<StockReport />}
-              />
-              <Route
-                path="/outstanding-report"
-                element={<OutstandingReport />}
-              />
-              <Route
-                path="/compliance-dashboard"
-                element={<ComplianceDashboard />}
-              />
-              <Route
-                path="/company-settings"
-                element={<CompanySettings />}
-              />
-              <Route
-                path="/user-management"
-                element={<UserManagement />}
-              />
-              <Route
-                path="/profile-settings"
-                element={<ProfileSettings />}
-              />
-              <Route
-                path="/role-management"
-                element={<RoleManagement />}
-              />
-              <Route
-                path="/backup-restore"
-                element={<BackupRestore />}
-              />
-              <Route
-                path="/print/sales-invoice"
-                element={<SalesInvoicePrint />}
-              />
-              <Route
-                path="/print/purchase-invoice"
-                element={<PurchaseInvoicePrint />}
-              />
-              <Route
-                path="/print/payment-voucher"
-                element={<PaymentVoucherPrint />}
-              />
-              <Route
-                path="/print/receipt-voucher"
-                element={<ReceiptVoucherPrint />}
-              />
-              <Route path="/login" element={<Navigate to="/" replace />} />
-            </Routes>
-          </div>
-        </div>
-      </div>
+      <AppContent />
     </BrowserRouter>
   );
 }

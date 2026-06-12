@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import CommonModal from "../../components/common/CommonModal";
 import Autocomplete from "../../components/common/Autocomplete";
 import { useStore } from "../../store/useStore";
@@ -28,13 +28,7 @@ function PurchaseReturn() {
   const fetchVendors = useStore((state) => state.fetchVendors);
   const fetchItems = useStore((state) => state.fetchItems);
 
-  useEffect(() => {
-    fetchVendors();
-    fetchItems();
-    fetchPurchaseReturns();
-  }, []);
-
-  const fetchPurchaseReturns = async () => {
+  const fetchPurchaseReturns = useCallback(async () => {
     setLoadingReturns(true);
     try {
       const res = await api.get("/transactions/purchase-returns");
@@ -44,7 +38,16 @@ function PurchaseReturn() {
     } finally {
       setLoadingReturns(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchVendors();
+    fetchItems();
+    const timer = setTimeout(() => {
+      fetchPurchaseReturns();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [fetchVendors, fetchItems, fetchPurchaseReturns]);
 
   const selectedVendor = vendors.find((v) => v.id === vendorId);
   const selectedItem = items.find((i) => i.id === itemId);

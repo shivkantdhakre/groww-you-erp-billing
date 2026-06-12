@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import CommonModal from "../../components/common/CommonModal";
 import Autocomplete from "../../components/common/Autocomplete";
@@ -14,13 +14,16 @@ function InvoiceTable({
   clearItemDetails,
   updateItemQty,
   deleteRow,
-  addRow
+  addRow,
+  itemSearchRefs,
+  quantityRefs
 }) {
   const ROW_HEIGHT = 60;
   const MAX_VISIBLE_ROWS = 8;
   const parentRef = useRef(null);
   const shouldVirtualize = invoiceItems.length > MAX_VISIBLE_ROWS;
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: invoiceItems.length,
     getScrollElement: () => parentRef.current,
@@ -93,6 +96,13 @@ function InvoiceTable({
                 >
                 <td className="p-3 align-top min-w-[200px]">
                   <Autocomplete
+                    inputRef={(el) => {
+                      if (el) {
+                        itemSearchRefs.current[item.id] = el;
+                      } else {
+                        delete itemSearchRefs.current[item.id];
+                      }
+                    }}
                     options={items}
                     labelKey="name"
                     valueKey="id"
@@ -124,10 +134,31 @@ function InvoiceTable({
 
                 <td className="p-3 text-right align-middle">
                   <input
+                    ref={(el) => {
+                      if (el) {
+                        quantityRefs.current[item.id] = el;
+                      } else {
+                        delete quantityRefs.current[item.id];
+                      }
+                    }}
                     type="number"
                     min="1"
                     value={item.qty}
                     onChange={(e) => updateItemQty(item.id, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const idx = virtualRow.index;
+                        if (idx === invoiceItems.length - 1) {
+                          addRow();
+                        } else {
+                          const nextRow = invoiceItems[idx + 1];
+                          if (nextRow && itemSearchRefs.current[nextRow.id]) {
+                            itemSearchRefs.current[nextRow.id].focus();
+                          }
+                        }
+                      }
+                    }}
                     className="border border-border p-2 rounded-lg w-20 text-right bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent font-mono"
                   />
                 </td>
@@ -172,7 +203,8 @@ function InvoiceSummaryCard({
   totalItems,
   totalQty,
   grandTotal,
-  handleSaveInvoice
+  handleSaveInvoice,
+  customerSearchRef
 }) {
   return (
     <div className="bg-card p-6 rounded-2xl border border-border shadow-sm space-y-6 text-foreground">
@@ -209,6 +241,7 @@ function InvoiceSummaryCard({
             Customer Name
           </label>
           <Autocomplete
+            inputRef={customerSearchRef}
             options={customers}
             labelKey="name"
             valueKey="id"
@@ -261,7 +294,7 @@ function SalesInvoice() {
   );
   
   const [customerId, setCustomerId] = useState(null);
-  const [invoiceItems, setInvoiceItems] = useState([
+  const [invoiceItems, setInvoiceItems] = useState(() => [
     {
       id: Date.now(),
       itemId: "",
@@ -280,20 +313,19 @@ function SalesInvoice() {
   const [messageType, setMessageType] = useState("");
   const [showSaveModal, setShowSaveModal] = useState(false);
 
+  // Focus & Progression Refs
+  const customerSearchRef = useRef(null);
+  const itemSearchRefs = useRef({});
+  const quantityRefs = useRef({});
+  const [focusTarget, setFocusTarget] = useState(null);
+
   // Zustand Master Data Cache
   const customers = useStore((state) => state.customers);
   const items = useStore((state) => state.items);
   const fetchCustomers = useStore((state) => state.fetchCustomers);
   const fetchItems = useStore((state) => state.fetchItems);
 
-  // Fetch Masters and Invoices on Mount
-  useEffect(() => {
-    fetchCustomers();
-    fetchItems();
-    fetchSalesInvoices();
-  }, []);
-
-  const fetchSalesInvoices = async () => {
+  const fetchSalesInvoices = useCallback(async () => {
     setLoadingInvoices(true);
     try {
       const res = await api.get("/transactions/sales-invoices");
@@ -303,9 +335,21 @@ function SalesInvoice() {
     } finally {
       setLoadingInvoices(false);
     }
-  };
+  }, []);
 
-  const handlePrintInvoice = async (invoiceId, layout) => {
+  const handlePrintInvoice = useCallback(async (invoiceId, layout) => {
+    if (layout.toLowerCase() === "thermal") {
+      const width = 450;
+      const height = 600;
+      const left = (window.screen.width - width) / 2;
+      const top = (window.screen.height - height) / 2;
+      window.open(
+        `/print/thermal-invoice/${invoiceId}?type=sale`,
+        "Thermal Invoice Print",
+        `width=${width},height=${height},left=${left},top=${top},status=no,resizable=yes,scrollbars=yes`
+      );
+      return;
+    }
     try {
       const res = await api.get(`/pdf/invoices/${invoiceId}?layout=${layout}`);
       if (res.data.pdfUrl) {
@@ -319,178 +363,9 @@ function SalesInvoice() {
       setMessage("Error generating PDF invoice.");
       setMessageType("error");
     }
-  };
+  }, []);
 
-  const addRow = () => {
-    const newRow = {
-      id: Date.now(),
-      itemId: "",
-      itemName: "",
-      qty: 1,
-      rate: 0,
-      gstPercentage: 0,
-      amount: 0,
-      currentStock: 0
-    };
-    setInvoiceItems([...invoiceItems, newRow]);
-  };
-
-  const deleteRow = (id) => {
-    if (invoiceItems.length === 1) {
-      setMessage("At least one item row is required");
-      setMessageType("warning");
-      return;
-    }
-    const updatedItems = invoiceItems.filter((item) => item.id !== id);
-    setInvoiceItems(updatedItems);
-  };
-
-  const updateItemDetails = (id, dbItem) => {
-    const updatedItems = invoiceItems.map((item) => {
-      if (item.id === id) {
-        const qty = Number(item.qty) || 1;
-        const rate = Number(dbItem.salePrice) || 0;
-        const gstPct = Number(dbItem.gstPercentage) || 0;
-        const subtotal = rate * qty;
-        const gstAmount = Math.round((subtotal * gstPct / 100) * 100) / 100;
-        return {
-          ...item,
-          itemId: dbItem.id,
-          itemName: dbItem.name,
-          rate,
-          gstPercentage: gstPct,
-          amount: Math.round((subtotal + gstAmount) * 100) / 100,
-          currentStock: dbItem.openingStock
-        };
-      }
-      return item;
-    });
-    setInvoiceItems(updatedItems);
-  };
-
-  const handleBarcodeScanned = (dbItem) => {
-    setInvoiceItems((prevItems) => {
-      // Check if item already exists in current rows
-      const existingIndex = prevItems.findIndex(item => item.itemId === dbItem.id);
-      if (existingIndex > -1) {
-        const updated = [...prevItems];
-        const item = updated[existingIndex];
-        const newQty = item.qty + 1;
-        
-        // Stock warning check
-        if (newQty > dbItem.openingStock) {
-          setMessage(`Cannot add. Insufficient stock for ${dbItem.name}. Available: ${dbItem.openingStock}`);
-          setMessageType("error");
-          return prevItems;
-        }
-        
-        const subtotal = item.rate * newQty;
-        const gstAmount = Math.round((subtotal * item.gstPercentage / 100) * 100) / 100;
-        updated[existingIndex] = {
-          ...item,
-          qty: newQty,
-          amount: Math.round((subtotal + gstAmount) * 100) / 100
-        };
-        setMessage(`Incremented ${dbItem.name} quantity.`);
-        setMessageType("success");
-        return updated;
-      } else {
-        // Stock check
-        if (dbItem.openingStock < 1) {
-          setMessage(`Cannot add ${dbItem.name}: Out of stock.`);
-          setMessageType("error");
-          return prevItems;
-        }
-
-        const lastRow = prevItems[prevItems.length - 1];
-        const rate = Number(dbItem.salePrice) || 0;
-        const gstPct = Number(dbItem.gstPercentage) || 0;
-        const subtotal = rate * 1;
-        const gstAmount = Math.round((subtotal * gstPct / 100) * 100) / 100;
-        const filledRow = {
-          id: lastRow && !lastRow.itemId ? lastRow.id : Date.now(),
-          itemId: dbItem.id,
-          itemName: dbItem.name,
-          qty: 1,
-          rate,
-          gstPercentage: gstPct,
-          amount: Math.round((subtotal + gstAmount) * 100) / 100,
-          currentStock: dbItem.openingStock
-        };
-
-        setMessage(`Added ${dbItem.name} to invoice.`);
-        setMessageType("success");
-        if (lastRow && !lastRow.itemId) {
-          return [...prevItems.slice(0, -1), filledRow];
-        } else {
-          return [...prevItems, filledRow];
-        }
-      }
-    });
-  };
-
-  // Register global hardware-accelerated barcode interceptor
-  useBarcodeScanner((barcode) => {
-    const matchedItem = items.find(
-      (item) => item.sku === barcode || item.sku?.toLowerCase() === barcode.toLowerCase()
-    );
-    if (matchedItem) {
-      handleBarcodeScanned(matchedItem);
-    } else {
-      setMessage(`Barcode "${barcode}" not matched in inventory.`);
-      setMessageType("warning");
-    }
-  });
-
-  const clearItemDetails = (id) => {
-    const updatedItems = invoiceItems.map((item) => {
-      if (item.id === id) {
-        return {
-          ...item,
-          itemId: "",
-          itemName: "",
-          rate: 0,
-          gstPercentage: 0,
-          amount: 0,
-          currentStock: 0
-        };
-      }
-      return item;
-    });
-    setInvoiceItems(updatedItems);
-  };
-
-  const updateItemQty = (id, qtyValue) => {
-    const updatedItems = invoiceItems.map((item) => {
-      if (item.id === id) {
-        const qty = parseInt(qtyValue) || 0;
-        const rate = Number(item.rate) || 0;
-        const gstPct = Number(item.gstPercentage) || 0;
-        const subtotal = rate * qty;
-        const gstAmount = Math.round((subtotal * gstPct / 100) * 100) / 100;
-        return {
-          ...item,
-          qty,
-          amount: Math.round((subtotal + gstAmount) * 100) / 100
-        };
-      }
-      return item;
-    });
-    setInvoiceItems(updatedItems);
-  };
-
-  const grandTotal = Math.round(
-    invoiceItems.reduce((total, item) => total + Number(item.amount), 0) * 100
-  ) / 100;
-
-  const totalItems = invoiceItems.length;
-
-  const totalQty = invoiceItems.reduce(
-    (total, item) => total + (Number(item.qty) || 0),
-    0
-  );
-
-  const handleSaveInvoice = async () => {
+  const handleSaveInvoice = useCallback(async () => {
     if (!invoiceDate) {
       setMessage("Invoice Date is required");
       setMessageType("error");
@@ -575,7 +450,247 @@ function SalesInvoice() {
       setMessage(errorMsg);
       setMessageType("error");
     }
+  }, [invoiceDate, customerId, invoiceItems, fetchItems, fetchCustomers, fetchSalesInvoices]);
+
+  const addRow = useCallback(() => {
+    const newId = Date.now();
+    const newRow = {
+      id: newId,
+      itemId: "",
+      itemName: "",
+      qty: 1,
+      rate: 0,
+      gstPercentage: 0,
+      amount: 0,
+      currentStock: 0
+    };
+    setInvoiceItems((prev) => [...prev, newRow]);
+    setFocusTarget({ id: newId, type: "item" });
+  }, []);
+
+  // Fetch Masters and Invoices on Mount
+  useEffect(() => {
+    fetchCustomers();
+    fetchItems();
+    const timer = setTimeout(() => {
+      fetchSalesInvoices();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [fetchCustomers, fetchItems, fetchSalesInvoices]);
+
+  // Focus target useEffect
+  useEffect(() => {
+    if (focusTarget) {
+      const { id, type } = focusTarget;
+      const timer = setTimeout(() => {
+        if (type === "item" && itemSearchRefs.current[id]) {
+          itemSearchRefs.current[id].focus();
+        } else if (type === "qty" && quantityRefs.current[id]) {
+          quantityRefs.current[id].focus();
+          quantityRefs.current[id].select();
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [focusTarget]);
+
+  // Global keydown listeners (F2, Ctrl+P, Alt+N, Alt+C)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Alt+N -> Add a new item row
+      if (e.altKey && e.key.toLowerCase() === "n") {
+        e.preventDefault();
+        addRow();
+      }
+      // F2 -> Save sales invoice
+      if (e.key === "F2") {
+        e.preventDefault();
+        handleSaveInvoice();
+      }
+      // Ctrl+P -> Print last generated invoice (thermal)
+      if (e.ctrlKey && e.key.toLowerCase() === "p") {
+        e.preventDefault();
+        if (savedInvoices.length > 0) {
+          handlePrintInvoice(savedInvoices[0].id, "thermal");
+        } else {
+          setMessage("No invoices saved to print.");
+          setMessageType("warning");
+        }
+      }
+      // Alt+C -> Focus Customer search
+      if (e.altKey && e.key.toLowerCase() === "c") {
+        e.preventDefault();
+        if (customerSearchRef.current) {
+          customerSearchRef.current.focus();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [invoiceItems, savedInvoices, handlePrintInvoice, handleSaveInvoice, addRow]);
+
+  const deleteRow = (id) => {
+    if (invoiceItems.length === 1) {
+      setMessage("At least one item row is required");
+      setMessageType("warning");
+      return;
+    }
+    const updatedItems = invoiceItems.filter((item) => item.id !== id);
+    setInvoiceItems(updatedItems);
   };
+
+  const updateItemDetails = (id, dbItem) => {
+    const updatedItems = invoiceItems.map((item) => {
+      if (item.id === id) {
+        const qty = Number(item.qty) || 1;
+        const rate = Number(dbItem.salePrice) || 0;
+        const gstPct = Number(dbItem.gstPercentage) || 0;
+        const subtotal = rate * qty;
+        const gstAmount = Math.round((subtotal * gstPct / 100) * 100) / 100;
+        return {
+          ...item,
+          itemId: dbItem.id,
+          itemName: dbItem.name,
+          rate,
+          gstPercentage: gstPct,
+          amount: Math.round((subtotal + gstAmount) * 100) / 100,
+          currentStock: dbItem.openingStock
+        };
+      }
+      return item;
+    });
+    setInvoiceItems(updatedItems);
+
+    // Auto-focus quantity input of the selected row
+    setFocusTarget({ id, type: "qty" });
+  };
+
+  const handleBarcodeScanned = (dbItem) => {
+    setInvoiceItems((prevItems) => {
+      const existingIndex = prevItems.findIndex(item => item.itemId === dbItem.id);
+      if (existingIndex > -1) {
+        const updated = [...prevItems];
+        const item = updated[existingIndex];
+        const newQty = item.qty + 1;
+        
+        if (newQty > dbItem.openingStock) {
+          setMessage(`Cannot add. Insufficient stock for ${dbItem.name}. Available: ${dbItem.openingStock}`);
+          setMessageType("error");
+          return prevItems;
+        }
+        
+        const subtotal = item.rate * newQty;
+        const gstAmount = Math.round((subtotal * item.gstPercentage / 100) * 100) / 100;
+        updated[existingIndex] = {
+          ...item,
+          qty: newQty,
+          amount: Math.round((subtotal + gstAmount) * 100) / 100
+        };
+        setMessage(`Incremented ${dbItem.name} quantity.`);
+        setMessageType("success");
+        setFocusTarget({ id: item.id, type: "qty" });
+        return updated;
+      } else {
+        if (dbItem.openingStock < 1) {
+          setMessage(`Cannot add ${dbItem.name}: Out of stock.`);
+          setMessageType("error");
+          return prevItems;
+        }
+
+        const lastRow = prevItems[prevItems.length - 1];
+        const rate = Number(dbItem.salePrice) || 0;
+        const gstPct = Number(dbItem.gstPercentage) || 0;
+        const subtotal = rate * 1;
+        const gstAmount = Math.round((subtotal * gstPct / 100) * 100) / 100;
+        const newId = lastRow && !lastRow.itemId ? lastRow.id : Date.now();
+        const filledRow = {
+          id: newId,
+          itemId: dbItem.id,
+          itemName: dbItem.name,
+          qty: 1,
+          rate,
+          gstPercentage: gstPct,
+          amount: Math.round((subtotal + gstAmount) * 100) / 100,
+          currentStock: dbItem.openingStock
+        };
+
+        setMessage(`Added ${dbItem.name} to invoice.`);
+        setMessageType("success");
+        setFocusTarget({ id: newId, type: "qty" });
+        if (lastRow && !lastRow.itemId) {
+          return [...prevItems.slice(0, -1), filledRow];
+        } else {
+          return [...prevItems, filledRow];
+        }
+      }
+    });
+  };
+
+  // Register global hardware-accelerated barcode interceptor
+  useBarcodeScanner((barcode) => {
+    const matchedItem = items.find(
+      (item) => item.sku === barcode || item.sku?.toLowerCase() === barcode.toLowerCase()
+    );
+    if (matchedItem) {
+      handleBarcodeScanned(matchedItem);
+    } else {
+      setMessage(`Barcode "${barcode}" not matched in inventory.`);
+      setMessageType("warning");
+    }
+  });
+
+  const clearItemDetails = (id) => {
+    const updatedItems = invoiceItems.map((item) => {
+      if (item.id === id) {
+        return {
+          ...item,
+          itemId: "",
+          itemName: "",
+          rate: 0,
+          gstPercentage: 0,
+          amount: 0,
+          currentStock: 0
+        };
+      }
+      return item;
+    });
+    setInvoiceItems(updatedItems);
+  };
+
+  const updateItemQty = (id, qtyValue) => {
+    const updatedItems = invoiceItems.map((item) => {
+      if (item.id === id) {
+        const qty = parseInt(qtyValue) || 0;
+        const rate = Number(item.rate) || 0;
+        const gstPct = Number(item.gstPercentage) || 0;
+        const subtotal = rate * qty;
+        const gstAmount = Math.round((subtotal * gstPct / 100) * 100) / 100;
+        return {
+          ...item,
+          qty,
+          amount: Math.round((subtotal + gstAmount) * 100) / 100
+        };
+      }
+      return item;
+    });
+    setInvoiceItems(updatedItems);
+  };
+
+  const grandTotal = Math.round(
+    invoiceItems.reduce((total, item) => total + Number(item.amount), 0) * 100
+  ) / 100;
+
+  const totalItems = invoiceItems.length;
+
+  const totalQty = invoiceItems.reduce(
+    (total, item) => total + (Number(item.qty) || 0),
+    0
+  );
+
+
 
   return (
     <div className="space-y-6">
@@ -612,6 +727,8 @@ function SalesInvoice() {
             updateItemQty={updateItemQty}
             deleteRow={deleteRow}
             addRow={addRow}
+            itemSearchRefs={itemSearchRefs}
+            quantityRefs={quantityRefs}
           />
         </div>
 
@@ -626,6 +743,7 @@ function SalesInvoice() {
             totalQty={totalQty}
             grandTotal={grandTotal}
             handleSaveInvoice={handleSaveInvoice}
+            customerSearchRef={customerSearchRef}
           />
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import CommonModal from "../../components/common/CommonModal";
 import Autocomplete from "../../components/common/Autocomplete";
 import { useStore } from "../../store/useStore";
@@ -28,13 +28,7 @@ function SalesReturn() {
   const fetchCustomers = useStore((state) => state.fetchCustomers);
   const fetchItems = useStore((state) => state.fetchItems);
 
-  useEffect(() => {
-    fetchCustomers();
-    fetchItems();
-    fetchSalesReturns();
-  }, []);
-
-  const fetchSalesReturns = async () => {
+  const fetchSalesReturns = useCallback(async () => {
     setLoadingReturns(true);
     try {
       const res = await api.get("/transactions/sales-returns");
@@ -44,7 +38,16 @@ function SalesReturn() {
     } finally {
       setLoadingReturns(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchCustomers();
+    fetchItems();
+    const timer = setTimeout(() => {
+      fetchSalesReturns();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [fetchCustomers, fetchItems, fetchSalesReturns]);
 
   const selectedCustomer = customers.find((c) => c.id === customerId);
   const selectedItem = items.find((i) => i.id === itemId);

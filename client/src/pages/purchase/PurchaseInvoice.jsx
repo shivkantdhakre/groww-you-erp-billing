@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import CommonModal from "../../components/common/CommonModal";
 import Autocomplete from "../../components/common/Autocomplete";
@@ -13,13 +13,16 @@ function InvoiceTable({
   clearItemDetails,
   updateItemQty,
   removeRow,
-  addRow
+  addRow,
+  itemSearchRefs,
+  quantityRefs
 }) {
   const ROW_HEIGHT = 60;
   const MAX_VISIBLE_ROWS = 8;
   const parentRef = useRef(null);
   const shouldVirtualize = purchaseItems.length > MAX_VISIBLE_ROWS;
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: purchaseItems.length,
     getScrollElement: () => parentRef.current,
@@ -92,6 +95,13 @@ function InvoiceTable({
                 >
                 <td className="p-3 align-top min-w-[200px]">
                   <Autocomplete
+                    inputRef={(el) => {
+                      if (el) {
+                        itemSearchRefs.current[item.id] = el;
+                      } else {
+                        delete itemSearchRefs.current[item.id];
+                      }
+                    }}
                     options={items}
                     labelKey="name"
                     valueKey="id"
@@ -117,10 +127,31 @@ function InvoiceTable({
 
                 <td className="p-3 text-right align-middle">
                   <input
+                    ref={(el) => {
+                      if (el) {
+                        quantityRefs.current[item.id] = el;
+                      } else {
+                        delete quantityRefs.current[item.id];
+                      }
+                    }}
                     type="number"
                     min="1"
                     value={item.qty}
                     onChange={(e) => updateItemQty(item.id, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const idx = virtualRow.index;
+                        if (idx === purchaseItems.length - 1) {
+                          addRow();
+                        } else {
+                          const nextRow = purchaseItems[idx + 1];
+                          if (nextRow && itemSearchRefs.current[nextRow.id]) {
+                            itemSearchRefs.current[nextRow.id].focus();
+                          }
+                        }
+                      }
+                    }}
                     className="border border-border p-2 rounded-lg w-20 text-right bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent font-mono"
                   />
                 </td>
@@ -168,7 +199,8 @@ function InvoiceSummaryCard({
   totalItems,
   totalQty,
   grandTotal,
-  savePurchase
+  savePurchase,
+  vendorSearchRef
 }) {
   return (
     <div className="bg-card p-6 rounded-2xl border border-border shadow-sm space-y-6 text-foreground">
@@ -206,6 +238,7 @@ function InvoiceSummaryCard({
             Vendor Name
           </label>
           <Autocomplete
+            inputRef={vendorSearchRef}
             options={vendors}
             labelKey="name"
             valueKey="id"
@@ -271,7 +304,7 @@ function PurchaseInvoice() {
   const [customInvoiceNo, setCustomInvoiceNo] = useState("");
   const [vendorId, setVendorId] = useState(null);
   
-  const [purchaseItems, setPurchaseItems] = useState([
+  const [purchaseItems, setPurchaseItems] = useState(() => [
     {
       id: Date.now(),
       itemId: "",
@@ -290,20 +323,19 @@ function PurchaseInvoice() {
   const [messageType, setMessageType] = useState("");
   const [showSaveModal, setShowSaveModal] = useState(false);
 
+  // Focus & Progression Refs
+  const vendorSearchRef = useRef(null);
+  const itemSearchRefs = useRef({});
+  const quantityRefs = useRef({});
+  const [focusTarget, setFocusTarget] = useState(null);
+
   // Zustand Master Data Cache
   const vendors = useStore((state) => state.vendors);
   const items = useStore((state) => state.items);
   const fetchVendors = useStore((state) => state.fetchVendors);
   const fetchItems = useStore((state) => state.fetchItems);
 
-  // Fetch Masters and Purchases on Mount
-  useEffect(() => {
-    fetchVendors();
-    fetchItems();
-    fetchPurchaseInvoices();
-  }, []);
-
-  const fetchPurchaseInvoices = async () => {
+  const fetchPurchaseInvoices = useCallback(async () => {
     setLoadingPurchases(true);
     try {
       const res = await api.get("/transactions/purchase-invoices");
@@ -313,9 +345,21 @@ function PurchaseInvoice() {
     } finally {
       setLoadingPurchases(false);
     }
-  };
+  }, []);
 
-  const handlePrintInvoice = async (invoiceId, layout) => {
+  const handlePrintInvoice = useCallback(async (invoiceId, layout) => {
+    if (layout.toLowerCase() === "thermal") {
+      const width = 450;
+      const height = 600;
+      const left = (window.screen.width - width) / 2;
+      const top = (window.screen.height - height) / 2;
+      window.open(
+        `/print/thermal-invoice/${invoiceId}?type=purchase`,
+        "Thermal Invoice Print",
+        `width=${width},height=${height},left=${left},top=${top},status=no,resizable=yes,scrollbars=yes`
+      );
+      return;
+    }
     try {
       const res = await api.get(`/pdf/invoices/${invoiceId}?layout=${layout}`);
       if (res.data.pdfUrl) {
@@ -329,13 +373,88 @@ function PurchaseInvoice() {
       setMessage("Error generating PDF invoice.");
       setMessageType("error");
     }
-  };
+  }, []);
 
   const selectedVendor = vendors.find((v) => v.id === vendorId);
 
-  const addRow = () => {
+  const savePurchase = useCallback(async () => {
+    if (!purchaseDate) {
+      setMessage("Purchase Date is required");
+      setMessageType("error");
+      return;
+    }
+
+    if (!vendorId) {
+      setMessage("Vendor selection is required");
+      setMessageType("error");
+      return;
+    }
+
+    const hasInvalidItem = purchaseItems.some(
+      (item) => !item.itemId || Number(item.qty) <= 0
+    );
+
+    if (hasInvalidItem) {
+      setMessage("Please select a valid Item and enter Quantity for all rows");
+      setMessageType("warning");
+      return;
+    }
+
+    try {
+      const payload = {
+        vendorId,
+        invoiceDate: purchaseDate,
+        invoiceNo: customInvoiceNo || undefined,
+        items: purchaseItems.map((item) => ({
+          itemId: item.itemId,
+          qty: item.qty
+        }))
+      };
+
+      await api.post("/transactions/purchase-invoices", payload);
+
+      await fetchItems(true);
+      await fetchVendors(true);
+
+      fetchPurchaseInvoices();
+
+      setVendorId(null);
+      setCustomInvoiceNo("");
+      setPurchaseItems([
+        {
+          id: Date.now(),
+          itemId: "",
+          itemName: "",
+          qty: 1,
+          rate: 0,
+          gstPercentage: 0,
+          amount: 0,
+          currentStock: 0
+        },
+      ]);
+
+      setMessage("Purchase Invoice saved successfully!");
+      setMessageType("success");
+      setShowSaveModal(true);
+
+      setTimeout(() => {
+        setMessage("");
+      }, 4000);
+    } catch (err) {
+      console.error("Failed to create purchase invoice:", err);
+      const errorMsg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        "Failed to save purchase invoice";
+      setMessage(errorMsg);
+      setMessageType("error");
+    }
+  }, [purchaseDate, vendorId, customInvoiceNo, purchaseItems, fetchItems, fetchVendors, fetchPurchaseInvoices]);
+
+  const addRow = useCallback(() => {
+    const newId = Date.now();
     const newRow = {
-      id: Date.now(),
+      id: newId,
       itemId: "",
       itemName: "",
       qty: 1,
@@ -344,8 +463,69 @@ function PurchaseInvoice() {
       amount: 0,
       currentStock: 0
     };
-    setPurchaseItems([...purchaseItems, newRow]);
-  };
+    setPurchaseItems((prev) => [...prev, newRow]);
+    setFocusTarget({ id: newId, type: "item" });
+  }, []);
+
+  // Fetch Masters and Purchases on Mount
+  useEffect(() => {
+    fetchVendors();
+    fetchItems();
+    const timer = setTimeout(() => {
+      fetchPurchaseInvoices();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [fetchVendors, fetchItems, fetchPurchaseInvoices]);
+
+  // Focus target useEffect
+  useEffect(() => {
+    if (focusTarget) {
+      const { id, type } = focusTarget;
+      const timer = setTimeout(() => {
+        if (type === "item" && itemSearchRefs.current[id]) {
+          itemSearchRefs.current[id].focus();
+        } else if (type === "qty" && quantityRefs.current[id]) {
+          quantityRefs.current[id].focus();
+          quantityRefs.current[id].select();
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [focusTarget]);
+
+  // Global keydown listeners (F2, Ctrl+P, Alt+N, Alt+C)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.altKey && e.key.toLowerCase() === "n") {
+        e.preventDefault();
+        addRow();
+      }
+      if (e.key === "F2") {
+        e.preventDefault();
+        savePurchase();
+      }
+      if (e.ctrlKey && e.key.toLowerCase() === "p") {
+        e.preventDefault();
+        if (savedPurchases.length > 0) {
+          handlePrintInvoice(savedPurchases[0].id, "thermal");
+        } else {
+          setMessage("No invoices saved to print.");
+          setMessageType("warning");
+        }
+      }
+      if (e.altKey && e.key.toLowerCase() === "c") {
+        e.preventDefault();
+        if (vendorSearchRef.current) {
+          vendorSearchRef.current.focus();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [purchaseItems, savedPurchases, handlePrintInvoice, savePurchase, addRow]);
 
   const removeRow = (id) => {
     if (purchaseItems.length === 1) {
@@ -378,6 +558,8 @@ function PurchaseInvoice() {
       return item;
     });
     setPurchaseItems(updatedItems);
+
+    setFocusTarget({ id, type: "qty" });
   };
 
   const clearItemDetails = (id) => {
@@ -428,82 +610,6 @@ function PurchaseInvoice() {
     0
   );
 
-  const savePurchase = async () => {
-    if (!purchaseDate) {
-      setMessage("Purchase Date is required");
-      setMessageType("error");
-      return;
-    }
-
-    if (!vendorId) {
-      setMessage("Vendor selection is required");
-      setMessageType("error");
-      return;
-    }
-
-    const hasInvalidItem = purchaseItems.some(
-      (item) => !item.itemId || Number(item.qty) <= 0
-    );
-
-    if (hasInvalidItem) {
-      setMessage("Please select a valid Item and enter Quantity for all rows");
-      setMessageType("warning");
-      return;
-    }
-
-    try {
-      const payload = {
-        vendorId,
-        invoiceDate: purchaseDate,
-        invoiceNo: customInvoiceNo || undefined,
-        items: purchaseItems.map((item) => ({
-          itemId: item.itemId,
-          qty: item.qty
-        }))
-      };
-
-      await api.post("/transactions/purchase-invoices", payload);
-
-      // Force refresh of Master Items to get updated database stock levels!
-      await fetchItems(true);
-      await fetchVendors(true);
-
-      // Reload saved purchases table
-      fetchPurchaseInvoices();
-
-      // Reset Form state
-      setVendorId(null);
-      setCustomInvoiceNo("");
-      setPurchaseItems([
-        {
-          id: Date.now(),
-          itemId: "",
-          itemName: "",
-          qty: 1,
-          rate: 0,
-          gstPercentage: 0,
-          amount: 0,
-          currentStock: 0
-        },
-      ]);
-
-      setMessage("Purchase Invoice saved successfully!");
-      setMessageType("success");
-      setShowSaveModal(true);
-
-      setTimeout(() => {
-        setMessage("");
-      }, 4000);
-    } catch (err) {
-      console.error("Failed to create purchase invoice:", err);
-      const errorMsg =
-        err.response?.data?.error ||
-        err.response?.data?.message ||
-        "Failed to save purchase invoice";
-      setMessage(errorMsg);
-      setMessageType("error");
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -536,6 +642,8 @@ function PurchaseInvoice() {
             updateItemQty={updateItemQty}
             removeRow={removeRow}
             addRow={addRow}
+            itemSearchRefs={itemSearchRefs}
+            quantityRefs={quantityRefs}
           />
         </div>
 
@@ -553,6 +661,7 @@ function PurchaseInvoice() {
             totalQty={totalQty}
             grandTotal={grandTotal}
             savePurchase={savePurchase}
+            vendorSearchRef={vendorSearchRef}
           />
         </div>
       </div>

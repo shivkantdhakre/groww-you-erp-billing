@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { useStore } from "../../store/useStore";
 import "./ComplianceDashboard.css"; // We will create a beautiful style sheet for this page
@@ -28,7 +28,6 @@ export default function ComplianceDashboard() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
-  const [authSession, setAuthSession] = useState({ token: null, expiresAt: null });
 
   // Cooldown, Warning & Reconciliations states
   const [otpCooldown, setOtpCooldown] = useState(0);
@@ -41,12 +40,12 @@ export default function ComplianceDashboard() {
   const [resolvingId, setResolvingId] = useState(null);
 
   // Axios config with headers
-  const getAxiosConfig = () => ({
+  const getAxiosConfig = useCallback(() => ({
     headers: { Authorization: `Bearer ${token}` },
-  });
+  }), [token]);
 
   // 1. Fetch data on load or date change
-  const loadComplianceData = async () => {
+  const loadComplianceData = useCallback(async () => {
     setLoading(true);
     setErrorMsg("");
     setSuccessMsg("");
@@ -79,7 +78,6 @@ export default function ComplianceDashboard() {
           getAxiosConfig()
         );
         const { active: isSessionActive, expiresAt: sessionExpiresAt } = sessionStatusRes.data;
-        setAuthSession({ token: isSessionActive ? "active" : null, expiresAt: sessionExpiresAt ? new Date(sessionExpiresAt) : null });
 
         if (isSessionActive && sessionExpiresAt) {
           const remainingMs = new Date(sessionExpiresAt).getTime() - Date.now();
@@ -127,13 +125,16 @@ export default function ComplianceDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [month, year, getAxiosConfig]);
 
   useEffect(() => {
     if (token) {
-      loadComplianceData();
+      const timer = setTimeout(() => {
+        loadComplianceData();
+      }, 0);
+      return () => clearTimeout(timer);
     }
-  }, [month, year, token]);
+  }, [token, loadComplianceData]);
 
   // Initialize and run OTP cooldown countdown timer
   useEffect(() => {
@@ -141,7 +142,10 @@ export default function ComplianceDashboard() {
     if (expiry) {
       const remaining = Math.ceil((parseInt(expiry) - Date.now()) / 1000);
       if (remaining > 0) {
-        setOtpCooldown(remaining);
+        const timer = setTimeout(() => {
+          setOtpCooldown(remaining);
+        }, 0);
+        return () => clearTimeout(timer);
       }
     }
   }, []);
@@ -176,6 +180,7 @@ export default function ComplianceDashboard() {
       localStorage.setItem("gsp_otp_cooldown_expiry", String(expiry));
       setOtpCooldown(180);
     } catch (err) {
+      console.error("Failed to trigger portal OTP:", err);
       setErrorMsg("Failed to trigger portal OTP. Check GSP configurations.");
     }
   };
@@ -188,12 +193,11 @@ export default function ComplianceDashboard() {
     if (!otp) return;
 
     try {
-      const res = await axios.post(
+      await axios.post(
         "http://localhost:5000/api/compliance/gst/otp/verify",
         { otp },
         getAxiosConfig()
       );
-      setAuthSession({ token: res.data.token, expiresAt: new Date(res.data.expiresAt) });
       setSuccessMsg("Portal session established successfully!");
       setShowOtpModal(false);
       setOtp("");
@@ -220,6 +224,7 @@ export default function ComplianceDashboard() {
       setSuccessMsg("Return record written off successfully. It will be ignored in GSTR-1 compilation.");
       loadComplianceData();
     } catch (err) {
+      console.error("Write off failed:", err);
       setErrorMsg("Failed to write off return record.");
     } finally {
       setResolvingId(null);
@@ -277,6 +282,7 @@ export default function ComplianceDashboard() {
       );
       setPreviewData(res.data);
     } catch (err) {
+      console.error("Preview GSTR-1 failed:", err);
       setErrorMsg("Failed to load GSTR-1 preview data.");
     }
   };

@@ -10,7 +10,8 @@ function Autocomplete({
   selectedId = null,
   onClear = null,
   searchFields = ["name"],
-  customRender = null
+  customRender = null,
+  inputRef = null
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -34,16 +35,22 @@ function Autocomplete({
   }, []);
 
   useEffect(() => {
-    if (selectedOption) {
-      setSearchTerm(selectedOption[labelKey]);
-    } else {
-      setSearchTerm("");
-    }
+    const timer = setTimeout(() => {
+      if (selectedOption) {
+        setSearchTerm(selectedOption[labelKey]);
+      } else {
+        setSearchTerm("");
+      }
+    }, 0);
+    return () => clearTimeout(timer);
   }, [selectedOption, labelKey]);
 
   // Reset active index when list opens or filters change
   useEffect(() => {
-    setActiveIndex(-1);
+    const timer = setTimeout(() => {
+      setActiveIndex(-1);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [searchTerm, isOpen]);
 
   // Reposition dropdown on scroll/resize while open
@@ -193,6 +200,7 @@ function Autocomplete({
     <div ref={wrapperRef} className="relative w-full">
       <div className="relative">
         <input
+          ref={inputRef}
           type="text"
           value={searchTerm}
           onChange={handleInputChange}

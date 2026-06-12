@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useStore } from "../../store/useStore";
 import api from "../../utils/api";
 
@@ -14,11 +14,7 @@ function CustomerLedger() {
   const [ledgerData, setLedgerData] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
-
-  const loadLedger = async () => {
+  const loadLedger = useCallback(async () => {
     if (!selectedCustomer) return;
     setLoading(true);
     try {
@@ -32,15 +28,26 @@ function CustomerLedger() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedCustomer, fromDate, toDate]);
+
+  useEffect(() => {
+    fetchCustomers().catch((err) => console.error("Failed to fetch customers:", err));
+  }, [fetchCustomers]);
 
   useEffect(() => {
     if (selectedCustomer) {
-      loadLedger();
+      // Defer to prevent calling setState synchronously within the effect body
+      const timer = setTimeout(() => {
+        loadLedger();
+      }, 0);
+      return () => clearTimeout(timer);
     } else {
-      setLedgerData(null);
+      const timer = setTimeout(() => {
+        setLedgerData(null);
+      }, 0);
+      return () => clearTimeout(timer);
     }
-  }, [selectedCustomer]);
+  }, [selectedCustomer, loadLedger]);
 
   const totalDebit =
     ledgerData?.transactions
@@ -55,19 +62,19 @@ function CustomerLedger() {
   const outstandingBalance = (ledgerData?.openingBalance || 0) + totalDebit - totalCredit;
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold mb-6">
+    <div className="space-y-6 text-foreground">
+      <h1 className="text-3xl font-bold text-foreground">
         Customer Ledger
       </h1>
 
-      <div className="bg-white p-5 rounded-xl shadow">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block mb-2 font-medium">Customer</label>
+      <div className="bg-card p-5 rounded-xl border border-border shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="flex flex-col">
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Customer</label>
             <select
               value={selectedCustomer}
               onChange={(e) => setSelectedCustomer(e.target.value)}
-              className="border p-3 rounded-lg w-full"
+              className="border border-border p-3 rounded-lg bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent cursor-pointer w-full"
             >
               <option value="">Select Customer</option>
               {customers.filter(c => c.isActive).map((customer) => (
@@ -78,30 +85,30 @@ function CustomerLedger() {
             </select>
           </div>
 
-          <div>
-            <label className="block mb-2 font-medium">From Date</label>
+          <div className="flex flex-col">
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">From Date</label>
             <input
               type="date"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
-              className="border p-3 rounded-lg w-full"
+              className="border border-border p-3 rounded-lg bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent w-full"
             />
           </div>
 
-          <div>
-            <label className="block mb-2 font-medium">To Date</label>
+          <div className="flex flex-col">
+            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">To Date</label>
             <input
               type="date"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
-              className="border p-3 rounded-lg w-full"
+              className="border border-border p-3 rounded-lg bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent w-full"
             />
           </div>
 
           <div className="flex items-end">
             <button
               onClick={loadLedger}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg w-full cursor-pointer"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-3 px-6 rounded-lg w-full cursor-pointer transition shadow-sm"
             >
               Search
             </button>
@@ -116,7 +123,7 @@ function CustomerLedger() {
                 setSearchTerm("");
                 setLedgerData(null);
               }}
-              className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg w-full cursor-pointer"
+              className="bg-secondary hover:bg-secondary/80 text-secondary-foreground font-semibold py-3 px-6 rounded-lg w-full cursor-pointer transition"
             >
               Reset
             </button>
@@ -125,107 +132,120 @@ function CustomerLedger() {
       </div>
 
       {loading && (
-        <div className="text-center mt-6 text-gray-500 font-semibold">
-          Loading ledger records...
+        <div className="text-center mt-6 text-muted-foreground font-semibold flex items-center justify-center gap-2">
+          <svg className="animate-spin h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+          <span>Loading ledger records...</span>
         </div>
       )}
 
       {ledgerData && !loading && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
-            <div className="bg-white p-5 rounded-xl shadow">
-              <p className="text-gray-500">Opening Balance</p>
-              <p className="text-2xl font-bold text-blue-600">
+            <div className="bg-card p-5 rounded-xl border border-border shadow-sm">
+              <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">Opening Balance</p>
+              <p className="text-2xl font-bold text-primary mt-1">
                 ₹ {ledgerData.openingBalance.toFixed(2)}
               </p>
             </div>
 
-            <div className="bg-white p-5 rounded-xl shadow">
-              <p className="text-gray-500">Total Debit (Invoices/Charges)</p>
-              <p className="text-2xl font-bold text-green-600">
+            <div className="bg-card p-5 rounded-xl border border-border shadow-sm">
+              <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">Total Debit (Invoices/Charges)</p>
+              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-500 mt-1">
                 ₹ {totalDebit.toFixed(2)}
               </p>
             </div>
 
-            <div className="bg-white p-5 rounded-xl shadow">
-              <p className="text-gray-500">Total Credit (Receipts/Returns)</p>
-              <p className="text-2xl font-bold text-orange-600">
+            <div className="bg-card p-5 rounded-xl border border-border shadow-sm">
+              <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">Total Credit (Receipts/Returns)</p>
+              <p className="text-2xl font-bold text-orange-500 dark:text-orange-400 mt-1">
                 ₹ {totalCredit.toFixed(2)}
               </p>
             </div>
 
-            <div className="bg-white p-5 rounded-xl shadow">
-              <p className="text-gray-500">Outstanding Balance</p>
-              <p className="text-2xl font-bold text-red-600">
+            <div className="bg-card p-5 rounded-xl border border-border shadow-sm">
+              <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">Outstanding Balance</p>
+              <p className="text-2xl font-bold text-destructive mt-1">
                 ₹ {outstandingBalance.toFixed(2)}
               </p>
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-xl shadow mt-6">
-            <h2 className="text-xl font-bold mb-4">
-              Ledger Transactions
-            </h2>
+          <div className="bg-card rounded-xl border border-border shadow-sm mt-6 overflow-hidden">
+            <div className="p-5 border-b border-border flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <h2 className="text-xl font-bold text-foreground">
+                Ledger Transactions
+              </h2>
 
-            <div className="flex justify-between mb-4">
-              <input
-                type="text"
-                placeholder="Search Reference..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="border p-2 rounded-lg w-72"
-              />
+              <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+                <input
+                  type="text"
+                  placeholder="Search Reference..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="border border-border p-2.5 rounded-lg bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent w-full md:w-64"
+                />
 
-              <div className="flex gap-2">
                 <button
                   onClick={() => window.print()}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg cursor-pointer"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-4 py-2 rounded-lg cursor-pointer transition shadow-sm text-sm no-print"
                 >
                   Print Ledger
                 </button>
               </div>
             </div>
 
-            <table className="w-full">
-              <thead className="bg-blue-600 text-white">
-                <tr>
-                  <th className="p-3">Date</th>
-                  <th className="p-3">Reference / Details</th>
-                  <th className="p-3">Voucher Type</th>
-                  <th className="p-3">Debit (Dr)</th>
-                  <th className="p-3">Credit (Cr)</th>
-                  <th className="p-3">Running Balance</th>
-                </tr>
-              </thead>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-secondary/40 text-muted-foreground border-b border-border">
+                  <tr>
+                    <th className="p-4 text-left font-semibold">Date</th>
+                    <th className="p-4 text-left font-semibold">Reference / Details</th>
+                    <th className="p-4 text-left font-semibold">Voucher Type</th>
+                    <th className="p-4 text-right font-semibold">Debit (Dr)</th>
+                    <th className="p-4 text-right font-semibold">Credit (Cr)</th>
+                    <th className="p-4 text-right font-semibold">Running Balance</th>
+                  </tr>
+                </thead>
 
-              <tbody>
-                <tr className="bg-gray-50 font-semibold border-b">
-                  <td className="p-3" colSpan="3">Opening Balance Forward</td>
-                  <td className="p-3">₹ 0.00</td>
-                  <td className="p-3">₹ 0.00</td>
-                  <td className="p-3 text-blue-600">₹ {ledgerData.openingBalance.toFixed(2)}</td>
-                </tr>
-                {ledgerData.transactions
-                  .filter((tx) =>
-                    tx.reference
-                      .toLowerCase()
-                      .includes(searchTerm.toLowerCase())
-                  )
-                  .map((tx, index) => (
-                    <tr key={index} className={`border-t text-center ${tx.isCancelled ? "bg-red-50 text-gray-400 line-through" : ""}`}>
-                      <td className="p-3">{tx.date}</td>
-                      <td className="p-3 text-left">{tx.reference}</td>
-                      <td className="p-3">
-                        {tx.type}
-                        {tx.isCancelled && <span className="text-red-500 text-xs font-bold ml-1">(Voided)</span>}
+                <tbody className="divide-y divide-border">
+                  <tr className="bg-secondary/20 font-semibold">
+                    <td className="p-4 text-left text-foreground" colSpan="3">Opening Balance Forward</td>
+                    <td className="p-4 text-right font-mono text-muted-foreground">₹ 0.00</td>
+                    <td className="p-4 text-right font-mono text-muted-foreground">₹ 0.00</td>
+                    <td className="p-4 text-right font-mono text-primary">₹ {ledgerData.openingBalance.toFixed(2)}</td>
+                  </tr>
+                  {ledgerData.transactions
+                    .filter((tx) =>
+                      tx.reference
+                        .toLowerCase()
+                        .includes(searchTerm.toLowerCase())
+                    )
+                    .map((tx, index) => (
+                      <tr key={index} className={`hover:bg-secondary/20 transition-colors duration-150 ${tx.isCancelled ? "bg-destructive/10 text-muted-foreground line-through" : ""}`}>
+                        <td className="p-4 text-muted-foreground">{tx.date}</td>
+                        <td className="p-4 text-left text-foreground font-medium">{tx.reference}</td>
+                        <td className="p-4 text-foreground">
+                          {tx.type}
+                          {tx.isCancelled && <span className="text-destructive text-xs font-bold ml-1.5">(Voided)</span>}
+                        </td>
+                        <td className="p-4 text-right font-mono text-emerald-600 dark:text-emerald-500">₹ {tx.debit.toFixed(2)}</td>
+                        <td className="p-4 text-right font-mono text-orange-500 dark:text-orange-400">₹ {tx.credit.toFixed(2)}</td>
+                        <td className="p-4 text-right font-mono font-bold text-primary">₹ {tx.balance.toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  {ledgerData.transactions.length === 0 && (
+                    <tr>
+                      <td colSpan="6" className="p-8 text-center text-muted-foreground font-medium">
+                        No transactions recorded for this customer in the selected period.
                       </td>
-                      <td className="p-3 text-green-600">₹ {tx.debit.toFixed(2)}</td>
-                      <td className="p-3 text-orange-600">₹ {tx.credit.toFixed(2)}</td>
-                      <td className="p-3 font-semibold text-blue-600">₹ {tx.balance.toFixed(2)}</td>
                     </tr>
-                  ))}
-              </tbody>
-            </table>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </>
       )}

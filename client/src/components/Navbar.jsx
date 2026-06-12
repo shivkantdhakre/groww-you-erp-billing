@@ -49,7 +49,6 @@ function Navbar() {
   // Debounced search logic
   useEffect(() => {
     if (!search.trim()) {
-      setSearchResults([]);
       return;
     }
 
@@ -68,6 +67,14 @@ function Navbar() {
     return () => clearTimeout(delayDebounceFn);
   }, [search]);
 
+  const handleSearchChange = (e) => {
+    const val = e.target.value;
+    setSearch(val);
+    if (!val.trim()) {
+      setSearchResults([]);
+    }
+  };
+
   const handleResultClick = (result) => {
     setSearch("");
     setSearchResults([]);
@@ -85,7 +92,7 @@ function Navbar() {
           type="text"
           placeholder="Search Customers, Vendors, Invoices, Items..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={handleSearchChange}
           className="w-full border border-border bg-card text-foreground p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
         />
 

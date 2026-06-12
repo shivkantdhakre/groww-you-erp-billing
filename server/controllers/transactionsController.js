@@ -154,6 +154,7 @@ export const createSalesInvoice = async (req, res) => {
           itemId,
           qty,
           price,
+          purchasePrice: dbItem.purchasePrice,
           gstPercentage,
           gstAmount,
           total
@@ -185,6 +186,7 @@ export const createSalesInvoice = async (req, res) => {
               itemId: item.itemId,
               qty: item.qty,
               price: item.price,
+              purchasePrice: item.purchasePrice,
               gstPercentage: item.gstPercentage,
               gstAmount: item.gstAmount,
               total: item.total
@@ -260,6 +262,70 @@ export const createSalesInvoice = async (req, res) => {
     }
     
     res.status(400).json({ error: error.message });
+  }
+};
+
+// Fetch a single sales invoice by ID
+export const getSalesInvoiceById = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const invoice = await prisma.invoice.findFirst({
+      where: {
+        id: parseInt(id),
+        companyId: req.user.companyId,
+        branchId: req.user.branchId,
+        invoiceType: "SALE"
+      },
+      include: {
+        customer: true,
+        items: {
+          include: {
+            item: true
+          }
+        }
+      }
+    });
+
+    if (!invoice) {
+      return res.status(404).json({ error: "Invoice not found or unauthorized" });
+    }
+
+    res.status(200).json(invoice);
+  } catch (error) {
+    console.error("Error fetching sales invoice by id:", error);
+    res.status(500).json({ error: "Failed to fetch sales invoice" });
+  }
+};
+
+// Fetch a single purchase invoice by ID
+export const getPurchaseInvoiceById = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const invoice = await prisma.invoice.findFirst({
+      where: {
+        id: parseInt(id),
+        companyId: req.user.companyId,
+        branchId: req.user.branchId,
+        invoiceType: "PURCHASE"
+      },
+      include: {
+        vendor: true,
+        items: {
+          include: {
+            item: true
+          }
+        }
+      }
+    });
+
+    if (!invoice) {
+      return res.status(404).json({ error: "Invoice not found or unauthorized" });
+    }
+
+    res.status(200).json(invoice);
+  } catch (error) {
+    console.error("Error fetching purchase invoice by id:", error);
+    res.status(500).json({ error: "Failed to fetch purchase invoice" });
   }
 };
 
@@ -386,6 +452,7 @@ export const createPurchaseInvoice = async (req, res) => {
           itemId,
           qty,
           price,
+          purchasePrice: price,
           gstPercentage,
           gstAmount,
           total
@@ -411,6 +478,7 @@ export const createPurchaseInvoice = async (req, res) => {
               itemId: item.itemId,
               qty: item.qty,
               price: item.price,
+              purchasePrice: item.purchasePrice,
               gstPercentage: item.gstPercentage,
               gstAmount: item.gstAmount,
               total: item.total

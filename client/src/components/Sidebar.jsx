@@ -66,27 +66,30 @@ function Sidebar() {
 
     // Auto-open active categories on route change
     useEffect(() => {
-        if (["/customers", "/vendors", "/inventory"].includes(pathname)) {
-            setMasters(true);
-        }
-        if (["/sales-invoice", "/sales-return"].includes(pathname)) {
-            setSales(true);
-        }
-        if (["/purchase-invoice", "/purchase-return"].includes(pathname)) {
-            setPurchase(true);
-        }
-        if (["/payment-voucher", "/receipt-voucher", "/journal-voucher", "/contra-voucher"].includes(pathname)) {
-            setAccounts(true);
-        }
-        if (["/customer-ledger", "/vendor-ledger", "/cash-book", "/bank-book", "/day-book"].includes(pathname)) {
-            setBooks(true);
-        }
-        if (["/reports-dashboard", "/sales-report", "/purchase-report", "/stock-report", "/outstanding-report", "/compliance-dashboard"].includes(pathname)) {
-            setReports(true);
-        }
-        if (["/company-settings", "/user-management", "/role-management", "/backup-restore"].includes(pathname)) {
-            setSettings(true);
-        }
+        const timer = setTimeout(() => {
+            if (["/customers", "/vendors", "/inventory"].includes(pathname)) {
+                setMasters(true);
+            }
+            if (["/sales-invoice", "/sales-return"].includes(pathname)) {
+                setSales(true);
+            }
+            if (["/purchase-invoice", "/purchase-return"].includes(pathname)) {
+                setPurchase(true);
+            }
+            if (["/payment-voucher", "/receipt-voucher", "/journal-voucher", "/contra-voucher"].includes(pathname)) {
+                setAccounts(true);
+            }
+            if (["/customer-ledger", "/vendor-ledger", "/cash-book", "/bank-book", "/day-book"].includes(pathname)) {
+                setBooks(true);
+            }
+            if (["/reports-dashboard", "/sales-report", "/purchase-report", "/stock-report", "/outstanding-report", "/compliance-dashboard"].includes(pathname)) {
+                setReports(true);
+            }
+            if (["/company-settings", "/user-management", "/role-management", "/backup-restore"].includes(pathname)) {
+                setSettings(true);
+            }
+        }, 0);
+        return () => clearTimeout(timer);
     }, [pathname]);
 
     // Helpers to style links
@@ -100,7 +103,7 @@ function Sidebar() {
         }`;
     };
 
-    const headerClass = (isOpen) =>
+    const headerClass = () =>
         `w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer hover:bg-secondary text-foreground`;
 
     return (
@@ -122,7 +125,7 @@ function Sidebar() {
 
                     {/* Masters Section */}
                     <div>
-                        <button onClick={() => setMasters(!masters)} className={headerClass(masters)}>
+                        <button onClick={() => setMasters(!masters)} className={headerClass()}>
                             <div className="flex items-center gap-3">
                                 <NavIcon icon={Database} className="text-muted-foreground" />
                                 <span>Masters</span>
@@ -147,7 +150,7 @@ function Sidebar() {
 
                     {/* Sales Section */}
                     <div>
-                        <button onClick={() => setSales(!sales)} className={headerClass(sales)}>
+                        <button onClick={() => setSales(!sales)} className={headerClass()}>
                             <div className="flex items-center gap-3">
                                 <NavIcon icon={TrendingUp} className="text-muted-foreground" />
                                 <span>Sales</span>
@@ -168,7 +171,7 @@ function Sidebar() {
 
                     {/* Purchase Section */}
                     <div>
-                        <button onClick={() => setPurchase(!purchase)} className={headerClass(purchase)}>
+                        <button onClick={() => setPurchase(!purchase)} className={headerClass()}>
                             <div className="flex items-center gap-3">
                                 <NavIcon icon={ShoppingCart} className="text-muted-foreground" />
                                 <span>Purchase</span>
@@ -189,7 +192,7 @@ function Sidebar() {
 
                     {/* Accounts Section */}
                     <div>
-                        <button onClick={() => setAccounts(!accounts)} className={headerClass(accounts)}>
+                        <button onClick={() => setAccounts(!accounts)} className={headerClass()}>
                             <div className="flex items-center gap-3">
                                 <NavIcon icon={Receipt} className="text-muted-foreground" />
                                 <span>Accounts</span>
@@ -218,7 +221,7 @@ function Sidebar() {
 
                     {/* Books Section */}
                     <div>
-                        <button onClick={() => setBooks(!books)} className={headerClass(books)}>
+                        <button onClick={() => setBooks(!books)} className={headerClass()}>
                             <div className="flex items-center gap-3">
                                 <NavIcon icon={BookOpen} className="text-muted-foreground" />
                                 <span>Books</span>
@@ -251,7 +254,7 @@ function Sidebar() {
 
                     {/* Reports Section */}
                     <div>
-                        <button onClick={() => setReports(!reports)} className={headerClass(reports)}>
+                        <button onClick={() => setReports(!reports)} className={headerClass()}>
                             <div className="flex items-center gap-3">
                                 <NavIcon icon={BarChart3} className="text-muted-foreground" />
                                 <span>Reports</span>
@@ -288,7 +291,7 @@ function Sidebar() {
 
                     {/* Settings Section */}
                     <div>
-                        <button onClick={() => setSettings(!settings)} className={headerClass(settings)}>
+                        <button onClick={() => setSettings(!settings)} className={headerClass()}>
                             <div className="flex items-center gap-3">
                                 <NavIcon icon={Settings} className="text-muted-foreground" />
                                 <span>Settings</span>

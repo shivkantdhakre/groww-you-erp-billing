@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useStore } from "../../store/useStore";
 import api from "../../utils/api";
 
@@ -13,12 +13,7 @@ function StockReport() {
   const [stockData, setStockData] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetchItems();
-    loadStockReport();
-  }, []);
-
-  const loadStockReport = async () => {
+  const loadStockReport = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.get(
@@ -31,7 +26,15 @@ function StockReport() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [category, itemId, stockStatus]);
+
+  useEffect(() => {
+    fetchItems();
+    const timer = setTimeout(() => {
+      loadStockReport();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [fetchItems, loadStockReport]);
 
   // Extract unique categories from items cache for filter dropdown
   const uniqueCategories = [...new Set(items.map((i) => i.category).filter(Boolean))];
@@ -53,22 +56,22 @@ function StockReport() {
   ).length;
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold">
+    <div className="space-y-6 text-foreground">
+      <h1 className="text-3xl font-bold tracking-tight">
         Stock Report
       </h1>
 
-      <p className="text-gray-500 mb-6">
+      <p className="text-muted-foreground mb-6">
         Track inventory stock status
       </p>
 
       {/* Filters */}
-      <div className="bg-white p-5 rounded-xl shadow mb-6">
+      <div className="bg-card p-5 rounded-xl border border-border shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card border border-border p-3 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <option value="">All Categories</option>
             {uniqueCategories.map((cat, idx) => (
@@ -79,7 +82,7 @@ function StockReport() {
           <select
             value={itemId}
             onChange={(e) => setItemId(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card border border-border p-3 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <option value="">All Items</option>
             {items.filter(i => i.isActive).map((item) => (
@@ -92,7 +95,7 @@ function StockReport() {
           <select
             value={stockStatus}
             onChange={(e) => setStockStatus(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card border border-border p-3 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <option value="">All Status</option>
             <option value="Low Stock">Low Stock</option>
@@ -101,7 +104,7 @@ function StockReport() {
 
           <button
             onClick={loadStockReport}
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg cursor-pointer"
+            className="bg-primary hover:bg-primary/95 text-primary-foreground font-semibold py-2 px-6 rounded-lg transition-colors cursor-pointer shadow-md"
           >
             Search
           </button>
@@ -109,7 +112,7 @@ function StockReport() {
       </div>
 
       {loading && (
-        <div className="text-center mt-6 text-gray-500 font-semibold">
+        <div className="text-center mt-6 text-muted-foreground font-semibold">
           Loading stock report...
         </div>
       )}
@@ -118,41 +121,41 @@ function StockReport() {
         <>
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white p-5 rounded-xl shadow">
-              <p className="text-gray-500">Total Items</p>
-              <p className="text-2xl font-bold text-blue-600">
+            <div className="bg-card border border-border p-5 rounded-xl shadow-sm">
+              <p className="text-muted-foreground">Total Items</p>
+              <p className="text-2xl font-bold text-primary">
                 {totalItems}
               </p>
             </div>
 
-            <div className="bg-white p-5 rounded-xl shadow">
-              <p className="text-gray-500">Total Stock Qty</p>
-              <p className="text-2xl font-bold text-green-600">
+            <div className="bg-card border border-border p-5 rounded-xl shadow-sm">
+              <p className="text-muted-foreground">Total Stock Qty</p>
+              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                 {totalStockQty}
               </p>
             </div>
 
-            <div className="bg-white p-5 rounded-xl shadow">
-              <p className="text-gray-500">Stock Value (at Cost)</p>
-              <p className="text-2xl font-bold text-purple-600">
+            <div className="bg-card border border-border p-5 rounded-xl shadow-sm">
+              <p className="text-muted-foreground">Stock Value (at Cost)</p>
+              <p className="text-2xl font-bold text-violet-600 dark:text-violet-400">
                 ₹ {stockValue.toFixed(2)}
               </p>
             </div>
 
-            <div className="bg-white p-5 rounded-xl shadow">
-              <p className="text-gray-500">Low Stock Items</p>
-              <p className="text-2xl font-bold text-red-600">
+            <div className="bg-card border border-border p-5 rounded-xl shadow-sm">
+              <p className="text-muted-foreground">Low Stock Items</p>
+              <p className="text-2xl font-bold text-rose-600 dark:text-rose-400">
                 {lowStockItems}
               </p>
             </div>
           </div>
 
           {/* Table */}
-          <div className="bg-white p-5 rounded-xl shadow">
+          <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
             <table className="w-full text-center">
-              <thead className="bg-blue-600 text-white">
+              <thead className="bg-muted text-muted-foreground border-b border-border text-sm font-semibold">
                 <tr>
-                  <th className="p-3">Item Name</th>
+                  <th className="p-3 text-left">Item Name</th>
                   <th className="p-3">Category</th>
                   <th className="p-3">Current Stock</th>
                   <th className="p-3">Purchase Rate</th>
@@ -162,24 +165,24 @@ function StockReport() {
                 </tr>
               </thead>
 
-              <tbody>
+              <tbody className="divide-y divide-border text-sm">
                 {stockData.map((item, index) => (
-                  <tr key={index} className="border-t">
-                    <td className="p-3 text-left">{item.itemName}</td>
-                    <td className="p-3">{item.category}</td>
-                    <td className="p-3">{item.currentStock}</td>
-                    <td className="p-3">₹ {item.purchaseRate.toFixed(2)}</td>
-                    <td className="p-3">₹ {item.saleRate.toFixed(2)}</td>
-                    <td className="p-3">
+                  <tr key={index} className="hover:bg-muted/50 transition-colors">
+                    <td className="p-3 text-left font-medium text-foreground">{item.itemName}</td>
+                    <td className="p-3 text-muted-foreground">{item.category}</td>
+                    <td className="p-3 font-semibold text-foreground">{item.currentStock}</td>
+                    <td className="p-3 text-muted-foreground">₹ {item.purchaseRate.toFixed(2)}</td>
+                    <td className="p-3 text-muted-foreground">₹ {item.saleRate.toFixed(2)}</td>
+                    <td className="p-3 font-medium text-foreground">
                       ₹ {(item.currentStock * item.purchaseRate).toFixed(2)}
                     </td>
                     <td className="p-3">
                       {item.currentStock < 10 ? (
-                        <span className="bg-red-100 text-red-600 px-3 py-1 rounded-full text-sm">
+                        <span className="bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 px-3 py-1 rounded-full text-xs font-semibold">
                           Low Stock
                         </span>
                       ) : (
-                        <span className="bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm">
+                        <span className="bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 px-3 py-1 rounded-full text-xs font-semibold">
                           In Stock
                         </span>
                       )}
@@ -188,7 +191,7 @@ function StockReport() {
                 ))}
                 {stockData.length === 0 && (
                   <tr>
-                    <td colSpan="7" className="p-6 text-gray-500 text-center">
+                    <td colSpan="7" className="p-6 text-muted-foreground text-center">
                       No stock records found matching filters.
                     </td>
                   </tr>

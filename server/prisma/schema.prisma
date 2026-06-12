@@ -179,6 +179,7 @@ model InvoiceItem {
   item           Item     @relation(fields: [itemId], references: [id])
   qty            Int
   price          Float
+  purchasePrice  Float    @default(0.0)
   gstPercentage  Float    @default(0.0)
   gstAmount      Float    @default(0.0)
   total          Float
