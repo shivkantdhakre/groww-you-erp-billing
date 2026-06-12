@@ -58,6 +58,7 @@ model Customer {
   name               String
   mobile             String
   address            String?
+  pincode            String                 @default("000000")
   gstin              String?
   openingBalance     Float                  @default(0.0)
   outstandingBalance Float                  @default(0.0)
@@ -81,6 +82,7 @@ model Vendor {
   name               String
   mobile             String
   address            String?
+  pincode            String                 @default("000000")
   gstin              String?
   openingBalance     Float                  @default(0.0)
   outstandingBalance Float                  @default(0.0)
@@ -108,6 +110,7 @@ model Item {
   openingStock     Int             @default(0)
   minStockAlert    Int             @default(0)
   isActive         Boolean         @default(true)
+  hsnCode          String          @default("000000")
   invoiceItems     InvoiceItem[]
   stockMovements   StockMovement[]
   returnItems      ReturnItem[]
@@ -140,6 +143,19 @@ model Invoice {
   branchId       Int
   branch         Branch        @relation(fields: [branchId], references: [id])
   pdfUrl         String?
+  dispatchPincode  String?
+  shippingPincode  String?
+  ewayBillNo       String?         @unique
+  ewayBillDate     DateTime?
+  transporterId    String?
+  transporterName  String?
+  transportMode    String?
+  vehicleNo        String?
+  distanceKm       Int?
+  gstFilingStatus  String          @default("PENDING")
+  gstFilingDate    DateTime?
+  
+  returns          Return[]
 
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
@@ -237,6 +253,8 @@ model Return {
   returnType     String       // "SALE" or "PURCHASE"
   returnDate     DateTime     @default(now())
   invoiceNo      String?      // Reference to original invoice number
+  invoiceId      Int?
+  invoice        Invoice?     @relation(fields: [invoiceId], references: [id])
   
   customerId     Int?
   customer       Customer?    @relation(fields: [customerId], references: [id])
@@ -289,6 +307,7 @@ model Branch {
   name                  String
   address               String?
   mobileNumber          String?
+  pincode               String                 @default("000000")
   isActive              Boolean                @default(true)
   
   users                 User[]

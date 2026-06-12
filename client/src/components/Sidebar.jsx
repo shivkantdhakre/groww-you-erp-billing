@@ -179,6 +179,9 @@ function Sidebar() {
                     <Link to="/outstanding-report" className="block p-2 hover:text-blue-400">
                         Outstanding Report
                     </Link>
+                    <Link to="/compliance-dashboard" className="block p-2 hover:text-blue-400">
+                        Compliance Dashboard
+                    </Link>
                 </div>
             )}
 

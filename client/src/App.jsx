@@ -35,6 +35,7 @@ import ContraVoucher from "./pages/accounts/ContraVoucher";
 
 import StockReport from "./pages/reports/StockReport";
 import OutstandingReport from "./pages/reports/OutstandingReport";
+import ComplianceDashboard from "./pages/reports/ComplianceDashboard";
 import CompanySettings from "./pages/settings/CompanySettings";
 import UserManagement from "./pages/settings/UserManagement";
 import RoleManagement from "./pages/settings/RoleManagement";
@@ -138,6 +139,10 @@ function App() {
               <Route
                 path="/outstanding-report"
                 element={<OutstandingReport />}
+              />
+              <Route
+                path="/compliance-dashboard"
+                element={<ComplianceDashboard />}
               />
               <Route
                 path="/company-settings"

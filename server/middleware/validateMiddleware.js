@@ -20,6 +20,7 @@ export const validate = (schema) => (req, res, next) => {
 // GSTIN pattern (15 characters alphanumeric)
 const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 const mobileRegex = /^[0-9]{10}$/;
+const pincodeRegex = /^[1-9][0-9]{5}$/;
 
 // 1. Forgot Password Schema
 export const forgotPasswordSchema = z.object({
@@ -42,6 +43,7 @@ export const companySettingsSchema = z.object({
   financialYear: z.string().nullish().or(z.literal("")),
   currentFinancialYearStart: z.string().datetime().nullish().or(z.string().date()).or(z.literal("")).nullish(),
   financialYearLocked: z.boolean().default(false),
+  pincode: z.string().regex(pincodeRegex, "Pincode must be exactly 6 digits").nullish().or(z.literal("")),
 });
 
 // 3. Customer Schema (for POST & PUT)
@@ -50,6 +52,7 @@ export const customerSchema = z.object({
   mobile: z.string().regex(mobileRegex, "Mobile number must be exactly 10 digits"),
   gstin: z.string().regex(gstinRegex, "Invalid GSTIN format").nullish().or(z.literal("")),
   address: z.string().nullish().or(z.literal("")),
+  pincode: z.string().regex(pincodeRegex, "Pincode must be exactly 6 digits"),
   openingBalance: z.number().default(0),
   creditLimit: z.number().default(0),
 });
@@ -60,6 +63,7 @@ export const vendorSchema = z.object({
   mobile: z.string().regex(mobileRegex, "Mobile number must be exactly 10 digits"),
   gstin: z.string().regex(gstinRegex, "Invalid GSTIN format").nullish().or(z.literal("")),
   address: z.string().nullish().or(z.literal("")),
+  pincode: z.string().regex(pincodeRegex, "Pincode must be exactly 6 digits"),
   openingBalance: z.number().default(0),
 });
 
@@ -76,5 +80,6 @@ export const itemSchema = z.object({
   }),
   openingStock: z.number().int("Opening Stock must be an integer").default(0),
   minStockAlert: z.number().int("Min Stock Alert must be an integer").default(10),
-  hsnCode: z.string().nullish().or(z.literal("")),
+  hsnCode: z.string().regex(/^[0-9]{4,8}$/, "HSN Code must be between 4 and 8 digits"),
+  hsnCodeText: z.string().nullish().or(z.literal("")), // optional compatibility placeholder
 });
