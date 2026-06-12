@@ -43,6 +43,13 @@ class GstService {
     return null;
   }
 
+  getSessionDetails() {
+    return {
+      token: this.getSessionToken(),
+      expiresAt: gspSession.expiresAt,
+    };
+  }
+
   /**
    * Compiles GSTR-1 payload for the company and month.
    */
@@ -159,7 +166,19 @@ class GstService {
 
     // Compile Credit Notes
     for (const ret of returns) {
-      if (ret.invoice) {
+      if (ret.isWrittenOff) {
+        continue;
+      }
+
+      const hasInvoice = ret.invoice;
+      const isLegacy = ret.legacyInvoiceNo && ret.legacyInvoiceDate;
+
+      if (hasInvoice || isLegacy) {
+        const inum = hasInvoice ? ret.invoice.invoiceNo : ret.legacyInvoiceNo;
+        const idt = hasInvoice 
+          ? ret.invoice.invoiceDate.toISOString().split('T')[0] 
+          : new Date(ret.legacyInvoiceDate).toISOString().split('T')[0];
+
         cdnr.push({
           ctin: ret.customer?.gstin || '',
           nt: [{
@@ -167,8 +186,8 @@ class GstService {
             nt_num: ret.returnNo,
             nt_dt: ret.returnDate.toISOString().split('T')[0],
             val: ret.grandTotal,
-            inum: ret.invoice.invoiceNo,
-            idt: ret.invoice.invoiceDate.toISOString().split('T')[0],
+            inum: inum,
+            idt: idt,
             pos: ret.customer?.gstin?.substring(0, 2) || '09',
             itms: ret.items.map((line, idx) => ({
               num: idx + 1,

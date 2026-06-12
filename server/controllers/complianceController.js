@@ -342,3 +342,126 @@ export const generateEwayBill = async (req, res) => {
     res.status(status).json({ error: error.message || 'E-way bill generation failed.' });
   }
 };
+
+/**
+ * GET /api/compliance/gst/session-status
+ * Exposes the active portal session token existence and expiration.
+ */
+export const getSessionStatus = async (req, res) => {
+  try {
+    const details = gstService.getSessionDetails();
+    res.status(200).json({
+      active: !!details.token,
+      expiresAt: details.expiresAt,
+    });
+  } catch (error) {
+    console.error('Session Status Error:', error);
+    res.status(500).json({ error: 'Failed to retrieve GSP session status.' });
+  }
+};
+
+/**
+ * GET /api/compliance/orphans
+ * Queries Prisma directly for all returns missing invoice references.
+ */
+export const getOrphanedReturns = async (req, res) => {
+  const companyId = req.user.companyId;
+  try {
+    const orphans = await prisma.return.findMany({
+      where: {
+        companyId,
+        invoiceId: null,
+        isWrittenOff: false,
+        legacyInvoiceNo: null,
+      },
+      include: {
+        customer: true,
+      },
+      orderBy: {
+        returnDate: 'desc',
+      },
+    });
+    res.status(200).json(orphans);
+  } catch (error) {
+    console.error('Get Orphaned Returns Error:', error);
+    res.status(500).json({ error: 'Failed to fetch orphaned returns.' });
+  }
+};
+
+/**
+ * POST /api/compliance/orphans/resolve
+ * Resolves an orphan return either by marking it as written off or by mapping it to a legacy/existing invoice.
+ */
+export const resolveOrphanReturn = async (req, res) => {
+  const { returnId, action, invoiceNo, invoiceDate } = req.body;
+  const companyId = req.user.companyId;
+
+  if (!returnId || !action) {
+    return res.status(400).json({ error: 'returnId and action are required.' });
+  }
+
+  try {
+    const returnRecord = await prisma.return.findFirst({
+      where: { id: parseInt(returnId), companyId },
+    });
+
+    if (!returnRecord) {
+      return res.status(404).json({ error: 'Return record not found.' });
+    }
+
+    if (action === 'WRITE_OFF') {
+      await prisma.return.update({
+        where: { id: returnRecord.id },
+        data: { isWrittenOff: true },
+      });
+      return res.status(200).json({ message: 'Return record written off successfully.' });
+    }
+
+    if (action === 'MAP_INVOICE') {
+      if (!invoiceNo || !invoiceDate) {
+        return res.status(400).json({ error: 'invoiceNo and invoiceDate are required for mapping.' });
+      }
+
+      const invDate = new Date(invoiceDate);
+      const retDate = new Date(returnRecord.returnDate);
+
+      // Chronological validation: original invoice date must precede or equal return date
+      if (invDate > retDate) {
+        return res.status(400).json({ 
+          error: 'CHRONOLOGICAL_ERROR', 
+          message: 'The original invoice date cannot be after the return date.' 
+        });
+      }
+
+      // Check if the invoice exists in our system
+      const existingInvoice = await prisma.invoice.findFirst({
+        where: { companyId, invoiceNo },
+      });
+
+      if (existingInvoice) {
+        await prisma.return.update({
+          where: { id: returnRecord.id },
+          data: {
+            invoiceId: existingInvoice.id,
+            invoiceNo: existingInvoice.invoiceNo,
+          },
+        });
+        return res.status(200).json({ message: 'Return successfully linked to existing invoice.' });
+      } else {
+        await prisma.return.update({
+          where: { id: returnRecord.id },
+          data: {
+            legacyInvoiceNo: invoiceNo,
+            legacyInvoiceDate: invDate,
+          },
+        });
+        return res.status(200).json({ message: 'Return successfully mapped to legacy/external invoice.' });
+      }
+    }
+
+    return res.status(400).json({ error: 'Invalid action specified.' });
+  } catch (error) {
+    console.error('Resolve Orphan Return Error:', error);
+    res.status(500).json({ error: 'Failed to resolve orphaned return.' });
+  }
+};

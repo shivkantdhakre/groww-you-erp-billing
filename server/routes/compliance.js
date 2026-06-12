@@ -7,6 +7,9 @@ import {
   fileGstr1,
   getGstr3bSummary,
   generateEwayBill,
+  getSessionStatus,
+  getOrphanedReturns,
+  resolveOrphanReturn,
 } from '../controllers/complianceController.js';
 import { verifyTokenAndTenant } from '../middleware/authMiddleware.js';
 
@@ -22,5 +25,8 @@ router.get('/gst/gstr1/preview', previewGstr1);
 router.post('/gst/gstr1/file', fileGstr1);
 router.get('/gst/gstr3b/summary', getGstr3bSummary);
 router.post('/ewaybill/generate/:invoiceId', generateEwayBill);
+router.get('/gst/session-status', getSessionStatus);
+router.get('/orphans', getOrphanedReturns);
+router.post('/orphans/resolve', resolveOrphanReturn);
 
 export default router;

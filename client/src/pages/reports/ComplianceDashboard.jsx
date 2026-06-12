@@ -30,6 +30,16 @@ export default function ComplianceDashboard() {
   const [successMsg, setSuccessMsg] = useState("");
   const [authSession, setAuthSession] = useState({ token: null, expiresAt: null });
 
+  // Cooldown, Warning & Reconciliations states
+  const [otpCooldown, setOtpCooldown] = useState(0);
+  const [proactiveWarning, setProactiveWarning] = useState(false);
+  const [orphanedReturns, setOrphanedReturns] = useState([]);
+  const [reconcilingReturn, setReconcilingReturn] = useState(null);
+  const [legacyInvoiceNo, setLegacyInvoiceNo] = useState("");
+  const [legacyInvoiceDate, setLegacyInvoiceDate] = useState("");
+  const [mappingError, setMappingError] = useState("");
+  const [resolvingId, setResolvingId] = useState(null);
+
   // Axios config with headers
   const getAxiosConfig = () => ({
     headers: { Authorization: `Bearer ${token}` },
@@ -62,6 +72,40 @@ export default function ComplianceDashboard() {
       });
       setInvoices(currentMonthInvoices);
 
+      // Fetch GSP session status
+      try {
+        const sessionStatusRes = await axios.get(
+          "http://localhost:5000/api/compliance/gst/session-status",
+          getAxiosConfig()
+        );
+        const { active: isSessionActive, expiresAt: sessionExpiresAt } = sessionStatusRes.data;
+        setAuthSession({ token: isSessionActive ? "active" : null, expiresAt: sessionExpiresAt ? new Date(sessionExpiresAt) : null });
+
+        if (isSessionActive && sessionExpiresAt) {
+          const remainingMs = new Date(sessionExpiresAt).getTime() - Date.now();
+          if (remainingMs > 0 && remainingMs < 30 * 60 * 1000) {
+            setProactiveWarning(true);
+          } else {
+            setProactiveWarning(false);
+          }
+        } else {
+          setProactiveWarning(false);
+        }
+      } catch (err) {
+        console.error("Error fetching session status:", err);
+      }
+
+      // Fetch orphaned returns
+      try {
+        const orphansRes = await axios.get(
+          "http://localhost:5000/api/compliance/orphans",
+          getAxiosConfig()
+        );
+        setOrphanedReturns(orphansRes.data);
+      } catch (err) {
+        console.error("Error fetching orphaned returns:", err);
+      }
+
       // Try fetching GSTR-3B summary (will fail with 401 if portal token expired)
       try {
         const gstrRes = await axios.get(
@@ -91,6 +135,32 @@ export default function ComplianceDashboard() {
     }
   }, [month, year, token]);
 
+  // Initialize and run OTP cooldown countdown timer
+  useEffect(() => {
+    const expiry = localStorage.getItem("gsp_otp_cooldown_expiry");
+    if (expiry) {
+      const remaining = Math.ceil((parseInt(expiry) - Date.now()) / 1000);
+      if (remaining > 0) {
+        setOtpCooldown(remaining);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (otpCooldown <= 0) return;
+    const interval = setInterval(() => {
+      setOtpCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          localStorage.removeItem("gsp_otp_cooldown_expiry");
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [otpCooldown]);
+
   // Request GSTN OTP
   const handleRequestOtp = async () => {
     setErrorMsg("");
@@ -102,6 +172,9 @@ export default function ComplianceDashboard() {
         getAxiosConfig()
       );
       setSuccessMsg("OTP request sent successfully! Enter code below.");
+      const expiry = Date.now() + 180 * 1000;
+      localStorage.setItem("gsp_otp_cooldown_expiry", String(expiry));
+      setOtpCooldown(180);
     } catch (err) {
       setErrorMsg("Failed to trigger portal OTP. Check GSP configurations.");
     }
@@ -124,10 +197,72 @@ export default function ComplianceDashboard() {
       setSuccessMsg("Portal session established successfully!");
       setShowOtpModal(false);
       setOtp("");
+      localStorage.removeItem("gsp_otp_cooldown_expiry");
+      setOtpCooldown(0);
       // Reload details now that session is active
       loadComplianceData();
     } catch (err) {
       setErrorMsg(err.response?.data?.error || "OTP verification failed.");
+    }
+  };
+
+  // Resolve orphaned returns by writing off
+  const handleWriteOff = async (returnId) => {
+    setErrorMsg("");
+    setSuccessMsg("");
+    setResolvingId(returnId);
+    try {
+      await axios.post(
+        "http://localhost:5000/api/compliance/orphans/resolve",
+        { returnId, action: "WRITE_OFF" },
+        getAxiosConfig()
+      );
+      setSuccessMsg("Return record written off successfully. It will be ignored in GSTR-1 compilation.");
+      loadComplianceData();
+    } catch (err) {
+      setErrorMsg("Failed to write off return record.");
+    } finally {
+      setResolvingId(null);
+    }
+  };
+
+  // Resolve orphaned returns by mapping
+  const handleMapSubmit = async (e) => {
+    e.preventDefault();
+    setMappingError("");
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    const retDate = new Date(reconcilingReturn.returnDate);
+    const invDate = new Date(legacyInvoiceDate);
+
+    // Client-side chronological check
+    if (invDate > retDate) {
+      setMappingError("The original invoice date cannot be after the return date.");
+      return;
+    }
+
+    setResolvingId(reconcilingReturn.id);
+    try {
+      await axios.post(
+        "http://localhost:5000/api/compliance/orphans/resolve",
+        {
+          returnId: reconcilingReturn.id,
+          action: "MAP_INVOICE",
+          invoiceNo: legacyInvoiceNo,
+          invoiceDate: legacyInvoiceDate,
+        },
+        getAxiosConfig()
+      );
+      setSuccessMsg("Return mapped successfully!");
+      setReconcilingReturn(null);
+      setLegacyInvoiceNo("");
+      setLegacyInvoiceDate("");
+      loadComplianceData();
+    } catch (err) {
+      setMappingError(err.response?.data?.message || err.response?.data?.error || "Failed to map return to invoice.");
+    } finally {
+      setResolvingId(null);
     }
   };
 
@@ -252,6 +387,19 @@ export default function ComplianceDashboard() {
       {errorMsg && <div className="alert-box error-alert">{errorMsg}</div>}
       {successMsg && <div className="alert-box success-alert">{successMsg}</div>}
 
+      {/* Proactive Token Refresh Suggestion */}
+      {proactiveWarning && (
+        <div className="alert-box warning-alert proactive-token-warning">
+          <div className="warning-content">
+            <h3>⚠️ Proactive Token Refresh Suggestion</h3>
+            <p>Your GSTN session token is older than 5.5 hours and will expire in less than 30 minutes. To prevent interruptions during heavy bulk filing operations, we recommend refreshing your session now.</p>
+          </div>
+          <button onClick={() => setShowOtpModal(true)} className="btn btn-primary btn-sm">
+            Refresh OTP Session
+          </button>
+        </div>
+      )}
+
       {/* 1. Portal Status Toolbar */}
       <div className="status-toolbar card-blur">
         <div className="status-indicator">
@@ -358,6 +506,52 @@ export default function ComplianceDashboard() {
         )}
       </div>
 
+      {/* Pending Reconciliations (Orphan Returns) Section */}
+      {orphanedReturns.length > 0 && (
+        <div className="section-panel card-blur pending-reconciliations-panel">
+          <h3 className="warning-text-title">⚠️ Pending Reconciliations: Orphaned Credit Notes</h3>
+          <p>The GST portal requires original invoice numbers and dates to file Credit Notes (CDNR). Resolve the orphans below by mapping them or writing them off.</p>
+          <table className="eway-table">
+            <thead>
+              <tr>
+                <th>Return No</th>
+                <th>Date</th>
+                <th>Customer</th>
+                <th>Amount</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {orphanedReturns.map((ret) => (
+                <tr key={ret.id}>
+                  <td><strong>{ret.returnNo}</strong></td>
+                  <td>{new Date(ret.returnDate).toLocaleDateString()}</td>
+                  <td>{ret.customer?.name || "Walk-in Customer"}</td>
+                  <td>₹{ret.grandTotal.toLocaleString()}</td>
+                  <td>
+                    <div className="actions-row">
+                      <button 
+                        onClick={() => setReconcilingReturn(ret)}
+                        className="btn btn-primary btn-sm"
+                      >
+                        Map Invoice
+                      </button>
+                      <button 
+                        onClick={() => handleWriteOff(ret.id)}
+                        disabled={resolvingId === ret.id}
+                        className="btn btn-secondary btn-sm"
+                      >
+                        {resolvingId === ret.id ? "Processing..." : "Write Off"}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       {/* 5. E-Way Bill Generation Panel */}
       <div className="section-panel card-blur">
         <h3>E-Way Bill Generation</h3>
@@ -412,8 +606,15 @@ export default function ComplianceDashboard() {
             <h3>Portal Authentication OTP</h3>
             <p>A verification code was sent by the GSP system to your registered mobile.</p>
             
-            <button onClick={handleRequestOtp} className="btn btn-secondary btn-sm mb-4">
-              Send Portal OTP
+            <button 
+              type="button"
+              onClick={handleRequestOtp} 
+              disabled={otpCooldown > 0}
+              className="btn btn-secondary btn-sm mb-4"
+            >
+              {otpCooldown > 0 
+                ? `Resend OTP (${Math.floor(otpCooldown / 60)}:${String(otpCooldown % 60).padStart(2, "0")})` 
+                : "Send Portal OTP"}
             </button>
 
             <form onSubmit={handleVerifyOtp}>
@@ -434,6 +635,61 @@ export default function ComplianceDashboard() {
                 </button>
                 <button type="submit" className="btn btn-success">
                   Verify & Connect
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ORPHAN MAPPING MODAL */}
+      {reconcilingReturn && (
+        <div className="modal-overlay">
+          <div className="modal-content card-blur">
+            <h3>Map Original Invoice - {reconcilingReturn.returnNo}</h3>
+            <p>Enter the original invoice details. If the invoice exists in the ERP, they will be linked. Otherwise, it will be mapped as a legacy external invoice.</p>
+            
+            {mappingError && <div className="alert-box error-alert">{mappingError}</div>}
+
+            <form onSubmit={handleMapSubmit}>
+              <div className="form-group">
+                <label>Original Invoice No:</label>
+                <input 
+                  type="text" 
+                  value={legacyInvoiceNo} 
+                  onChange={(e) => setLegacyInvoiceNo(e.target.value)} 
+                  placeholder="e.g. GY-2026-0001" 
+                  className="form-control"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Original Invoice Date:</label>
+                <input 
+                  type="date" 
+                  value={legacyInvoiceDate} 
+                  onChange={(e) => setLegacyInvoiceDate(e.target.value)} 
+                  className="form-control"
+                  required
+                />
+                <small className="help-text">Must be on or before the return date ({new Date(reconcilingReturn.returnDate).toLocaleDateString()})</small>
+              </div>
+
+              <div className="modal-actions">
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    setReconcilingReturn(null);
+                    setLegacyInvoiceNo("");
+                    setLegacyInvoiceDate("");
+                    setMappingError("");
+                  }} 
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button type="submit" disabled={resolvingId === reconcilingReturn.id} className="btn btn-success">
+                  {resolvingId === reconcilingReturn.id ? "Linking..." : "Link Invoice"}
                 </button>
               </div>
             </form>

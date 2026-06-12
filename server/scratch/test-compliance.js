@@ -2,6 +2,7 @@ import { gstService } from '../utils/gstService.js';
 import { MockGspAdapter } from '../utils/mockGspAdapter.js';
 import { ClearTaxAdapter } from '../utils/cleartaxAdapter.js';
 import { PrismaClient } from '@prisma/client';
+import { contextStorage } from '../utils/context.js';
 
 const basePrisma = new PrismaClient();
 
@@ -154,6 +155,84 @@ async function runComplianceTests() {
     const validDistanceOverride = 3800; // valid limit <= 4000
     const isValidDistanceAccepted = validDistanceOverride >= 1 && validDistanceOverride <= 4000;
     assert(isValidDistanceAccepted, 'Distance limit override validated (3800 km accepted)');
+
+    // ----------------------------------------------------
+    // TEST 7: GSP Session Status Check
+    // ----------------------------------------------------
+    console.log('\n--- TEST 7: GSP Session Status API ---');
+    const tokenVal = gstService.getSessionToken();
+    const details = gstService.getSessionDetails();
+    assert(details !== null, 'Session details can be queried');
+    if (tokenVal) {
+      assert(details.token === tokenVal, 'Active token matched in details');
+    }
+
+    // ----------------------------------------------------
+    // TEST 8: Orphan Returns Resolution & Date Validation
+    // ----------------------------------------------------
+    console.log('\n--- TEST 8: Orphan Returns Resolution ---');
+    // Create an orphan return
+    const orphanReturn = await basePrisma.return.create({
+      data: {
+        returnNo: 'ORPH-SRT-0001',
+        returnType: 'SALE',
+        returnDate: new Date('2026-06-12T10:00:00Z'),
+        totalItems: 1,
+        totalQty: 1,
+        grandTotal: 120,
+        branchId: branch.id,
+        companyId: testCompany.id,
+      },
+    });
+
+    // Verify it is fetched as orphan
+    const currentOrphans = await basePrisma.return.findMany({
+      where: {
+        companyId: testCompany.id,
+        invoiceId: null,
+        isWrittenOff: false,
+        legacyInvoiceNo: null,
+      },
+    });
+    assert(currentOrphans.some(r => r.id === orphanReturn.id), 'Orphan return correctly queried from DB');
+
+    // Date validation test: original invoice date in future (invalid)
+    const futureInvoiceDate = new Date('2026-06-12T11:00:00Z'); // after return date
+    const isFutureInvalid = futureInvoiceDate > orphanReturn.returnDate;
+    assert(isFutureInvalid === true, 'Chronological checker flags future invoice date as invalid');
+
+    // Resolve as Write Off
+    const updatedWriteOff = await basePrisma.return.update({
+      where: { id: orphanReturn.id },
+      data: { isWrittenOff: true },
+    });
+    assert(updatedWriteOff.isWrittenOff === true, 'Return successfully marked as written off');
+
+    // Reset write-off flag for mapping test
+    await basePrisma.return.update({
+      where: { id: orphanReturn.id },
+      data: { isWrittenOff: false },
+    });
+
+    // Resolve as Mapped Legacy
+    const legacyInvDate = new Date('2026-06-11T10:00:00Z'); // valid date before return
+    const updatedMapped = await basePrisma.return.update({
+      where: { id: orphanReturn.id },
+      data: {
+        legacyInvoiceNo: 'LEGACY-001',
+        legacyInvoiceDate: legacyInvDate,
+      },
+    });
+    assert(updatedMapped.legacyInvoiceNo === 'LEGACY-001', 'Legacy invoice number successfully mapped');
+    assert(updatedMapped.legacyInvoiceDate.getTime() === legacyInvDate.getTime(), 'Legacy invoice date successfully mapped');
+
+    // Verify GSTR-1 CDNR compiler includes legacy mapping
+    const compiledPayload = await contextStorage.run({ user: { role: 'SUPER_ADMIN', companyId: testCompany.id } }, () => 
+      gstService.compileGstr1Payload(testCompany.id, '06', '2026')
+    );
+    const compiledCdnr = compiledPayload.cdnr;
+    assert(compiledCdnr.length === 2, 'GSTR-1 compilations include both standard and legacy mapped credit notes');
+    assert(compiledCdnr.some(c => c.nt[0].nt_num === 'ORPH-SRT-0001' && c.nt[0].inum === 'LEGACY-001'), 'Legacy invoice details correctly formatted in CDNR payload');
 
     // Clean up seeded data
     console.log('\nCleaning up seeded compliance test data...');

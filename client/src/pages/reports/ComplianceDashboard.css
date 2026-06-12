@@ -396,3 +396,50 @@
   gap: 1rem;
   margin-top: 1.5rem;
 }
+
+/* Pre-deployment polish additions */
+.proactive-token-warning {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+  background: linear-gradient(135deg, #fffbeb 0%, #fff7ed 100%);
+  border: 1px solid #fed7aa;
+  box-shadow: 0 4px 15px rgba(249, 115, 22, 0.05);
+}
+
+.proactive-token-warning .warning-content h3 {
+  margin: 0 0 0.25rem 0;
+  color: #c2410c;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.proactive-token-warning .warning-content p {
+  margin: 0;
+  color: #ea580c;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.pending-reconciliations-panel h3.warning-text-title {
+  color: #b45309;
+  font-size: 1.25rem;
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .proactive-token-warning {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .proactive-token-warning button {
+    width: 100%;
+  }
+}
