@@ -504,25 +504,39 @@ class PDFService {
         console.log(`Uploaded to Supabase Storage: ${publicUrl}`);
         return publicUrl;
       } catch (err) {
-        console.error('Failed to upload to Supabase Storage S3 endpoint, falling back to local storage:', err);
+        console.error('Failed to upload to Supabase Storage S3 endpoint:', err);
+        if (process.env.NODE_ENV === 'production') {
+          return null; // Return null so the transaction survives and doesn't crash the server
+        }
       }
+    }
+
+    // If we are in production and S3 is not configured/failed, return null
+    if (process.env.NODE_ENV === 'production') {
+      console.error('Supabase S3 storage is not configured in production. PDF URL left empty.');
+      return null;
     }
 
     // LOCAL DEVELOPMENT FALLBACK
     // Save locally to server/public/invoices/ and return local dev URL
-    const publicDir = path.join(process.cwd(), 'public');
-    const invoicesDir = path.join(publicDir, 'invoices');
-    
-    if (!fs.existsSync(publicDir)) fs.mkdirSync(publicDir);
-    if (!fs.existsSync(invoicesDir)) fs.mkdirSync(invoicesDir);
-    
-    const filePath = path.join(invoicesDir, fileName);
-    fs.writeFileSync(filePath, pdfBuffer);
-    
-    // In dev, the server port is 5000
-    const localUrl = `http://localhost:${process.env.PORT || 5000}/public/invoices/${fileName}`;
-    console.log(`Saved locally in development mode: ${localUrl}`);
-    return localUrl;
+    try {
+      const publicDir = path.join(process.cwd(), 'public');
+      const invoicesDir = path.join(publicDir, 'invoices');
+      
+      if (!fs.existsSync(publicDir)) fs.mkdirSync(publicDir);
+      if (!fs.existsSync(invoicesDir)) fs.mkdirSync(invoicesDir);
+      
+      const filePath = path.join(invoicesDir, fileName);
+      fs.writeFileSync(filePath, pdfBuffer);
+      
+      // In dev, the server port is 5000
+      const localUrl = `http://localhost:${process.env.PORT || 5000}/public/invoices/${fileName}`;
+      console.log(`Saved locally in development mode: ${localUrl}`);
+      return localUrl;
+    } catch (localErr) {
+      console.error('Failed to save PDF locally in development fallback:', localErr);
+      return null;
+    }
   }
 }
 

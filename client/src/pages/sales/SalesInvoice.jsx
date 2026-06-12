@@ -119,62 +119,64 @@ function SalesInvoice() {
   };
 
   const handleBarcodeScanned = (dbItem) => {
-    // Check if item already exists in current rows
-    const existingIndex = invoiceItems.findIndex(item => item.itemId === dbItem.id);
-    if (existingIndex > -1) {
-      const updated = [...invoiceItems];
-      const item = updated[existingIndex];
-      const newQty = item.qty + 1;
-      
-      // Stock warning check
-      if (newQty > dbItem.openingStock) {
-        setMessage(`Cannot add. Insufficient stock for ${dbItem.name}. Available: ${dbItem.openingStock}`);
-        setMessageType("error");
-        return;
-      }
-      
-      const subtotal = item.rate * newQty;
-      const gstAmount = Math.round((subtotal * item.gstPercentage / 100) * 100) / 100;
-      updated[existingIndex] = {
-        ...item,
-        qty: newQty,
-        amount: Math.round((subtotal + gstAmount) * 100) / 100
-      };
-      setInvoiceItems(updated);
-      setMessage(`Incremented ${dbItem.name} quantity.`);
-      setMessageType("success");
-    } else {
-      // Stock check
-      if (dbItem.openingStock < 1) {
-        setMessage(`Cannot add ${dbItem.name}: Out of stock.`);
-        setMessageType("error");
-        return;
-      }
-
-      const lastRow = invoiceItems[invoiceItems.length - 1];
-      const rate = Number(dbItem.salePrice) || 0;
-      const gstPct = Number(dbItem.gstPercentage) || 0;
-      const subtotal = rate * 1;
-      const gstAmount = Math.round((subtotal * gstPct / 100) * 100) / 100;
-      const filledRow = {
-        id: lastRow && !lastRow.itemId ? lastRow.id : Date.now(),
-        itemId: dbItem.id,
-        itemName: dbItem.name,
-        qty: 1,
-        rate,
-        gstPercentage: gstPct,
-        amount: Math.round((subtotal + gstAmount) * 100) / 100,
-        currentStock: dbItem.openingStock
-      };
-
-      if (lastRow && !lastRow.itemId) {
-        setInvoiceItems([...invoiceItems.slice(0, -1), filledRow]);
+    setInvoiceItems((prevItems) => {
+      // Check if item already exists in current rows
+      const existingIndex = prevItems.findIndex(item => item.itemId === dbItem.id);
+      if (existingIndex > -1) {
+        const updated = [...prevItems];
+        const item = updated[existingIndex];
+        const newQty = item.qty + 1;
+        
+        // Stock warning check
+        if (newQty > dbItem.openingStock) {
+          setMessage(`Cannot add. Insufficient stock for ${dbItem.name}. Available: ${dbItem.openingStock}`);
+          setMessageType("error");
+          return prevItems;
+        }
+        
+        const subtotal = item.rate * newQty;
+        const gstAmount = Math.round((subtotal * item.gstPercentage / 100) * 100) / 100;
+        updated[existingIndex] = {
+          ...item,
+          qty: newQty,
+          amount: Math.round((subtotal + gstAmount) * 100) / 100
+        };
+        setMessage(`Incremented ${dbItem.name} quantity.`);
+        setMessageType("success");
+        return updated;
       } else {
-        setInvoiceItems([...invoiceItems, filledRow]);
+        // Stock check
+        if (dbItem.openingStock < 1) {
+          setMessage(`Cannot add ${dbItem.name}: Out of stock.`);
+          setMessageType("error");
+          return prevItems;
+        }
+
+        const lastRow = prevItems[prevItems.length - 1];
+        const rate = Number(dbItem.salePrice) || 0;
+        const gstPct = Number(dbItem.gstPercentage) || 0;
+        const subtotal = rate * 1;
+        const gstAmount = Math.round((subtotal * gstPct / 100) * 100) / 100;
+        const filledRow = {
+          id: lastRow && !lastRow.itemId ? lastRow.id : Date.now(),
+          itemId: dbItem.id,
+          itemName: dbItem.name,
+          qty: 1,
+          rate,
+          gstPercentage: gstPct,
+          amount: Math.round((subtotal + gstAmount) * 100) / 100,
+          currentStock: dbItem.openingStock
+        };
+
+        setMessage(`Added ${dbItem.name} to invoice.`);
+        setMessageType("success");
+        if (lastRow && !lastRow.itemId) {
+          return [...prevItems.slice(0, -1), filledRow];
+        } else {
+          return [...prevItems, filledRow];
+        }
       }
-      setMessage(`Added ${dbItem.name} to invoice.`);
-      setMessageType("success");
-    }
+    });
   };
 
   // Register global hardware-accelerated barcode interceptor
