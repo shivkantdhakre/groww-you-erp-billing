@@ -20,6 +20,22 @@ function Navbar() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
 
+  // Theme Toggler state
+  const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
+
+  useEffect(() => {
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(theme === "light" ? "dark" : "light");
+  };
+
   // Debounced search logic
   useEffect(() => {
     if (!search.trim()) {
@@ -51,7 +67,7 @@ function Navbar() {
   const unreadCount = notifications.filter((item) => !item.read).length;
 
   return (
-    <div className="bg-white shadow px-6 py-4 flex justify-between items-center relative no-print">
+    <div className="bg-card border-b border-border shadow px-6 py-4 flex justify-between items-center relative text-foreground no-print">
       
       {/* Search Input Box */}
       <div className="w-2/3 relative">
@@ -60,13 +76,13 @@ function Navbar() {
           placeholder="Search Customers, Vendors, Invoices, Items..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full border border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border border-border bg-card text-foreground p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
         />
 
         {search && (
-          <div className="absolute bg-white border border-gray-200 rounded-lg shadow-lg w-full mt-1 z-50 max-h-80 overflow-y-auto">
+          <div className="absolute bg-card border border-border rounded-lg shadow-lg w-full mt-1 z-50 max-h-80 overflow-y-auto text-foreground">
             {loadingSearch ? (
-              <div className="p-3 text-gray-500 flex items-center justify-center">
+              <div className="p-3 text-muted-foreground flex items-center justify-center">
                 <span className="animate-spin mr-2">⏳</span> Searching...
               </div>
             ) : searchResults.length > 0 ? (
@@ -74,19 +90,19 @@ function Navbar() {
                 <div
                   key={index}
                   onClick={() => handleResultClick(item)}
-                  className="p-3 hover:bg-gray-100 cursor-pointer flex justify-between items-center border-b last:border-0"
+                  className="p-3 hover:bg-muted cursor-pointer flex justify-between items-center border-b border-border last:border-0"
                 >
                   <div>
-                    <span className="font-semibold text-gray-800">{item.name}</span>
-                    <span className="text-xs text-gray-500 block">{item.details}</span>
+                    <span className="font-semibold">{item.name}</span>
+                    <span className="text-xs text-muted-foreground block">{item.details}</span>
                   </div>
-                  <span className="text-xs font-semibold px-2 py-1 bg-blue-100 text-blue-800 rounded uppercase">
+                  <span className="text-xs font-semibold px-2 py-1 bg-primary/10 text-primary rounded uppercase">
                     {item.type}
                   </span>
                 </div>
               ))
             ) : (
-              <div className="p-3 text-gray-500 text-center">No Results Found</div>
+              <div className="p-3 text-muted-foreground text-center">No Results Found</div>
             )}
           </div>
         )}
@@ -94,32 +110,41 @@ function Navbar() {
 
       {/* Right Side Icons */}
       <div className="flex items-center gap-4">
+
+        {/* Theme Switch Toggler */}
+        <button
+          onClick={toggleTheme}
+          className="p-2 rounded-lg hover:bg-muted transition-colors cursor-pointer text-xl"
+          title={theme === "light" ? "Switch to Dark Mode" : "Switch to Light Mode"}
+        >
+          {theme === "light" ? "🌙" : "☀️"}
+        </button>
         
         {/* Notification Bell Dropdown */}
         <div className="relative">
           <button
             onClick={() => setShowNotifications(!showNotifications)}
-            className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+            className="relative p-2 rounded-lg hover:bg-muted transition-colors cursor-pointer"
           >
-            <span className="text-2xl">🔔</span>
+            <span className="text-xl">🔔</span>
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+              <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] font-bold px-2 py-0.5 rounded-full">
                 {unreadCount}
               </span>
             )}
           </button>
 
           {showNotifications && (
-            <div className="absolute right-0 mt-3 w-80 bg-white border border-gray-200 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
-              <div className="p-4 border-b flex justify-between items-center">
-                <h3 className="font-semibold text-gray-800">Notifications</h3>
+            <div className="absolute right-0 mt-3 w-80 bg-card border border-border rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto text-foreground">
+              <div className="p-4 border-b border-border flex justify-between items-center">
+                <h3 className="font-semibold">Notifications</h3>
                 {notifications.length > 0 && (
                   <button
                     onClick={() => {
                       clearNotifications();
                       setShowNotifications(false);
                     }}
-                    className="text-red-600 hover:text-red-800 text-xs font-semibold cursor-pointer"
+                    className="text-destructive hover:text-destructive/80 text-xs font-semibold cursor-pointer"
                   >
                     Clear All
                   </button>
@@ -130,19 +155,19 @@ function Navbar() {
                 notifications.map((item) => (
                   <div
                     key={item.id}
-                    className={`p-4 border-b last:border-0 transition-colors ${
-                      item.read ? "bg-white" : "bg-blue-50/50"
+                    className={`p-4 border-b border-border last:border-0 transition-colors ${
+                      item.read ? "bg-card" : "bg-primary/5"
                     }`}
                   >
-                    <p className="text-sm text-gray-700">{item.message}</p>
+                    <p className="text-sm">{item.message}</p>
                     <div className="flex justify-between items-center mt-2">
-                      <span className="text-[10px] text-gray-400">
+                      <span className="text-[10px] text-muted-foreground">
                         {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                       {!item.read && (
                         <button
                           onClick={() => markNotificationRead(item.id)}
-                          className="text-blue-600 hover:text-blue-800 text-xs font-semibold cursor-pointer"
+                          className="text-primary hover:text-primary/85 text-xs font-semibold cursor-pointer"
                         >
                           Mark As Read
                         </button>
@@ -151,7 +176,7 @@ function Navbar() {
                   </div>
                 ))
               ) : (
-                <div className="p-6 text-center text-gray-500 text-sm">No Notifications</div>
+                <div className="p-6 text-center text-muted-foreground text-sm">No Notifications</div>
               )}
             </div>
           )}
@@ -161,24 +186,24 @@ function Navbar() {
         <div className="relative">
           <button
             onClick={() => setShowProfile(!showProfile)}
-            className="flex items-center gap-2 bg-gray-100 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
+            className="flex items-center gap-2 bg-muted px-3 py-2 rounded-lg hover:bg-muted/80 transition-colors cursor-pointer text-foreground"
           >
-            <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
+            <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
               {user?.name?.charAt(0).toUpperCase() || "U"}
             </div>
-            <span className="font-medium text-gray-700 hidden sm:inline">
+            <span className="font-medium hidden sm:inline">
               {user?.name || "User"}
             </span>
           </button>
 
           {showProfile && (
-            <div className="absolute right-0 mt-3 w-72 bg-white border border-gray-200 rounded-lg shadow-xl z-50">
-              <div className="p-4 border-b bg-gray-50/50 rounded-t-lg">
-                <h3 className="font-bold text-gray-800 text-base">{user?.name || "User"}</h3>
-                <p className="text-xs text-gray-500 uppercase mt-0.5 font-semibold">
+            <div className="absolute right-0 mt-3 w-72 bg-card border border-border rounded-lg shadow-xl z-50 text-foreground">
+              <div className="p-4 border-b border-border bg-muted/20 rounded-t-lg">
+                <h3 className="font-bold text-base">{user?.name || "User"}</h3>
+                <p className="text-xs text-muted-foreground uppercase mt-0.5 font-semibold">
                   {user?.role === "COMPANY_ADMIN" ? "Administrator" : (user?.subRole || user?.role || "Staff")}
                 </p>
-                <p className="text-xs text-gray-400 mt-1 truncate">{user?.email || ""}</p>
+                <p className="text-xs text-muted-foreground mt-1 truncate">{user?.email || ""}</p>
               </div>
 
               <button
@@ -186,7 +211,7 @@ function Navbar() {
                   setShowProfile(false);
                   navigate("/profile-settings");
                 }}
-                className="w-full text-left p-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+                className="w-full text-left p-3 text-sm hover:bg-muted transition-colors cursor-pointer"
               >
                 👤 My Profile
               </button>
@@ -196,7 +221,7 @@ function Navbar() {
                   setShowProfile(false);
                   navigate("/profile-settings");
                 }}
-                className="w-full text-left p-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+                className="w-full text-left p-3 text-sm hover:bg-muted transition-colors cursor-pointer"
               >
                 🔑 Change Password
               </button>
@@ -207,7 +232,7 @@ function Navbar() {
                     setShowProfile(false);
                     navigate("/company-settings");
                   }}
-                  className="w-full text-left p-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+                  className="w-full text-left p-3 text-sm hover:bg-muted transition-colors cursor-pointer"
                 >
                   ⚙️ Settings
                 </button>
@@ -218,7 +243,7 @@ function Navbar() {
                   setShowProfile(false);
                   logout();
                 }}
-                className="w-full text-left p-3 text-sm hover:bg-red-50 text-red-600 font-semibold border-t cursor-pointer"
+                className="w-full text-left p-3 text-sm hover:bg-destructive/5 text-destructive font-semibold border-t border-border cursor-pointer"
               >
                 🚪 Logout
               </button>

@@ -5,6 +5,209 @@ import { useStore } from "../../store/useStore";
 import api from "../../utils/api";
 import { useBarcodeScanner } from "../../hooks/useBarcodeScanner";
 
+// Sub-component for Invoice Items Table
+function InvoiceTable({
+  invoiceItems,
+  items,
+  updateItemDetails,
+  clearItemDetails,
+  updateItemQty,
+  deleteRow,
+  addRow
+}) {
+  return (
+    <div className="bg-card p-6 rounded-2xl border border-border shadow-sm overflow-x-auto">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-bold text-foreground">Invoice Items</h2>
+        <button
+          onClick={addRow}
+          className="bg-primary hover:bg-primary/95 text-primary-foreground px-4 py-2 rounded-xl transition duration-200 font-semibold shadow-md shadow-primary/15 flex items-center gap-1.5 cursor-pointer text-sm"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+          </svg>
+          Add Item
+        </button>
+      </div>
+
+      <table className="w-full min-w-[700px] mb-4 text-sm">
+        <thead className="bg-secondary/40 text-muted-foreground border-b border-border">
+          <tr>
+            <th className="p-3 text-left font-semibold">Item</th>
+            <th className="p-3 text-right font-semibold w-32">Available Stock</th>
+            <th className="p-3 text-right font-semibold w-28">Qty</th>
+            <th className="p-3 text-right font-semibold w-36">Rate</th>
+            <th className="p-3 text-right font-semibold w-24">GST %</th>
+            <th className="p-3 text-right font-semibold w-36">Total (incl. GST)</th>
+            <th className="p-3 text-center font-semibold w-24">Action</th>
+          </tr>
+        </thead>
+
+        <tbody className="divide-y divide-border">
+          {invoiceItems.map((item) => (
+            <tr key={item.id} className="elevated-table-row transition-colors duration-150">
+              <td className="p-3 align-top min-w-[200px]">
+                <Autocomplete
+                  options={items}
+                  labelKey="name"
+                  valueKey="id"
+                  placeholder="Search Item..."
+                  selectedId={item.itemId}
+                  searchFields={["name", "sku"]}
+                  customRender={(opt) => (
+                    <div className="flex justify-between w-full text-xs">
+                      <span className="font-semibold text-foreground">{opt.name}</span>
+                      <span className="text-muted-foreground font-mono">
+                        Stock: {opt.openingStock} | Price: ₹{opt.salePrice}
+                      </span>
+                    </div>
+                  )}
+                  onSelect={(opt) => updateItemDetails(item.id, opt)}
+                  onClear={() => clearItemDetails(item.id)}
+                />
+              </td>
+
+              <td className="p-3 text-right align-middle font-mono font-semibold text-foreground">
+                {item.itemId ? (
+                  <span className={item.currentStock <= 0 ? "text-destructive" : ""}>
+                    {item.currentStock}
+                  </span>
+                ) : (
+                  "-"
+                )}
+              </td>
+
+              <td className="p-3 text-right align-middle">
+                <input
+                  type="number"
+                  min="1"
+                  value={item.qty}
+                  onChange={(e) => updateItemQty(item.id, e.target.value)}
+                  className="border border-border p-2 rounded-lg w-20 text-right bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent font-mono"
+                />
+              </td>
+
+              <td className="p-3 text-right align-middle font-mono font-semibold text-foreground">
+                {item.itemId ? `₹ ${item.rate.toFixed(2)}` : "-"}
+              </td>
+
+              <td className="p-3 text-right align-middle font-mono font-semibold text-muted-foreground">
+                {item.itemId ? `${item.gstPercentage}%` : "-"}
+              </td>
+
+              <td className="p-3 text-right align-middle font-mono font-bold text-foreground">
+                {item.itemId ? `₹ ${item.amount.toFixed(2)}` : "-"}
+              </td>
+
+              <td className="p-3 text-center align-middle">
+                <button
+                  onClick={() => deleteRow(item.id)}
+                  className="bg-destructive/10 text-destructive px-3 py-1.5 rounded-lg hover:bg-destructive hover:text-destructive-foreground transition-all duration-200 text-xs font-semibold cursor-pointer"
+                >
+                  Delete
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// Sub-component for Invoice Summary Panel
+function InvoiceSummaryCard({
+  invoiceDate,
+  setInvoiceDate,
+  customerId,
+  setCustomerId,
+  customers,
+  totalItems,
+  totalQty,
+  grandTotal,
+  handleSaveInvoice
+}) {
+  return (
+    <div className="bg-card p-6 rounded-2xl border border-border shadow-sm space-y-6 text-foreground">
+      <h2 className="text-xl font-bold border-b border-border pb-3">Invoice Details</h2>
+
+      {/* Invoice Meta */}
+      <div className="space-y-4">
+        <div>
+          <label className="block mb-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+            Invoice No
+          </label>
+          <input
+            type="text"
+            value="[Auto-Generated]"
+            readOnly
+            className="border border-border p-3 rounded-lg w-full bg-secondary/30 text-muted-foreground font-mono text-sm cursor-not-allowed"
+          />
+        </div>
+
+        <div>
+          <label className="block mb-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+            Invoice Date
+          </label>
+          <input
+            type="date"
+            value={invoiceDate}
+            onChange={(e) => setInvoiceDate(e.target.value)}
+            className="border border-border p-3 rounded-lg w-full bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition text-sm"
+          />
+        </div>
+
+        <div>
+          <label className="block mb-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+            Customer Name
+          </label>
+          <Autocomplete
+            options={customers}
+            labelKey="name"
+            valueKey="id"
+            placeholder="Select Customer..."
+            selectedId={customerId}
+            searchFields={["name", "mobile"]}
+            customRender={(opt) => (
+              <div className="flex justify-between w-full text-xs">
+                <span className="font-semibold text-foreground">{opt.name}</span>
+                <span className="text-muted-foreground">{opt.mobile}</span>
+              </div>
+            )}
+            onSelect={(opt) => setCustomerId(opt.id)}
+            onClear={() => setCustomerId(null)}
+          />
+        </div>
+      </div>
+
+      {/* Total Calculations */}
+      <div className="bg-secondary/25 p-4 rounded-xl border border-border space-y-3 shadow-inner">
+        <div className="flex justify-between items-center text-sm">
+          <span className="text-muted-foreground font-medium">Total Items:</span>
+          <span className="font-mono font-bold">{totalItems}</span>
+        </div>
+        <div className="flex justify-between items-center text-sm">
+          <span className="text-muted-foreground font-medium">Total Quantity:</span>
+          <span className="font-mono font-bold">{totalQty}</span>
+        </div>
+        <div className="border-t border-border pt-3 flex justify-between items-center">
+          <span className="font-bold">Grand Total:</span>
+          <span className="font-mono text-xl font-extrabold text-emerald-600 dark:text-emerald-500">
+            ₹ {grandTotal.toFixed(2)}
+          </span>
+        </div>
+      </div>
+
+      <button
+        onClick={handleSaveInvoice}
+        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl transition font-bold shadow-lg shadow-emerald-600/10 cursor-pointer active:scale-98"
+      >
+        Save Sales Invoice
+      </button>
+    </div>
+  );
+}
+
 function SalesInvoice() {
   const [invoiceDate, setInvoiceDate] = useState(
     new Date().toISOString().split("T")[0]
@@ -329,243 +532,103 @@ function SalesInvoice() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold mb-6 text-gray-800">Sales Invoice</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Sales Invoice</h1>
+        <div className="flex items-center gap-2 bg-secondary/40 border border-border px-3 py-1.5 rounded-lg text-xs font-semibold text-muted-foreground font-mono">
+          <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+          Barcode Scanner Active
+        </div>
+      </div>
 
       {message && (
         <div
-          className={`p-4 rounded-lg mb-4 text-white font-medium shadow-md transition-all duration-300 ${
+          className={`p-4 rounded-xl mb-4 text-white font-medium shadow-lg transition-all duration-300 animate-fade-in-up ${
             messageType === "success"
-              ? "bg-emerald-600"
+              ? "bg-emerald-600 shadow-emerald-600/10"
               : messageType === "warning"
-              ? "bg-amber-500"
-              : "bg-rose-600"
+              ? "bg-amber-500 shadow-amber-500/10"
+              : "bg-rose-600 shadow-rose-600/10"
           }`}
         >
           {message}
         </div>
       )}
 
-      {/* Invoice Header Details */}
-      <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div>
-            <label className="block mb-2 text-sm font-semibold text-gray-700">
-              Invoice No
-            </label>
-            <input
-              type="text"
-              value="[Auto-Generated]"
-              readOnly
-              className="border border-gray-200 p-3 rounded-lg w-full bg-gray-50 text-gray-500 font-mono"
-            />
-          </div>
-
-          <div>
-            <label className="block mb-2 text-sm font-semibold text-gray-700">
-              Invoice Date
-            </label>
-            <input
-              type="date"
-              value={invoiceDate}
-              onChange={(e) => setInvoiceDate(e.target.value)}
-              className="border border-gray-200 p-3 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            />
-          </div>
-
-          <div>
-            <label className="block mb-2 text-sm font-semibold text-gray-700">
-              Customer Name
-            </label>
-            <Autocomplete
-              options={customers}
-              labelKey="name"
-              valueKey="id"
-              placeholder="Select Customer..."
-              selectedId={customerId}
-              searchFields={["name", "mobile"]}
-              customRender={(opt) => (
-                <div className="flex justify-between w-full">
-                  <span className="font-semibold text-gray-800">{opt.name}</span>
-                  <span className="text-sm text-gray-500">{opt.mobile}</span>
-                </div>
-              )}
-              onSelect={(opt) => setCustomerId(opt.id)}
-              onClear={() => setCustomerId(null)}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Invoice Rows */}
-      <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 overflow-x-auto">
-        <h2 className="text-xl font-bold mb-4 text-gray-800">Invoice Items</h2>
-
-        <table className="w-full min-w-[700px] mb-4">
-          <thead className="bg-gray-50 text-gray-700 border-b border-gray-200">
-            <tr>
-              <th className="p-3 text-left font-semibold text-sm">Item</th>
-              <th className="p-3 text-left font-semibold text-sm w-32">Available Stock</th>
-              <th className="p-3 text-left font-semibold text-sm w-28">Qty</th>
-              <th className="p-3 text-left font-semibold text-sm w-36">Rate</th>
-              <th className="p-3 text-left font-semibold text-sm w-24">GST %</th>
-              <th className="p-3 text-left font-semibold text-sm w-36">Total (incl. GST)</th>
-              <th className="p-3 text-center font-semibold text-sm w-24">Action</th>
-            </tr>
-          </thead>
-
-          <tbody className="divide-y divide-gray-100">
-            {invoiceItems.map((item) => (
-              <tr key={item.id} className="hover:bg-gray-50/50 transition">
-                <td className="p-3 align-top">
-                  <Autocomplete
-                    options={items}
-                    labelKey="name"
-                    valueKey="id"
-                    placeholder="Search Item..."
-                    selectedId={item.itemId}
-                    searchFields={["name", "sku"]}
-                    customRender={(opt) => (
-                      <div className="flex justify-between w-full">
-                        <span className="font-semibold text-gray-800">{opt.name}</span>
-                        <span className="text-sm text-gray-500">
-                          Stock: {opt.openingStock} | Price: ₹{opt.salePrice}
-                        </span>
-                      </div>
-                    )}
-                    onSelect={(opt) => updateItemDetails(item.id, opt)}
-                    onClear={() => clearItemDetails(item.id)}
-                  />
-                </td>
-
-                <td className="p-3 align-top font-semibold text-gray-700">
-                  {item.itemId ? (
-                    <span className={item.currentStock <= 0 ? "text-rose-600" : "text-gray-700"}>
-                      {item.currentStock}
-                    </span>
-                  ) : (
-                    "-"
-                  )}
-                </td>
-
-                <td className="p-3 align-top">
-                  <input
-                    type="number"
-                    min="1"
-                    value={item.qty}
-                    onChange={(e) => updateItemQty(item.id, e.target.value)}
-                    className="border border-gray-200 p-2 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </td>
-
-                <td className="p-3 align-top font-semibold text-gray-700 pt-5">
-                  {item.itemId ? `₹ ${item.rate}` : "-"}
-                </td>
-
-                <td className="p-3 align-top font-semibold text-gray-500 pt-5">
-                  {item.itemId ? `${item.gstPercentage}%` : "-"}
-                </td>
-
-                <td className="p-3 align-top font-bold text-gray-800 pt-5">
-                  {item.itemId ? `₹ ${item.amount}` : "-"}
-                </td>
-
-                <td className="p-3 text-center align-top">
-                  <button
-                    onClick={() => deleteRow(item.id)}
-                    className="bg-rose-50 text-rose-600 px-3 py-2 rounded-lg hover:bg-rose-100 hover:text-rose-700 transition font-medium"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        <button
-          onClick={addRow}
-          className="bg-indigo-50 text-indigo-600 px-5 py-3 rounded-lg hover:bg-indigo-100 transition font-semibold"
-        >
-          + Add Item
-        </button>
-
-        {/* Totals Summary */}
-        <div className="bg-gray-50 p-6 rounded-xl border border-gray-100 mt-6 shadow-inner">
-          <h2 className="text-lg font-bold mb-4 text-gray-800">Invoice Summary</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <p className="text-sm text-gray-500 font-medium">Total Items</p>
-              <p className="text-3xl font-extrabold text-gray-800">{totalItems}</p>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-500 font-medium">Total Qty</p>
-              <p className="text-3xl font-extrabold text-gray-800">{totalQty}</p>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-500 font-medium">Grand Total (Tax Included)</p>
-              <p className="text-3xl font-extrabold text-emerald-600">₹ {grandTotal}</p>
-            </div>
-          </div>
+      {/* Grid Layout: Left is Invoice Items, Right is Customer / Summary */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div className="lg:col-span-2">
+          <InvoiceTable
+            invoiceItems={invoiceItems}
+            items={items}
+            updateItemDetails={updateItemDetails}
+            clearItemDetails={clearItemDetails}
+            updateItemQty={updateItemQty}
+            deleteRow={deleteRow}
+            addRow={addRow}
+          />
         </div>
 
-        <div className="mt-6 flex justify-end">
-          <button
-            onClick={handleSaveInvoice}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-lg transition font-bold shadow-md shadow-emerald-600/10"
-          >
-            Save Sales Invoice
-          </button>
+        <div className="lg:col-span-1">
+          <InvoiceSummaryCard
+            invoiceDate={invoiceDate}
+            setInvoiceDate={setInvoiceDate}
+            customerId={customerId}
+            setCustomerId={setCustomerId}
+            customers={customers}
+            totalItems={totalItems}
+            totalQty={totalQty}
+            grandTotal={grandTotal}
+            handleSaveInvoice={handleSaveInvoice}
+          />
         </div>
       </div>
 
       {/* Saved Invoices Table */}
-      <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
-        <h2 className="text-2xl font-bold mb-4 text-gray-800">Saved Invoices</h2>
+      <div className="bg-card p-6 rounded-2xl border border-border shadow-sm">
+        <h2 className="text-xl font-bold mb-6 text-foreground">Saved Invoices</h2>
         {loadingInvoices ? (
-          <div className="text-center py-6 text-gray-500">Loading invoices...</div>
+          <div className="text-center py-6 text-muted-foreground">Loading invoices...</div>
         ) : savedInvoices.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 text-gray-700 border-b border-gray-200">
+            <table className="w-full text-sm">
+              <thead className="bg-secondary/40 text-muted-foreground border-b border-border">
                 <tr>
-                  <th className="p-3 text-left font-semibold text-sm">Invoice No</th>
-                  <th className="p-3 text-left font-semibold text-sm">Date</th>
-                  <th className="p-3 text-left font-semibold text-sm">Customer</th>
-                  <th className="p-3 text-left font-semibold text-sm">Items count</th>
-                  <th className="p-3 text-left font-semibold text-sm">Qty</th>
-                  <th className="p-3 text-left font-semibold text-sm">Grand Total</th>
-                  <th className="p-3 text-center font-semibold text-sm w-48">Actions</th>
+                  <th className="p-3 text-left font-semibold">Invoice No</th>
+                  <th className="p-3 text-left font-semibold">Date</th>
+                  <th className="p-3 text-left font-semibold">Customer</th>
+                  <th className="p-3 text-right font-semibold">Items count</th>
+                  <th className="p-3 text-right font-semibold">Qty</th>
+                  <th className="p-3 text-right font-semibold">Grand Total</th>
+                  <th className="p-3 text-center font-semibold w-48">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-border">
                 {savedInvoices.map((invoice) => (
-                  <tr key={invoice.id} className="hover:bg-gray-50/50 transition">
-                    <td className="p-3 text-gray-900 font-mono font-semibold">
+                  <tr key={invoice.id} className="elevated-table-row transition-colors duration-150">
+                    <td className="p-3 text-foreground font-mono font-semibold">
                       {invoice.invoiceNo}
                     </td>
-                    <td className="p-3 text-gray-600">
+                    <td className="p-3 text-muted-foreground">
                       {new Date(invoice.invoiceDate).toLocaleDateString()}
                     </td>
-                    <td className="p-3 text-gray-700 font-medium">
+                    <td className="p-3 text-foreground font-medium">
                       {invoice.customer?.name || "-"}
                     </td>
-                    <td className="p-3 text-gray-600">{invoice.totalItems}</td>
-                    <td className="p-3 text-gray-600">{invoice.totalQty}</td>
-                    <td className="p-3 text-emerald-600 font-bold">
-                      ₹ {invoice.grandTotal}
+                    <td className="p-3 text-right font-mono text-muted-foreground">{invoice.totalItems}</td>
+                    <td className="p-3 text-right font-mono text-muted-foreground">{invoice.totalQty}</td>
+                    <td className="p-3 text-right text-emerald-600 dark:text-emerald-500 font-mono font-bold">
+                      ₹ {invoice.grandTotal.toFixed(2)}
                     </td>
                     <td className="p-3 text-center flex justify-center gap-2">
                       <button
                         onClick={() => handlePrintInvoice(invoice.id, 'A4')}
-                        className="bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100 transition text-xs font-semibold"
+                        className="bg-primary/10 text-primary px-3 py-1.5 rounded-lg hover:bg-primary hover:text-primary-foreground transition-all duration-200 text-xs font-semibold cursor-pointer"
                       >
                         Print A4
                       </button>
                       <button
                         onClick={() => handlePrintInvoice(invoice.id, 'Thermal')}
-                        className="bg-amber-50 text-amber-600 px-2 py-1 rounded hover:bg-amber-100 transition text-xs font-semibold"
+                        className="bg-accent/10 text-accent px-3 py-1.5 rounded-lg hover:bg-accent hover:text-accent-foreground transition-all duration-200 text-xs font-semibold cursor-pointer"
                       >
                         Thermal
                       </button>
@@ -576,21 +639,23 @@ function SalesInvoice() {
             </table>
           </div>
         ) : (
-          <div className="text-center py-6 text-gray-400">No invoices saved yet</div>
+          <div className="text-center py-6 text-muted-foreground text-sm">No invoices saved yet</div>
         )}
       </div>
 
       <CommonModal isOpen={showSaveModal} title="Invoice Saved">
-        <p className="mb-4 text-gray-600">
-          The Sales Invoice has been recorded and stock levels have been successfully updated.
-        </p>
-        <div className="flex justify-end">
-          <button
-            onClick={() => setShowSaveModal(false)}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-lg font-semibold transition"
-          >
-            OK
-          </button>
+        <div className="space-y-4">
+          <p className="text-muted-foreground text-sm">
+            The Sales Invoice has been recorded and stock levels have been successfully updated.
+          </p>
+          <div className="flex justify-end">
+            <button
+              onClick={() => setShowSaveModal(false)}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl font-semibold transition cursor-pointer"
+            >
+              OK
+            </button>
+          </div>
         </div>
       </CommonModal>
     </div>

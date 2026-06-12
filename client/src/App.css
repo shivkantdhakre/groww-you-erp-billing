@@ -206,3 +206,72 @@
   padding: 10px;
   border-radius: 8px;
 }
+
+/* Glassmorphism Styles (For static non-interactive layouts only) */
+.glass-panel {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+}
+
+.glass-panel-blur {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+}
+
+/* Elevated Invoicing Tables (High legibility dark mode style) */
+.dark .elevated-table-row {
+  background-color: hsl(var(--card));
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.dark .elevated-table-row:hover {
+  background-color: hsl(var(--table-row-hover));
+}
+
+/* Micro-animations */
+@keyframes fadeInSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Autocomplete search selections focus ring */
+.autocomplete-dropdown {
+  position: absolute;
+  z-index: 50;
+  width: 100%;
+  max-height: 250px;
+  overflow-y: auto;
+  background-color: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.375rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.autocomplete-item {
+  padding: 0.625rem 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.autocomplete-item:hover, 
+.autocomplete-item.active {
+  background-color: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+}
+
+/* Transition enhancements */
+.transition-all-300 {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}

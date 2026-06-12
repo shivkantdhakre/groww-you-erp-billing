@@ -76,7 +76,7 @@ function App() {
 
   return (
     <BrowserRouter>
-      <div className="flex min-h-screen bg-gray-100">
+      <div className="flex min-h-screen bg-background text-foreground transition-colors duration-300">
 
         {/* Sidebar */}
         <Sidebar />
