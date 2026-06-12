@@ -2,6 +2,16 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStore } from "../store/useStore";
 import api from "../utils/api";
+import {
+  Moon,
+  Sun,
+  Bell,
+  Loader2,
+  User,
+  KeyRound,
+  Settings,
+  LogOut
+} from "lucide-react";
 
 function Navbar() {
   const navigate = useNavigate();
@@ -82,8 +92,9 @@ function Navbar() {
         {search && (
           <div className="absolute bg-card border border-border rounded-lg shadow-lg w-full mt-1 z-50 max-h-80 overflow-y-auto text-foreground">
             {loadingSearch ? (
-              <div className="p-3 text-muted-foreground flex items-center justify-center">
-                <span className="animate-spin mr-2">⏳</span> Searching...
+              <div className="p-3 text-muted-foreground flex items-center justify-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin shrink-0 text-primary" aria-hidden="true" />
+                <span>Searching...</span>
               </div>
             ) : searchResults.length > 0 ? (
               searchResults.map((item, index) => (
@@ -114,19 +125,25 @@ function Navbar() {
         {/* Theme Switch Toggler */}
         <button
           onClick={toggleTheme}
-          className="p-2 rounded-lg hover:bg-muted transition-colors cursor-pointer text-xl"
+          className="p-2 rounded-lg hover:bg-muted transition-colors cursor-pointer text-muted-foreground hover:text-foreground flex items-center justify-center"
           title={theme === "light" ? "Switch to Dark Mode" : "Switch to Light Mode"}
+          aria-label={theme === "light" ? "Switch to Dark Mode" : "Switch to Light Mode"}
         >
-          {theme === "light" ? "🌙" : "☀️"}
+          {theme === "light" ? (
+            <Moon className="w-5 h-5 shrink-0" aria-hidden="true" />
+          ) : (
+            <Sun className="w-5 h-5 shrink-0" aria-hidden="true" />
+          )}
         </button>
         
         {/* Notification Bell Dropdown */}
         <div className="relative">
           <button
             onClick={() => setShowNotifications(!showNotifications)}
-            className="relative p-2 rounded-lg hover:bg-muted transition-colors cursor-pointer"
+            className="relative p-2 rounded-lg hover:bg-muted transition-colors cursor-pointer text-muted-foreground hover:text-foreground flex items-center justify-center"
+            aria-label="Notifications"
           >
-            <span className="text-xl">🔔</span>
+            <Bell className="w-5 h-5 shrink-0" aria-hidden="true" />
             {unreadCount > 0 && (
               <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] font-bold px-2 py-0.5 rounded-full">
                 {unreadCount}
@@ -211,9 +228,10 @@ function Navbar() {
                   setShowProfile(false);
                   navigate("/profile-settings");
                 }}
-                className="w-full text-left p-3 text-sm hover:bg-muted transition-colors cursor-pointer"
+                className="w-full text-left p-3 text-sm hover:bg-muted transition-colors cursor-pointer flex items-center gap-2"
               >
-                👤 My Profile
+                <User className="w-4 h-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+                <span>My Profile</span>
               </button>
 
               <button
@@ -221,9 +239,10 @@ function Navbar() {
                   setShowProfile(false);
                   navigate("/profile-settings");
                 }}
-                className="w-full text-left p-3 text-sm hover:bg-muted transition-colors cursor-pointer"
+                className="w-full text-left p-3 text-sm hover:bg-muted transition-colors cursor-pointer flex items-center gap-2"
               >
-                🔑 Change Password
+                <KeyRound className="w-4 h-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+                <span>Change Password</span>
               </button>
 
               {user?.role === "COMPANY_ADMIN" && (
@@ -232,9 +251,10 @@ function Navbar() {
                     setShowProfile(false);
                     navigate("/company-settings");
                   }}
-                  className="w-full text-left p-3 text-sm hover:bg-muted transition-colors cursor-pointer"
+                  className="w-full text-left p-3 text-sm hover:bg-muted transition-colors cursor-pointer flex items-center gap-2"
                 >
-                  ⚙️ Settings
+                  <Settings className="w-4 h-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+                  <span>Settings</span>
                 </button>
               )}
 
@@ -243,9 +263,10 @@ function Navbar() {
                   setShowProfile(false);
                   logout();
                 }}
-                className="w-full text-left p-3 text-sm hover:bg-destructive/5 text-destructive font-semibold border-t border-border cursor-pointer"
+                className="w-full text-left p-3 text-sm hover:bg-destructive/5 text-destructive font-semibold border-t border-border cursor-pointer flex items-center gap-2"
               >
-                🚪 Logout
+                <LogOut className="w-4 h-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+                <span>Logout</span>
               </button>
             </div>
           )}
