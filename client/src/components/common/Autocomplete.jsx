@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 
 function Autocomplete({
   options = [],
@@ -14,11 +15,23 @@ function Autocomplete({
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
   const wrapperRef = useRef(null);
   const listRef = useRef(null);
 
   // Find currently selected option
   const selectedOption = options.find((opt) => opt[valueKey] === selectedId);
+
+  // Calculate dropdown position from the wrapper's bounding rect
+  const updatePosition = useCallback(() => {
+    if (!wrapperRef.current) return;
+    const rect = wrapperRef.current.getBoundingClientRect();
+    setDropdownPos({
+      top: rect.bottom + 4,
+      left: rect.left,
+      width: rect.width,
+    });
+  }, []);
 
   useEffect(() => {
     if (selectedOption) {
@@ -33,9 +46,24 @@ function Autocomplete({
     setActiveIndex(-1);
   }, [searchTerm, isOpen]);
 
+  // Reposition dropdown on scroll/resize while open
+  useEffect(() => {
+    if (!isOpen) return;
+    updatePosition();
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [isOpen, updatePosition]);
+
   useEffect(() => {
     function handleClickOutside(event) {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+      if (
+        wrapperRef.current && !wrapperRef.current.contains(event.target) &&
+        listRef.current && !listRef.current.contains(event.target)
+      ) {
         setIsOpen(false);
         // Reset search term to selected option's name when closing
         if (selectedOption) {
@@ -126,6 +154,41 @@ function Autocomplete({
     }
   };
 
+  const dropdownList = isOpen ? (
+    <ul
+      ref={listRef}
+      style={{
+        position: "fixed",
+        top: `${dropdownPos.top}px`,
+        left: `${dropdownPos.left}px`,
+        width: `${dropdownPos.width}px`,
+      }}
+      className="z-[9999] bg-card border border-border rounded-lg shadow-xl max-h-60 overflow-y-auto divide-y divide-border text-foreground"
+    >
+      {filteredOptions.length > 0 ? (
+        filteredOptions.map((option, index) => (
+          <li
+            key={option[valueKey]}
+            onClick={() => handleSelect(option)}
+            className={`p-3 cursor-pointer transition-colors duration-150 flex justify-between items-center text-foreground ${
+              index === activeIndex
+                ? "bg-secondary font-medium"
+                : "hover:bg-secondary/40 text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {customRender ? (
+              customRender(option)
+            ) : (
+              <span>{option[labelKey]}</span>
+            )}
+          </li>
+        ))
+      ) : (
+        <li className="p-3 text-muted-foreground text-center">No results found</li>
+      )}
+    </ul>
+  ) : null;
+
   return (
     <div ref={wrapperRef} className="relative w-full">
       <div className="relative">
@@ -152,34 +215,7 @@ function Autocomplete({
         )}
       </div>
 
-      {isOpen && (
-        <ul
-          ref={listRef}
-          className="absolute z-50 mt-1 w-full bg-card border border-border rounded-lg shadow-xl max-h-60 overflow-y-auto divide-y divide-border text-foreground"
-        >
-          {filteredOptions.length > 0 ? (
-            filteredOptions.map((option, index) => (
-              <li
-                key={option[valueKey]}
-                onClick={() => handleSelect(option)}
-                className={`p-3 cursor-pointer transition-colors duration-150 flex justify-between items-center text-foreground ${
-                  index === activeIndex
-                    ? "bg-secondary font-medium"
-                    : "hover:bg-secondary/40 text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {customRender ? (
-                  customRender(option)
-                ) : (
-                  <span>{option[labelKey]}</span>
-                )}
-              </li>
-            ))
-          ) : (
-            <li className="p-3 text-muted-foreground text-center">No results found</li>
-          )}
-        </ul>
-      )}
+      {createPortal(dropdownList, document.body)}
     </div>
   );
 }

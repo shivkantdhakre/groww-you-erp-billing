@@ -3,8 +3,17 @@ import crypto from 'crypto';
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12;
 
-const getEncryptionKey = () => {
-  const rawKey = process.env.ENCRYPTION_KEY;
+const getEncryptionKeyForVersion = (version) => {
+  let keyEnvVar = 'ENCRYPTION_KEY';
+  if (version && version !== 'legacy') {
+    const formattedVersion = version.toUpperCase(); // e.g. 'V1', 'V2'
+    const specificKey = process.env[`ENCRYPTION_KEY_${formattedVersion}`];
+    if (specificKey) {
+      keyEnvVar = `ENCRYPTION_KEY_${formattedVersion}`;
+    }
+  }
+
+  const rawKey = process.env[keyEnvVar] || process.env.ENCRYPTION_KEY;
   if (!rawKey) {
     // Development/testing fallback key (32 bytes)
     return Buffer.from('8f2f4c9c104443bc9195b058a5e8211b8f2f4c9c104443bc9195b058a5e8211b', 'hex');
@@ -16,13 +25,14 @@ const getEncryptionKey = () => {
 };
 
 /**
- * Encrypts cleartext using AES-256-GCM and formats as "ivHex:tagHex:cipherHex"
+ * Encrypts cleartext using AES-256-GCM and formats as "version:ivHex:tagHex:cipherHex"
  * @param {string} text - text to encrypt
  * @returns {string|null}
  */
 export const encrypt = (text) => {
   if (!text) return null;
-  const key = getEncryptionKey();
+  const version = process.env.ACTIVE_ENCRYPTION_KEY_VERSION || 'v1';
+  const key = getEncryptionKeyForVersion(version);
   const iv = crypto.randomBytes(IV_LENGTH);
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
   
@@ -31,11 +41,11 @@ export const encrypt = (text) => {
   
   const authTag = cipher.getAuthTag();
   
-  return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
+  return `${version}:${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
 };
 
 /**
- * Decrypts "ivHex:tagHex:cipherHex" format string
+ * Decrypts "version:ivHex:tagHex:cipherHex" or legacy "ivHex:tagHex:cipherHex" format string
  * @param {string} encryptedText - encrypted text string
  * @returns {string|null}
  */
@@ -43,15 +53,29 @@ export const decrypt = (encryptedText) => {
   if (!encryptedText) return null;
   try {
     const parts = encryptedText.split(':');
-    if (parts.length !== 3) {
-      throw new Error('Invalid encrypted format. Expected iv:tag:ciphertext');
+    let version;
+    let ivHex, authTagHex, cipherHex;
+
+    // Detect versioned format vs legacy unversioned format
+    if (parts.length === 4 && /^v\d+$/.test(parts[0])) {
+      version = parts[0];
+      ivHex = parts[1];
+      authTagHex = parts[2];
+      cipherHex = parts[3];
+    } else if (parts.length === 3) {
+      version = 'legacy';
+      ivHex = parts[0];
+      authTagHex = parts[1];
+      cipherHex = parts[2];
+    } else {
+      throw new Error('Invalid encrypted format. Expected iv:tag:ciphertext or version:iv:tag:ciphertext');
     }
     
-    const iv = Buffer.from(parts[0], 'hex');
-    const authTag = Buffer.from(parts[1], 'hex');
-    const encrypted = Buffer.from(parts[2], 'hex');
+    const iv = Buffer.from(ivHex, 'hex');
+    const authTag = Buffer.from(authTagHex, 'hex');
+    const encrypted = Buffer.from(cipherHex, 'hex');
     
-    const key = getEncryptionKey();
+    const key = getEncryptionKeyForVersion(version);
     const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
     decipher.setAuthTag(authTag);
     

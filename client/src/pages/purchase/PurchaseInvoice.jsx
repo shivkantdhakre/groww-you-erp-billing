@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import CommonModal from "../../components/common/CommonModal";
 import Autocomplete from "../../components/common/Autocomplete";
 import { useStore } from "../../store/useStore";
 import api from "../../utils/api";
 
-// Sub-component for Purchase Items Table
+// Sub-component for Purchase Items Table (Virtualized)
 function InvoiceTable({
   purchaseItems,
   items,
@@ -14,6 +15,18 @@ function InvoiceTable({
   removeRow,
   addRow
 }) {
+  const ROW_HEIGHT = 60;
+  const MAX_VISIBLE_ROWS = 8;
+  const parentRef = useRef(null);
+  const shouldVirtualize = purchaseItems.length > MAX_VISIBLE_ROWS;
+
+  const virtualizer = useVirtualizer({
+    count: purchaseItems.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 3,
+  });
+
   return (
     <div className="bg-card p-6 rounded-2xl border border-border shadow-sm overflow-x-auto">
       <div className="flex justify-between items-center mb-6">
@@ -29,7 +42,8 @@ function InvoiceTable({
         </button>
       </div>
 
-      <table className="w-full min-w-[700px] mb-4 text-sm">
+      {/* Sticky header table */}
+      <table className="w-full min-w-[700px] text-sm">
         <thead className="bg-secondary/40 text-muted-foreground border-b border-border">
           <tr>
             <th className="p-3 text-left font-semibold">Item</th>
@@ -41,69 +55,102 @@ function InvoiceTable({
             <th className="p-3 text-center font-semibold w-24">Action</th>
           </tr>
         </thead>
-
-        <tbody className="divide-y divide-border">
-          {purchaseItems.map((item) => (
-            <tr key={item.id} className="elevated-table-row transition-colors duration-150">
-              <td className="p-3 align-top min-w-[200px]">
-                <Autocomplete
-                  options={items}
-                  labelKey="name"
-                  valueKey="id"
-                  placeholder="Search Item..."
-                  selectedId={item.itemId}
-                  searchFields={["name", "sku"]}
-                  customRender={(opt) => (
-                    <div className="flex justify-between w-full text-xs">
-                      <span className="font-semibold text-foreground">{opt.name}</span>
-                      <span className="text-muted-foreground font-mono">
-                        Stock: {opt.openingStock} | Cost: ₹{opt.purchasePrice}
-                      </span>
-                    </div>
-                  )}
-                  onSelect={(opt) => updateItemDetails(item.id, opt)}
-                  onClear={() => clearItemDetails(item.id)}
-                />
-              </td>
-
-              <td className="p-3 text-right align-middle font-mono font-semibold text-foreground">
-                {item.itemId ? item.currentStock : "-"}
-              </td>
-
-              <td className="p-3 text-right align-middle">
-                <input
-                  type="number"
-                  min="1"
-                  value={item.qty}
-                  onChange={(e) => updateItemQty(item.id, e.target.value)}
-                  className="border border-border p-2 rounded-lg w-20 text-right bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent font-mono"
-                />
-              </td>
-
-              <td className="p-3 text-right align-middle font-mono font-semibold text-foreground">
-                {item.itemId ? `₹ ${item.rate.toFixed(2)}` : "-"}
-              </td>
-
-              <td className="p-3 text-right align-middle font-mono font-semibold text-muted-foreground">
-                {item.itemId ? `${item.gstPercentage}%` : "-"}
-              </td>
-
-              <td className="p-3 text-right align-middle font-mono font-bold text-foreground">
-                {item.itemId ? `₹ ${item.amount.toFixed(2)}` : "-"}
-              </td>
-
-              <td className="p-3 text-center align-middle">
-                <button
-                  onClick={() => removeRow(item.id)}
-                  className="bg-destructive/10 text-destructive px-3 py-1.5 rounded-lg hover:bg-destructive hover:text-destructive-foreground transition-all duration-200 text-xs font-semibold cursor-pointer"
-                >
-                  Delete
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
       </table>
+
+      {/* Virtualized scrollable body */}
+      <div
+        ref={parentRef}
+        className="overflow-y-auto"
+        style={{
+          maxHeight: shouldVirtualize ? `${MAX_VISIBLE_ROWS * ROW_HEIGHT}px` : undefined,
+        }}
+      >
+        <table className="w-full min-w-[700px] mb-4 text-sm">
+          <tbody
+            className="divide-y divide-border"
+            style={{
+              height: shouldVirtualize ? `${virtualizer.getTotalSize()}px` : undefined,
+              width: "100%",
+              position: "relative",
+            }}
+          >
+            {(shouldVirtualize ? virtualizer.getVirtualItems() : purchaseItems.map((item, index) => ({ index, start: index * ROW_HEIGHT, size: ROW_HEIGHT }))).map((virtualRow) => {
+              const item = purchaseItems[virtualRow.index];
+              return (
+                <tr
+                  key={item.id}
+                  className="elevated-table-row transition-colors duration-150"
+                  style={shouldVirtualize ? {
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: `${virtualRow.size}px`,
+                    transform: `translateY(${virtualRow.start}px)`,
+                    display: "table-row",
+                  } : undefined}
+                >
+                <td className="p-3 align-top min-w-[200px]">
+                  <Autocomplete
+                    options={items}
+                    labelKey="name"
+                    valueKey="id"
+                    placeholder="Search Item..."
+                    selectedId={item.itemId}
+                    searchFields={["name", "sku"]}
+                    customRender={(opt) => (
+                      <div className="flex justify-between w-full text-xs">
+                        <span className="font-semibold text-foreground">{opt.name}</span>
+                        <span className="text-muted-foreground font-mono">
+                          Stock: {opt.openingStock} | Cost: ₹{opt.purchasePrice}
+                        </span>
+                      </div>
+                    )}
+                    onSelect={(opt) => updateItemDetails(item.id, opt)}
+                    onClear={() => clearItemDetails(item.id)}
+                  />
+                </td>
+
+                <td className="p-3 text-right align-middle font-mono font-semibold text-foreground">
+                  {item.itemId ? item.currentStock : "-"}
+                </td>
+
+                <td className="p-3 text-right align-middle">
+                  <input
+                    type="number"
+                    min="1"
+                    value={item.qty}
+                    onChange={(e) => updateItemQty(item.id, e.target.value)}
+                    className="border border-border p-2 rounded-lg w-20 text-right bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent font-mono"
+                  />
+                </td>
+
+                <td className="p-3 text-right align-middle font-mono font-semibold text-foreground">
+                  {item.itemId ? `₹ ${item.rate.toFixed(2)}` : "-"}
+                </td>
+
+                <td className="p-3 text-right align-middle font-mono font-semibold text-muted-foreground">
+                  {item.itemId ? `${item.gstPercentage}%` : "-"}
+                </td>
+
+                <td className="p-3 text-right align-middle font-mono font-bold text-foreground">
+                  {item.itemId ? `₹ ${item.amount.toFixed(2)}` : "-"}
+                </td>
+
+                <td className="p-3 text-center align-middle">
+                  <button
+                    onClick={() => removeRow(item.id)}
+                    className="bg-destructive/10 text-destructive px-3 py-1.5 rounded-lg hover:bg-destructive hover:text-destructive-foreground transition-all duration-200 text-xs font-semibold cursor-pointer"
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
