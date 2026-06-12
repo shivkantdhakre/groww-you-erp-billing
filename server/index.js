@@ -12,6 +12,7 @@ import notificationsRouter from "./routes/notifications.js";
 import usersRouter from "./routes/users.js";
 import pdfRouter from "./routes/pdf.js";
 import complianceRouter from "./routes/compliance.js";
+import branchRouter from "./routes/branch.js";
 import prisma from "./utils/prisma.js";
 import pdfService from "./utils/pdfService.js";
 import path from "path";
@@ -36,6 +37,7 @@ app.use("/api/notifications", notificationsRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/pdf", pdfRouter);
 app.use("/api/compliance", complianceRouter);
+app.use("/api/branches", branchRouter);
 
 // Serve local generated PDFs in development fallback
 app.use("/public", express.static(path.join(process.cwd(), "public")));
