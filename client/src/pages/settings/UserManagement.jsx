@@ -149,18 +149,18 @@ function UserManagement() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold mb-2">User Management</h1>
-      <p className="text-gray-500 mb-6">Manage ERP staff members and deactivations</p>
+      <h1 className="text-3xl font-bold mb-2 text-foreground">User Management</h1>
+      <p className="text-muted-foreground mb-6">Manage ERP staff members and deactivations</p>
 
       {/* Form */}
-      <div className="bg-white p-6 rounded-xl shadow">
+      <div className="bg-card text-foreground p-6 rounded-xl border border-border shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <input
             type="text"
             placeholder="Full Name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
           <input
@@ -168,7 +168,7 @@ function UserManagement() {
             placeholder="Email Address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
           <input
@@ -176,13 +176,13 @@ function UserManagement() {
             placeholder={editUserId ? "New Password (Optional)" : "Password (Min 6 chars)"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
           <select
             value={selectedRole}
             onChange={(e) => setSelectedRole(e.target.value)}
-            className="border p-3 rounded-lg text-gray-700 bg-white"
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none cursor-pointer transition"
           >
             <option value="">Select Role</option>
             <option value="Administrator">Administrator (Admin)</option>
@@ -194,14 +194,14 @@ function UserManagement() {
         <div className="flex gap-3 mt-5">
           <button
             onClick={handleSaveUser}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-semibold transition-colors cursor-pointer"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-2.5 rounded-lg font-semibold transition-colors cursor-pointer shadow-sm"
           >
             {editUserId !== null ? "Update User" : "Add User"}
           </button>
           {editUserId !== null && (
             <button
               onClick={clearForm}
-              className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2.5 rounded-lg font-semibold transition-colors cursor-pointer"
+              className="bg-secondary hover:bg-secondary/80 text-secondary-foreground px-5 py-2.5 rounded-lg font-semibold transition-colors cursor-pointer"
             >
               Cancel Edit
             </button>
@@ -214,10 +214,10 @@ function UserManagement() {
       </div>
 
       {/* Users Table */}
-      <div className="bg-white p-6 rounded-xl shadow mt-6 overflow-x-auto">
+      <div className="bg-card text-foreground p-6 rounded-xl border border-border shadow-sm mt-6 overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-blue-600 text-white">
+            <tr className="bg-secondary text-secondary-foreground border-b border-border">
               <th className="p-3 font-semibold rounded-tl-lg">Name</th>
               <th className="p-3 font-semibold">Email</th>
               <th className="p-3 font-semibold">Role Designation</th>
@@ -239,25 +239,25 @@ function UserManagement() {
                 }
 
                 return (
-                  <tr key={u.id} className="border-t hover:bg-gray-50">
-                    <td className="p-3 text-gray-800 font-medium">{u.name}</td>
-                    <td className="p-3 text-gray-600">{u.email}</td>
-                    <td className="p-3 text-gray-600 font-semibold">{roleDisplay}</td>
+                  <tr key={u.id} className="border-t border-border hover:bg-muted/30 transition">
+                    <td className="p-3 text-foreground font-medium">{u.name}</td>
+                    <td className="p-3 text-muted-foreground">{u.email}</td>
+                    <td className="p-3 text-muted-foreground font-semibold">{roleDisplay}</td>
                     <td className="p-3 text-xs">
-                      <span className="px-2.5 py-1 bg-gray-100 text-gray-700 rounded-full font-bold uppercase">
+                      <span className="px-2.5 py-1 bg-muted text-muted-foreground rounded-full font-bold uppercase">
                         {u.role}{u.subRole ? `:${u.subRole}` : ""}
                       </span>
                     </td>
                     <td className="p-3">
                       <button
                         onClick={() => handleEditClick(u)}
-                        className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded mr-2 text-xs font-semibold transition-colors cursor-pointer"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded mr-2 text-xs font-semibold transition-colors cursor-pointer shadow-sm"
                       >
                         Edit
                       </button>
                       <button
                         onClick={() => handleDeleteClick(u.id)}
-                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded text-xs font-semibold transition-colors cursor-pointer"
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90 px-3 py-1.5 rounded text-xs font-semibold transition-colors cursor-pointer shadow-sm"
                       >
                         Deactivate
                       </button>
@@ -267,7 +267,7 @@ function UserManagement() {
               })
             ) : (
               <tr>
-                <td colSpan="5" className="p-6 text-center text-gray-500">
+                <td colSpan="5" className="p-6 text-center text-muted-foreground font-medium">
                   No Users Found
                 </td>
               </tr>

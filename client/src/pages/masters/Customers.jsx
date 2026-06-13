@@ -147,26 +147,26 @@ function Customers() {
 
 
   return (
-    <div>
+    <div className="text-foreground">
       {/* Top Section */}
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Customers</h1>
+        <h1 className="text-3xl font-bold text-foreground">Customers</h1>
       </div>
 
       {/* Form */}
-      <div className="bg-white p-5 rounded-xl shadow mb-6">
-        <h2 className="text-xl font-bold mb-4">
+      <div className="bg-card text-foreground p-5 rounded-xl border border-border shadow-sm mb-6">
+        <h2 className="text-xl font-bold mb-4 text-foreground">
           {editId !== null ? "Edit Customer" : "Add Customer"}
         </h2>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Name */}
           <input
             type="text"
             placeholder="Customer Name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
           {/* Mobile */}
@@ -175,7 +175,7 @@ function Customers() {
             placeholder="Mobile Number"
             value={mobile}
             onChange={(e) => setMobile(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
           {/* GSTIN */}
@@ -184,7 +184,7 @@ function Customers() {
             placeholder="GSTIN Number"
             value={gstin}
             onChange={(e) => setGstin(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
           {/* Address */}
@@ -193,7 +193,7 @@ function Customers() {
             placeholder="Address"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
           {/* Opening Balance */}
@@ -202,7 +202,7 @@ function Customers() {
             placeholder="Opening Balance"
             value={openingBalance}
             onChange={(e) => setOpeningBalance(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
           {/* Credit Limit */}
@@ -211,14 +211,14 @@ function Customers() {
             placeholder="Credit Limit"
             value={creditLimit}
             onChange={(e) => setCreditLimit(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
         </div>
 
         <div className="mt-4 flex gap-2">
           <button
             onClick={addCustomer}
-            className="bg-blue-600 text-white px-5 py-3 rounded-lg hover:bg-blue-700 cursor-pointer"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 px-5 py-3 rounded-lg font-semibold transition cursor-pointer shadow-sm"
           >
             {editId !== null ? "Update Customer" : "Add Customer"}
           </button>
@@ -233,7 +233,7 @@ function Customers() {
               setOpeningBalance("");
               setCreditLimit("");
             }}
-            className="bg-gray-500 text-white px-5 py-3 rounded-lg hover:bg-gray-600 cursor-pointer"
+            className="bg-secondary text-secondary-foreground hover:bg-secondary/80 px-5 py-3 rounded-lg font-semibold transition cursor-pointer"
           >
             Clear
           </button>
@@ -242,12 +242,12 @@ function Customers() {
 
       {message && (
         <div
-          className={`p-3 rounded-lg mb-4 text-white ${
+          className={`p-3 rounded-lg mb-4 text-white font-medium shadow-sm transition ${
             messageType === "success"
-              ? "bg-green-500"
+              ? "bg-emerald-600"
               : messageType === "warning"
-              ? "bg-yellow-500"
-              : "bg-red-500"
+              ? "bg-amber-500"
+              : "bg-destructive"
           }`}
         >
           {message}
@@ -255,18 +255,18 @@ function Customers() {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center p-8 bg-white rounded-xl shadow">
-          <svg className="animate-spin h-8 w-8 text-blue-600 mr-3" fill="none" viewBox="0 0 24 24">
+        <div className="flex items-center justify-center p-8 bg-card border border-border text-foreground rounded-xl shadow-sm">
+          <svg className="animate-spin h-8 w-8 text-primary mr-3" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
-          <span className="text-slate-600 font-medium">Loading customers...</span>
+          <span className="text-muted-foreground font-medium">Loading customers...</span>
         </div>
       ) : (
         <>
-          <div className="bg-white p-4 rounded-xl shadow mb-4 w-64">
-            <h3 className="text-gray-500 text-sm">Total Customers</h3>
-            <p className="text-3xl font-bold text-blue-600">{customers.length}</p>
+          <div className="bg-card text-foreground p-4 rounded-xl border border-border shadow-sm mb-4 w-64">
+            <h3 className="text-muted-foreground text-sm font-semibold">Total Customers</h3>
+            <p className="text-3xl font-extrabold text-primary">{customers.length}</p>
           </div>
 
           {/* Search */}
@@ -275,22 +275,22 @@ function Customers() {
             placeholder="Search Customer"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="border p-3 rounded-lg mb-4 w-full"
+            className="bg-card text-foreground border border-border p-3 rounded-lg mb-4 w-full focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
           {/* Table */}
-          <div className="bg-white rounded-xl shadow overflow-hidden">
+          <div className="bg-card text-foreground rounded-xl border border-border shadow-sm overflow-hidden">
             <table className="w-full">
-              <thead className="bg-blue-600 text-white">
+              <thead className="bg-secondary text-secondary-foreground border-b border-border">
                 <tr>
-                  <th className="text-left p-4">Sr No</th>
-                  <th className="text-left p-4">Name</th>
-                  <th className="text-left p-4">Mobile</th>
-                  <th className="text-left p-4">GSTIN</th>
-                  <th className="text-left p-4">Address</th>
-                  <th className="text-left p-4">Opening Balance</th>
-                  <th className="text-left p-4">Credit Limit</th>
-                  <th className="text-left p-4">Action</th>
+                  <th className="text-left p-4 font-semibold text-sm">Sr No</th>
+                  <th className="text-left p-4 font-semibold text-sm">Name</th>
+                  <th className="text-left p-4 font-semibold text-sm">Mobile</th>
+                  <th className="text-left p-4 font-semibold text-sm">GSTIN</th>
+                  <th className="text-left p-4 font-semibold text-sm">Address</th>
+                  <th className="text-left p-4 font-semibold text-sm">Opening Balance</th>
+                  <th className="text-left p-4 font-semibold text-sm">Credit Limit</th>
+                  <th className="text-left p-4 font-semibold text-sm">Action</th>
                 </tr>
               </thead>
 
@@ -302,17 +302,15 @@ function Customers() {
                   .map((customer, index) => (
                     <tr
                       key={customer.id}
-                      className={`border-t ${
-                        index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                      }`}
+                      className="border-t border-border hover:bg-muted/30 transition"
                     >
-                      <td className="p-4">{index + 1}</td>
-                      <td className="p-4">{customer.name}</td>
-                      <td className="p-4">{customer.mobile}</td>
-                      <td className="p-4">{customer.gstin || "N/A"}</td>
-                      <td className="p-4">{customer.address || "N/A"}</td>
-                      <td className="p-4">₹ {customer.openingBalance || 0}</td>
-                      <td className="p-4">₹ {customer.creditLimit || 0}</td>
+                      <td className="p-4 text-foreground">{index + 1}</td>
+                      <td className="p-4 text-foreground font-semibold">{customer.name}</td>
+                      <td className="p-4 text-muted-foreground">{customer.mobile}</td>
+                      <td className="p-4 text-muted-foreground font-mono">{customer.gstin || "N/A"}</td>
+                      <td className="p-4 text-foreground">{customer.address || "N/A"}</td>
+                      <td className="p-4 text-foreground">₹ {customer.openingBalance || 0}</td>
+                      <td className="p-4 text-foreground">₹ {customer.creditLimit || 0}</td>
 
                       <td className="p-4">
                         <button
@@ -325,14 +323,14 @@ function Customers() {
                             setOpeningBalance(customer.openingBalance || "");
                             setCreditLimit(customer.creditLimit || "");
                           }}
-                          className="bg-yellow-500 text-white px-3 py-1 rounded mr-2 hover:bg-yellow-600 cursor-pointer"
+                          className="bg-amber-500 text-white px-3 py-1 rounded mr-2 hover:bg-amber-600 transition cursor-pointer text-sm font-semibold shadow-sm"
                         >
                           Edit
                         </button>
 
                         <button
                           onClick={() => deleteCustomer(customer.id)}
-                          className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 cursor-pointer"
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90 px-3 py-1 rounded transition cursor-pointer text-sm font-semibold shadow-sm"
                         >
                           Delete
                         </button>

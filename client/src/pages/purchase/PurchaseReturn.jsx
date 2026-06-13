@@ -128,8 +128,8 @@ function PurchaseReturn() {
   ) / 100;
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold mb-6 text-gray-800">Purchase Return</h1>
+    <div className="space-y-6 text-foreground">
+      <h1 className="text-3xl font-bold mb-6 text-foreground">Purchase Return</h1>
 
       {message && (
         <div
@@ -146,30 +146,30 @@ function PurchaseReturn() {
       )}
 
       {/* FORM */}
-      <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+      <div className="bg-card text-foreground p-6 rounded-xl border border-border shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div>
-            <label className="block mb-2 text-sm font-semibold text-gray-700">Return Number</label>
+            <label className="block mb-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">Return Number</label>
             <input
               type="text"
               value="[Auto-Generated]"
               readOnly
-              className="border border-gray-200 p-3 rounded-lg w-full bg-gray-50 text-gray-500 font-mono"
+              className="border border-border p-3 rounded-lg w-full bg-muted text-muted-foreground font-mono focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="block mb-2 text-sm font-semibold text-gray-700">Return Date</label>
+            <label className="block mb-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">Return Date</label>
             <input
               type="date"
               value={returnDate}
               onChange={(e) => setReturnDate(e.target.value)}
-              className="border border-gray-200 p-3 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              className="bg-card text-foreground border border-border p-3 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
             />
           </div>
 
           <div>
-            <label className="block mb-2 text-sm font-semibold text-gray-700">Vendor Name</label>
+            <label className="block mb-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">Vendor Name</label>
             <Autocomplete
               options={vendors}
               labelKey="name"
@@ -179,8 +179,8 @@ function PurchaseReturn() {
               searchFields={["name", "mobile"]}
               customRender={(opt) => (
                 <div className="flex justify-between w-full">
-                  <span className="font-semibold text-gray-800">{opt.name}</span>
-                  <span className="text-sm text-gray-500">
+                  <span className="font-semibold text-foreground">{opt.name}</span>
+                  <span className="text-sm text-muted-foreground">
                     Bal: ₹{opt.outstandingBalance}
                   </span>
                 </div>
@@ -189,36 +189,36 @@ function PurchaseReturn() {
               onClear={() => setVendorId(null)}
             />
             {selectedVendor && (
-              <p className="text-xs text-gray-500 mt-1">
-                Outstanding Balance: <span className="font-bold text-gray-700">₹{selectedVendor.outstandingBalance}</span>
+              <p className="text-xs text-muted-foreground mt-1">
+                Outstanding Balance: <span className="font-bold text-foreground">₹{selectedVendor.outstandingBalance}</span>
               </p>
             )}
           </div>
 
           <div>
-            <label className="block mb-2 text-sm font-semibold text-gray-700">Purchase Invoice No</label>
+            <label className="block mb-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">Purchase Invoice No</label>
             <input
               type="text"
               placeholder="e.g. GY-PUR-0001 (Optional)"
               value={purchaseInvoiceNo}
               onChange={(e) => setPurchaseInvoiceNo(e.target.value)}
-              className="border border-gray-200 p-3 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              className="bg-card text-foreground border border-border p-3 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
             />
           </div>
 
           <div>
-            <label className="block mb-2 text-sm font-semibold text-gray-700">Reason</label>
+            <label className="block mb-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">Reason</label>
             <input
               type="text"
               placeholder="e.g. Defective stock"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              className="border border-gray-200 p-3 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              className="bg-card text-foreground border border-border p-3 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
             />
           </div>
 
           <div>
-            <label className="block mb-2 text-sm font-semibold text-gray-700">Product</label>
+            <label className="block mb-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">Product</label>
             <Autocomplete
               options={items}
               labelKey="name"
@@ -228,8 +228,8 @@ function PurchaseReturn() {
               searchFields={["name", "sku"]}
               customRender={(opt) => (
                 <div className="flex justify-between w-full">
-                  <span className="font-semibold text-gray-800">{opt.name}</span>
-                  <span className="text-sm text-gray-500">
+                  <span className="font-semibold text-foreground">{opt.name}</span>
+                  <span className="text-sm text-muted-foreground">
                     Stock: {opt.openingStock} | Cost: ₹{opt.purchasePrice}
                   </span>
                 </div>
@@ -244,67 +244,67 @@ function PurchaseReturn() {
               }}
             />
             {selectedItem && (
-              <p className="text-xs text-gray-500 mt-1">
-                Current Stock: <span className="font-bold text-gray-700">{selectedItem.openingStock}</span>
+              <p className="text-xs text-muted-foreground mt-1">
+                Current Stock: <span className="font-bold text-foreground">{selectedItem.openingStock}</span>
               </p>
             )}
           </div>
 
           <div>
-            <label className="block mb-2 text-sm font-semibold text-gray-700">Qty</label>
+            <label className="block mb-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">Qty</label>
             <input
               type="number"
               placeholder="Qty"
               value={qty}
               onChange={(e) => setQty(e.target.value)}
-              className="border border-gray-200 p-3 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="bg-card text-foreground border border-border p-3 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
           <div>
-            <label className="block mb-2 text-sm font-semibold text-gray-700">Purchase Rate</label>
+            <label className="block mb-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">Purchase Rate</label>
             <input
               type="text"
               value={itemId ? `₹ ${rate}` : "-"}
               readOnly
-              className="border border-gray-200 p-3 rounded-lg w-full bg-gray-50 text-gray-500 font-semibold"
+              className="border border-border p-3 rounded-lg w-full bg-muted text-muted-foreground font-semibold focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="block mb-2 text-sm font-semibold text-gray-700">Return Amount</label>
+            <label className="block mb-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">Return Amount</label>
             <input
               type="text"
               value={`₹ ${amount.toFixed(2)}`}
               readOnly
-              className="border border-gray-200 p-3 rounded-lg w-full bg-gray-50 text-gray-700 font-bold"
+              className="border border-border p-3 rounded-lg w-full bg-muted text-foreground font-bold focus:outline-none"
             />
           </div>
         </div>
 
         <button
           onClick={handleSaveReturn}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-lg mt-6 font-bold shadow-md transition"
+          className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-lg mt-6 font-bold shadow-sm transition cursor-pointer"
         >
           Save Return
         </button>
       </div>
 
       {/* SUMMARY */}
-      <div className="bg-white p-5 rounded-xl shadow border border-gray-100 w-72">
-        <h3 className="text-gray-500 text-sm font-semibold">Total Return Amount</h3>
+      <div className="bg-card text-foreground p-5 rounded-xl border border-border shadow-sm w-72">
+        <h3 className="text-muted-foreground text-sm font-semibold">Total Return Amount</h3>
         <p className="text-3xl font-extrabold text-rose-600 mt-1">₹ {totalReturnAmount}</p>
       </div>
 
       {/* TABLE */}
-      <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
-        <h2 className="text-2xl font-bold mb-4 text-gray-800">Saved Returns</h2>
+      <div className="bg-card text-foreground p-6 rounded-xl border border-border shadow-sm">
+        <h2 className="text-2xl font-bold mb-4 text-foreground">Saved Returns</h2>
         {loadingReturns ? (
-          <div className="text-center py-6 text-gray-500">Loading returns...</div>
+          <div className="text-center py-6 text-muted-foreground font-medium">Loading returns...</div>
         ) : returns.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 text-gray-700 border-b border-gray-200">
+              <thead className="bg-secondary text-secondary-foreground border-b border-border">
                 <tr>
                   <th className="p-3 text-left font-semibold text-sm">Return Number</th>
                   <th className="p-3 text-left font-semibold text-sm">Return Date</th>
@@ -315,15 +315,15 @@ function PurchaseReturn() {
                   <th className="p-3 text-left font-semibold text-sm">Total</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-border">
                 {returns.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50/50 transition">
-                    <td className="p-3 font-mono font-semibold text-gray-900">{item.returnNo}</td>
-                    <td className="p-3 text-gray-600">{new Date(item.returnDate).toLocaleDateString()}</td>
-                    <td className="p-3 text-gray-700 font-medium">{item.vendor?.name || "-"}</td>
-                    <td className="p-3 text-gray-600 font-mono">{item.invoiceNo || "-"}</td>
-                    <td className="p-3 text-gray-700">{item.items?.[0]?.item?.name || "-"}</td>
-                    <td className="p-3 text-gray-600">{item.totalQty}</td>
+                  <tr key={item.id} className="hover:bg-muted/30 border-b border-border transition">
+                    <td className="p-3 font-mono font-semibold text-foreground">{item.returnNo}</td>
+                    <td className="p-3 text-muted-foreground">{new Date(item.returnDate).toLocaleDateString()}</td>
+                    <td className="p-3 text-foreground font-medium">{item.vendor?.name || "-"}</td>
+                    <td className="p-3 text-muted-foreground font-mono">{item.invoiceNo || "-"}</td>
+                    <td className="p-3 text-foreground">{item.items?.[0]?.item?.name || "-"}</td>
+                    <td className="p-3 text-muted-foreground">{item.totalQty}</td>
                     <td className="p-3 text-rose-600 font-bold">₹ {item.grandTotal}</td>
                   </tr>
                 ))}
@@ -331,18 +331,18 @@ function PurchaseReturn() {
             </table>
           </div>
         ) : (
-          <div className="text-center py-6 text-gray-400">No returns saved yet</div>
+          <div className="text-center py-6 text-muted-foreground">No returns saved yet</div>
         )}
       </div>
 
       <CommonModal isOpen={showSaveModal} title="Purchase Return Saved">
-        <p className="mb-4 text-gray-600">
+        <p className="mb-4 text-muted-foreground">
           The Purchase Return has been successfully saved. Inventory levels and vendor outstanding balances have been updated.
         </p>
         <div className="flex justify-end">
           <button
             onClick={() => setShowSaveModal(false)}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-lg font-semibold transition"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-lg font-semibold transition cursor-pointer"
           >
             OK
           </button>

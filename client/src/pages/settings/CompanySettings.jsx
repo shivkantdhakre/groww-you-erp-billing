@@ -84,90 +84,90 @@ function CompanySettings() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8 bg-white rounded-xl shadow">
-        <svg className="animate-spin h-8 w-8 text-blue-600 mr-3" fill="none" viewBox="0 0 24 24">
+      <div className="flex items-center justify-center p-8 bg-card border border-border text-foreground rounded-xl shadow-sm">
+        <svg className="animate-spin h-8 w-8 text-primary mr-3" fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
         </svg>
-        <span className="text-slate-600 font-medium">Loading settings...</span>
+        <span className="text-muted-foreground font-medium">Loading settings...</span>
       </div>
     );
   }
 
   return (
     <div>
-      <h1 className="text-3xl font-bold">Company Settings</h1>
-      <p className="text-gray-500 mb-6">Manage company setup information and locks</p>
+      <h1 className="text-3xl font-bold text-foreground">Company Settings</h1>
+      <p className="text-muted-foreground mb-6">Manage company setup information and locks</p>
 
       {message && (
         <div
-          className={`p-3 rounded-lg mb-6 text-white ${
-            messageType === "success" ? "bg-green-500" : "bg-red-500"
+          className={`p-3 rounded-lg mb-6 text-white font-medium shadow-sm transition ${
+            messageType === "success" ? "bg-emerald-600" : "bg-destructive"
           }`}
         >
           {message}
         </div>
       )}
 
-      <div className="bg-white p-6 rounded-xl shadow space-y-6">
+      <div className="bg-card text-foreground p-6 rounded-xl border border-border shadow-sm space-y-6">
         <div>
-          <h2 className="text-xl font-semibold mb-4">Company Details</h2>
+          <h2 className="text-xl font-semibold mb-4 text-foreground">Company Details</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input
               type="text"
               placeholder="Company Name"
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
-              className="border p-3 rounded-lg"
+              className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
             />
             <input
               type="text"
               placeholder="GST Number"
               value={gstNumber}
               onChange={(e) => setGstNumber(e.target.value)}
-              className="border p-3 rounded-lg"
+              className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
             />
             <input
               type="text"
               placeholder="Mobile Number"
               value={mobile}
               onChange={(e) => setMobile(e.target.value)}
-              className="border p-3 rounded-lg"
+              className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
             />
             <input
               type="text"
               placeholder="Invoice Prefix (e.g. GY-)"
               value={invoicePrefix}
               onChange={(e) => setInvoicePrefix(e.target.value)}
-              className="border p-3 rounded-lg"
+              className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
             />
           </div>
           <textarea
             placeholder="Address"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            className="border p-3 rounded-lg w-full mt-4"
+            className="bg-card text-foreground border border-border p-3 rounded-lg w-full mt-4 focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
             rows="3"
           />
         </div>
 
         <div>
-          <h2 className="text-xl font-semibold mb-4">Financial Year Settings</h2>
+          <h2 className="text-xl font-semibold mb-4 text-foreground">Financial Year Settings</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input
               type="text"
               placeholder="Financial Year (e.g. 2026-27)"
               value={financialYear}
               onChange={(e) => setFinancialYear(e.target.value)}
-              className="border p-3 rounded-lg"
+              className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
             />
             <div className="flex flex-col">
-              <label className="text-xs text-gray-500 mb-1 ml-1">FY Start Date</label>
+              <label className="text-xs text-muted-foreground mb-1 ml-1 font-semibold">FY Start Date</label>
               <input
                 type="date"
                 value={currentFinancialYearStart}
                 onChange={(e) => setCurrentFinancialYearStart(e.target.value)}
-                className="border p-3 rounded-lg"
+                className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
               />
             </div>
           </div>
@@ -177,9 +177,9 @@ function CompanySettings() {
               id="fyLocked"
               checked={financialYearLocked}
               onChange={(e) => setFinancialYearLocked(e.target.checked)}
-              className="h-5 w-5"
+              className="h-5 w-5 rounded border-border text-primary focus:ring-primary focus:ring-offset-background cursor-pointer"
             />
-            <label htmlFor="fyLocked" className="font-semibold text-gray-700">
+            <label htmlFor="fyLocked" className="font-semibold text-muted-foreground select-none cursor-pointer">
               Lock Financial Year (Prevent postings before FY Start Date)
             </label>
           </div>
@@ -187,7 +187,7 @@ function CompanySettings() {
 
         <button
           onClick={saveSettings}
-          className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-semibold cursor-pointer transition-colors"
+          className="bg-primary text-primary-foreground px-6 py-3 rounded-lg hover:bg-primary/95 font-semibold cursor-pointer transition shadow-sm"
         >
           Save Settings
         </button>

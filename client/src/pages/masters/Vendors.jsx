@@ -156,26 +156,26 @@ function Vendors() {
   };
 
   return (
-    <div>
+    <div className="text-foreground">
       {/* Top Section */}
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Vendors</h1>
+        <h1 className="text-3xl font-bold text-foreground">Vendors</h1>
       </div>
 
       {/* Form */}
-      <div className="bg-white p-5 rounded-xl shadow mb-6">
-        <h2 className="text-xl font-bold mb-4">
+      <div className="bg-card text-foreground p-5 rounded-xl border border-border shadow-sm mb-6">
+        <h2 className="text-xl font-bold mb-4 text-foreground">
           {editId !== null ? "Edit Vendor" : "Add Vendor"}
         </h2>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Name */}
           <input
             type="text"
             placeholder="Vendor Name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
           {/* Mobile */}
@@ -184,7 +184,7 @@ function Vendors() {
             placeholder="Mobile Number"
             value={mobile}
             onChange={(e) => setMobile(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
           {/* GSTIN */}
@@ -193,7 +193,7 @@ function Vendors() {
             placeholder="GSTIN Number"
             value={gstin}
             onChange={(e) => setGstin(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
           {/* Address */}
@@ -202,7 +202,7 @@ function Vendors() {
             placeholder="Address"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
           {/* Opening Balance */}
@@ -211,7 +211,7 @@ function Vendors() {
             placeholder="Opening Balance"
             value={openingBalance}
             onChange={(e) => setOpeningBalance(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
           {/* Credit Limit */}
@@ -220,7 +220,7 @@ function Vendors() {
             placeholder="Credit Limit"
             value={creditLimit}
             onChange={(e) => setCreditLimit(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
           {/* Contact Person */}
@@ -229,7 +229,7 @@ function Vendors() {
             placeholder="Contact Person"
             value={contactPerson}
             onChange={(e) => setContactPerson(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
           {/* Credit Days */}
@@ -238,14 +238,14 @@ function Vendors() {
             placeholder="Credit Days"
             value={creditDays}
             onChange={(e) => setCreditDays(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
         </div>
 
         <div className="mt-4 flex gap-2">
           <button
             onClick={addVendor}
-            className="bg-blue-600 text-white px-5 py-3 rounded-lg hover:bg-blue-700 cursor-pointer"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 px-5 py-3 rounded-lg font-semibold transition cursor-pointer shadow-sm"
           >
             {editId !== null ? "Update Vendor" : "Add Vendor"}
           </button>
@@ -262,7 +262,7 @@ function Vendors() {
               setContactPerson("");
               setCreditDays("");
             }}
-            className="bg-gray-500 text-white px-5 py-3 rounded-lg hover:bg-gray-600 cursor-pointer"
+            className="bg-secondary text-secondary-foreground hover:bg-secondary/80 px-5 py-3 rounded-lg font-semibold transition cursor-pointer"
           >
             Clear
           </button>
@@ -271,12 +271,12 @@ function Vendors() {
 
       {message && (
         <div
-          className={`p-3 rounded-lg mb-4 text-white ${
+          className={`p-3 rounded-lg mb-4 text-white font-medium shadow-sm transition ${
             messageType === "success"
-              ? "bg-green-500"
+              ? "bg-emerald-600"
               : messageType === "warning"
-              ? "bg-yellow-500"
-              : "bg-red-500"
+              ? "bg-amber-500"
+              : "bg-destructive"
           }`}
         >
           {message}
@@ -284,18 +284,18 @@ function Vendors() {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center p-8 bg-white rounded-xl shadow">
-          <svg className="animate-spin h-8 w-8 text-blue-600 mr-3" fill="none" viewBox="0 0 24 24">
+        <div className="flex items-center justify-center p-8 bg-card border border-border text-foreground rounded-xl shadow-sm">
+          <svg className="animate-spin h-8 w-8 text-primary mr-3" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
-          <span className="text-slate-600 font-medium">Loading vendors...</span>
+          <span className="text-muted-foreground font-medium">Loading vendors...</span>
         </div>
       ) : (
         <>
-          <div className="bg-white p-4 rounded-xl shadow mb-4 w-64">
-            <h3 className="text-gray-500 text-sm">Total Vendors</h3>
-            <p className="text-3xl font-bold text-blue-600">{vendors.length}</p>
+          <div className="bg-card text-foreground p-4 rounded-xl border border-border shadow-sm mb-4 w-64">
+            <h3 className="text-muted-foreground text-sm font-semibold">Total Vendors</h3>
+            <p className="text-3xl font-extrabold text-primary">{vendors.length}</p>
           </div>
 
           {/* Search */}
@@ -304,48 +304,46 @@ function Vendors() {
             placeholder="Search Vendor"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="border p-3 rounded-lg mb-4 w-full"
+            className="bg-card text-foreground border border-border p-3 rounded-lg mb-4 w-full focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
           {/* Table */}
-          <div className="bg-white rounded-xl shadow overflow-hidden">
+          <div className="bg-card text-foreground rounded-xl border border-border shadow-sm overflow-hidden">
             <table className="w-full">
-              <thead className="bg-blue-600 text-white">
+              <thead className="bg-secondary text-secondary-foreground border-b border-border">
                 <tr>
-                  <th className="text-left p-4">Sr No</th>
-                  <th className="text-left p-4">Name</th>
-                  <th className="text-left p-4">Mobile</th>
-                  <th className="text-left p-4">GSTIN</th>
-                  <th className="text-left p-4">Address</th>
-                  <th className="text-left p-4">Opening Balance</th>
-                  <th className="text-left p-4">Credit Limit</th>
-                  <th className="text-left p-4">Contact Person</th>
-                  <th className="text-left p-4">Credit Days</th>
-                  <th className="text-left p-4">Action</th>
+                  <th className="text-left p-4 font-semibold text-sm">Sr No</th>
+                  <th className="text-left p-4 font-semibold text-sm">Name</th>
+                  <th className="text-left p-4 font-semibold text-sm">Mobile</th>
+                  <th className="text-left p-4 font-semibold text-sm">GSTIN</th>
+                  <th className="text-left p-4 font-semibold text-sm">Address</th>
+                  <th className="text-left p-4 font-semibold text-sm">Opening Balance</th>
+                  <th className="text-left p-4 font-semibold text-sm">Credit Limit</th>
+                  <th className="text-left p-4 font-semibold text-sm">Contact Person</th>
+                  <th className="text-left p-4 font-semibold text-sm">Credit Days</th>
+                  <th className="text-left p-4 font-semibold text-sm">Action</th>
                 </tr>
               </thead>
 
               <tbody>
                 {vendors
                   .filter((vendor) =>
-                    vendor.name.toLowerCase().includes(search.toLowerCase()),
+                    vendor.name.toLowerCase().includes(search.toLowerCase())
                   )
                   .map((vendor, index) => (
                     <tr
                       key={vendor.id}
-                      className={`border-t ${
-                        index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                      }`}
+                      className="border-t border-border hover:bg-muted/30 transition"
                     >
-                      <td className="p-4">{index + 1}</td>
-                      <td className="p-4">{vendor.name}</td>
-                      <td className="p-4">{vendor.mobile}</td>
-                      <td className="p-4">{vendor.gstin || "N/A"}</td>
-                      <td className="p-4">{vendor.address || "N/A"}</td>
-                      <td className="p-4">₹ {vendor.openingBalance || 0}</td>
-                      <td className="p-4">₹ {vendor.creditLimit || 0}</td>
-                      <td className="p-4">{vendor.contactPerson || "N/A"}</td>
-                      <td className="p-4">{vendor.creditDays || "N/A"}</td>
+                      <td className="p-4 text-foreground">{index + 1}</td>
+                      <td className="p-4 text-foreground font-semibold">{vendor.name}</td>
+                      <td className="p-4 text-muted-foreground">{vendor.mobile}</td>
+                      <td className="p-4 text-muted-foreground font-mono">{vendor.gstin || "N/A"}</td>
+                      <td className="p-4 text-foreground">{vendor.address || "N/A"}</td>
+                      <td className="p-4 text-foreground">₹ {vendor.openingBalance || 0}</td>
+                      <td className="p-4 text-foreground">₹ {vendor.creditLimit || 0}</td>
+                      <td className="p-4 text-foreground">{vendor.contactPerson || "N/A"}</td>
+                      <td className="p-4 text-foreground">{vendor.creditDays || "N/A"}</td>
 
                       <td className="p-4">
                         <div className="flex gap-2">
@@ -361,14 +359,14 @@ function Vendors() {
                               setContactPerson(vendor.contactPerson || "");
                               setCreditDays(vendor.creditDays || "");
                             }}
-                            className="bg-yellow-500 text-white px-3 py-1 rounded mr-2 hover:bg-yellow-600 cursor-pointer"
+                            className="bg-amber-500 text-white px-3 py-1 rounded mr-2 hover:bg-amber-600 transition cursor-pointer text-sm font-semibold shadow-sm"
                           >
                             Edit
                           </button>
 
                           <button
                             onClick={() => deleteVendor(vendor.id)}
-                            className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 cursor-pointer"
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 px-3 py-1 rounded transition cursor-pointer text-sm font-semibold shadow-sm"
                           >
                             Delete
                           </button>

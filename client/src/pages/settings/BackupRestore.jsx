@@ -29,11 +29,11 @@ function BackupRestore() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold mb-2">
+      <h1 className="text-3xl font-bold mb-2 text-foreground">
         Backup & Restore
       </h1>
 
-      <p className="text-gray-500 mb-6">
+      <p className="text-muted-foreground mb-6">
         Manage Database Backup & Recovery
       </p>
 
@@ -41,35 +41,35 @@ function BackupRestore() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
 
-        <div className="bg-white p-6 rounded-xl shadow">
-          <h2 className="text-xl font-semibold mb-4">
+        <div className="bg-card text-foreground p-6 rounded-xl border border-border shadow-sm">
+          <h2 className="text-xl font-semibold mb-4 text-foreground">
             Backup Database
           </h2>
 
-          <p className="text-gray-500 mb-4">
+          <p className="text-muted-foreground mb-4">
             Create a database backup file.
           </p>
 
-          <button className="bg-blue-600 text-white px-5 py-2 rounded-lg">
+          <button className="bg-primary text-primary-foreground hover:bg-primary/90 px-5 py-2 rounded-lg font-semibold transition cursor-pointer shadow-sm">
             Create Backup
           </button>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow">
-          <h2 className="text-xl font-semibold mb-4">
+        <div className="bg-card text-foreground p-6 rounded-xl border border-border shadow-sm">
+          <h2 className="text-xl font-semibold mb-4 text-foreground">
             Restore Database
           </h2>
 
-          <p className="text-gray-500 mb-4">
+          <p className="text-muted-foreground mb-4">
             Upload backup file and restore.
           </p>
 
           <input
             type="file"
-            className="border p-2 rounded-lg w-full mb-4"
+            className="bg-card text-foreground border border-border p-2 rounded-lg w-full mb-4 focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
-          <button className="bg-green-600 text-white px-5 py-2 rounded-lg">
+          <button className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-lg font-semibold transition cursor-pointer shadow-sm">
             Restore Backup
           </button>
         </div>
@@ -78,27 +78,27 @@ function BackupRestore() {
 
       {/* Backup History */}
 
-      <div className="bg-white p-6 rounded-xl shadow">
+      <div className="bg-card text-foreground p-6 rounded-xl border border-border shadow-sm">
 
-        <h2 className="text-xl font-semibold mb-4">
+        <h2 className="text-xl font-semibold mb-4 text-foreground">
           Backup History
         </h2>
 
         <table className="w-full">
 
-          <thead className="bg-blue-600 text-white">
+          <thead className="bg-secondary text-secondary-foreground">
             <tr>
-              <th className="p-3">Date</th>
-              <th className="p-3">Time</th>
-              <th className="p-3">Backup Size</th>
-              <th className="p-3">Action</th>
+              <th className="p-3 text-left">Date</th>
+              <th className="p-3 text-left">Time</th>
+              <th className="p-3 text-left">Backup Size</th>
+              <th className="p-3 text-left">Action</th>
             </tr>
           </thead>
 
           <tbody>
 
             {backupHistory.map((backup, index) => (
-              <tr key={index} className="border-t">
+              <tr key={index} className="border-t border-border hover:bg-muted/30 transition">
 
                 <td className="p-3">{backup.date}</td>
                 <td className="p-3">{backup.time}</td>
@@ -106,7 +106,7 @@ function BackupRestore() {
 
                 <td className="p-3">
 
-                  <button className="bg-indigo-600 text-white px-3 py-1 rounded">
+                  <button className="bg-primary text-primary-foreground hover:bg-primary/90 px-3 py-1 rounded text-sm transition cursor-pointer shadow-sm">
                     Download
                   </button>
 

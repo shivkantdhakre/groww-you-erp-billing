@@ -163,20 +163,20 @@ function Inventory() {
 
 
   return (
-    <div>
+    <div className="text-foreground">
       <h1 className="text-3xl font-bold">Inventory</h1>
-      <div className="bg-white p-5 rounded-xl shadow mt-6">
-        <h2 className="text-xl font-bold mb-4">
+      <div className="bg-card text-foreground p-5 rounded-xl border border-border shadow-sm mt-6">
+        <h2 className="text-xl font-bold mb-4 text-foreground">
           {editId !== null ? "Edit Item Master" : "Add Item Master"}
         </h2>
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <input
             type="text"
             placeholder="Item Name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
           <input
@@ -184,7 +184,7 @@ function Inventory() {
             placeholder="SKU / Item Code"
             value={sku}
             onChange={(e) => setSku(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
           <input
@@ -192,7 +192,7 @@ function Inventory() {
             placeholder="Category"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
           <input
@@ -200,7 +200,7 @@ function Inventory() {
             placeholder="HSN Code"
             value={hsnCode}
             onChange={(e) => setHsnCode(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
           <input
@@ -208,7 +208,7 @@ function Inventory() {
             placeholder="GST %"
             value={gstPercentage}
             onChange={(e) => setGstPercentage(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
           <input
@@ -216,7 +216,7 @@ function Inventory() {
             placeholder="Unit (e.g. Pcs, Box, Kg)"
             value={unit}
             onChange={(e) => setUnit(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
           <input
@@ -224,7 +224,7 @@ function Inventory() {
             placeholder="Purchase Price"
             value={purchasePrice}
             onChange={(e) => setPurchasePrice(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
           <input
@@ -232,7 +232,7 @@ function Inventory() {
             placeholder="Sale Price"
             value={salePrice}
             onChange={(e) => setSalePrice(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
           <input
@@ -240,7 +240,7 @@ function Inventory() {
             placeholder="Opening Stock"
             value={openingStock}
             onChange={(e) => setOpeningStock(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
           <input
@@ -248,14 +248,14 @@ function Inventory() {
             placeholder="Min Stock Alert"
             value={minStockAlert}
             onChange={(e) => setMinStockAlert(e.target.value)}
-            className="border p-3 rounded-lg"
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
         </div>
 
         <div className="mt-4 flex gap-2">
           <button
             onClick={addItem}
-            className="bg-blue-600 text-white px-5 py-3 rounded-lg hover:bg-blue-700 cursor-pointer"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 px-5 py-3 rounded-lg font-semibold transition cursor-pointer shadow-sm"
           >
             {editId !== null ? "Update Item" : "Add Item"}
           </button>
@@ -273,7 +273,7 @@ function Inventory() {
               setOpeningStock("");
               setMinStockAlert("10");
             }}
-            className="bg-gray-500 text-white px-5 py-3 rounded-lg hover:bg-gray-600 cursor-pointer"
+            className="bg-secondary text-secondary-foreground hover:bg-secondary/80 px-5 py-3 rounded-lg font-semibold transition cursor-pointer"
           >
             Clear
           </button>
@@ -282,12 +282,12 @@ function Inventory() {
 
       {message && (
         <div
-          className={`p-3 rounded-lg mb-4 text-white mt-4 ${
+          className={`p-3 rounded-lg mb-4 text-white mt-4 font-medium shadow-sm transition ${
             messageType === "success"
-              ? "bg-green-500"
+              ? "bg-emerald-600"
               : messageType === "warning"
-              ? "bg-yellow-500"
-              : "bg-red-500"
+              ? "bg-amber-500"
+              : "bg-destructive"
           }`}
         >
           {message}
@@ -295,19 +295,19 @@ function Inventory() {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center p-8 bg-white rounded-xl shadow mt-4">
-          <svg className="animate-spin h-8 w-8 text-blue-600 mr-3" fill="none" viewBox="0 0 24 24">
+        <div className="flex items-center justify-center p-8 bg-card border border-border text-foreground rounded-xl shadow-sm mt-4">
+          <svg className="animate-spin h-8 w-8 text-primary mr-3" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
-          <span className="text-slate-600 font-medium">Loading inventory...</span>
+          <span className="text-muted-foreground font-medium">Loading inventory...</span>
         </div>
       ) : (
         <>
           {/* Inventory Count Card */}
-          <div className="bg-white p-4 rounded-xl shadow mb-4 mt-4 w-72">
-            <h3 className="text-gray-500 text-sm">Total Items</h3>
-            <p className="text-3xl font-bold text-blue-600">{items.length}</p>
+          <div className="bg-card text-foreground p-4 rounded-xl border border-border shadow-sm mb-4 mt-4 w-72">
+            <h3 className="text-muted-foreground text-sm font-semibold">Total Items</h3>
+            <p className="text-3xl font-extrabold text-primary">{items.length}</p>
           </div>
 
           {/* Search */}
@@ -316,57 +316,55 @@ function Inventory() {
             placeholder="Search Item"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="border p-3 rounded-lg mb-4 w-full"
+            className="bg-card text-foreground border border-border p-3 rounded-lg mb-4 w-full focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
-          <div className="bg-white rounded-xl shadow overflow-hidden">
+          <div className="bg-card text-foreground rounded-xl border border-border shadow-sm overflow-hidden">
             <table className="w-full">
-              <thead className="bg-blue-600 text-white">
+              <thead className="bg-secondary text-secondary-foreground border-b border-border">
                 <tr>
-                  <th className="text-left p-4">Sr No</th>
-                  <th className="text-left p-4">Item Name</th>
-                  <th className="text-left p-4">SKU / Code</th>
-                  <th className="text-left p-4">Category</th>
-                  <th className="text-left p-4">HSN</th>
-                  <th className="text-left p-4">GST %</th>
-                  <th className="text-left p-4">Unit</th>
-                  <th className="text-left p-4">Purchase Price</th>
-                  <th className="text-left p-4">Sale Price</th>
-                  <th className="text-left p-4">Opening Stock</th>
-                  <th className="text-left p-4">Stock Status</th>
-                  <th className="text-left p-4">Action</th>
+                  <th className="text-left p-4 font-semibold text-sm">Sr No</th>
+                  <th className="text-left p-4 font-semibold text-sm">Item Name</th>
+                  <th className="text-left p-4 font-semibold text-sm">SKU / Code</th>
+                  <th className="text-left p-4 font-semibold text-sm">Category</th>
+                  <th className="text-left p-4 font-semibold text-sm">HSN</th>
+                  <th className="text-left p-4 font-semibold text-sm">GST %</th>
+                  <th className="text-left p-4 font-semibold text-sm">Unit</th>
+                  <th className="text-left p-4 font-semibold text-sm">Purchase Price</th>
+                  <th className="text-left p-4 font-semibold text-sm">Sale Price</th>
+                  <th className="text-left p-4 font-semibold text-sm">Opening Stock</th>
+                  <th className="text-left p-4 font-semibold text-sm">Stock Status</th>
+                  <th className="text-left p-4 font-semibold text-sm">Action</th>
                 </tr>
               </thead>
 
               <tbody>
                 {items
                   .filter((item) =>
-                    item.name.toLowerCase().includes(search.toLowerCase()),
+                    item.name.toLowerCase().includes(search.toLowerCase())
                   )
                   .map((item, index) => (
                     <tr
                       key={item.id}
-                      className={`border-t ${
-                        index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                      }`}
+                      className="border-t border-border hover:bg-muted/30 transition"
                     >
-                      <td className="p-4">{index + 1}</td>
-                      <td className="p-4">{item.name}</td>
-                      <td className="p-4">{item.sku || "N/A"}</td>
-                      <td className="p-4">{item.category || "N/A"}</td>
-                      <td className="p-4">{item.hsnCode || "N/A"}</td>
-                      <td className="p-4">{item.gstPercentage || 0}%</td>
-                      <td className="p-4">{item.unit}</td>
-                      <td className="p-4">₹ {item.purchasePrice}</td>
-                      <td className="p-4">₹ {item.salePrice}</td>
-                      <td className="p-4">{item.openingStock}</td>
+                      <td className="p-4 text-foreground">{index + 1}</td>
+                      <td className="p-4 text-foreground font-semibold">{item.name}</td>
+                      <td className="p-4 text-muted-foreground font-mono">{item.sku || "N/A"}</td>
+                      <td className="p-4 text-foreground">{item.category || "N/A"}</td>
+                      <td className="p-4 text-muted-foreground font-mono">{item.hsnCode || "N/A"}</td>
+                      <td className="p-4 text-foreground">{item.gstPercentage || 0}%</td>
+                      <td className="p-4 text-foreground">{item.unit}</td>
+                      <td className="p-4 text-foreground">₹ {item.purchasePrice}</td>
+                      <td className="p-4 text-foreground">₹ {item.salePrice}</td>
+                      <td className="p-4 text-foreground">{item.openingStock}</td>
                       <td className="p-4">
                         {Number(item.openingStock) < (item.minStockAlert || 10) ? (
-                          <span className="bg-red-100 text-red-600 px-3 py-1 rounded-full text-sm">
+                          <span className="bg-destructive/10 text-destructive px-3 py-1 rounded-full text-xs font-bold">
                             Low Stock
                           </span>
                         ) : (
-                          <span className="bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm">
+                          <span className="bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full text-xs font-bold">
                             In Stock
                           </span>
                         )}
@@ -388,14 +386,14 @@ function Inventory() {
                               setOpeningStock(item.openingStock || "");
                               setMinStockAlert(item.minStockAlert || "10");
                             }}
-                            className="bg-yellow-500 text-white px-3 py-1 rounded mr-2 hover:bg-yellow-600 cursor-pointer"
+                            className="bg-amber-500 text-white px-3 py-1 rounded mr-2 hover:bg-amber-600 transition cursor-pointer text-sm font-semibold shadow-sm"
                           >
                             Edit
                           </button>
 
                           <button
                             onClick={() => deleteItem(item.id)}
-                            className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 cursor-pointer"
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 px-3 py-1 rounded transition cursor-pointer text-sm font-semibold shadow-sm"
                           >
                             Delete
                           </button>
