@@ -48,7 +48,8 @@ export default function Login() {
 
   const handleForgotPassword = async (e) => {
     e.preventDefault();
-    if (!forgotEmail || !newPassword || (!gstNumber && !mobileNumber)) {
+    const trimmedGst = gstNumber.trim().toUpperCase();
+    if (!forgotEmail || !newPassword || (!trimmedGst && !mobileNumber)) {
       setError("Please fill email, new password, and at least one tenant verification factor (GSTIN or Mobile).");
       return;
     }
@@ -61,7 +62,7 @@ export default function Login() {
       const res = await api.post("/auth/forgot-password", {
         email: forgotEmail,
         newPassword,
-        gstNumber: gstNumber || null,
+        gstNumber: trimmedGst || null,
         mobileNumber: mobileNumber || null,
       });
 
@@ -188,7 +189,7 @@ export default function Login() {
               <input
                 type="text"
                 value={gstNumber}
-                onChange={(e) => setGstNumber(e.target.value)}
+                onChange={(e) => setGstNumber(e.target.value.toUpperCase())}
                 placeholder="27AAACG1234D1Z5"
                 className="w-full px-4 py-2.5 rounded-lg bg-card border border-border text-foreground placeholder-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
               />

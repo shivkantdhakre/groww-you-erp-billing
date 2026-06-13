@@ -50,10 +50,19 @@ function CompanySettings() {
       return;
     }
 
-    if (gstNumber && gstNumber.length !== 15) {
-      setMessage("Invalid GST Number (must be 15 characters)");
-      setMessageType("error");
-      return;
+    const trimmedGst = gstNumber.trim().toUpperCase();
+    if (trimmedGst) {
+      if (trimmedGst.length !== 15) {
+        setMessage("Invalid GST Number (must be 15 characters)");
+        setMessageType("error");
+        return;
+      }
+      const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+      if (!gstinRegex.test(trimmedGst)) {
+        setMessage("Invalid GST Number Format (e.g. 07ABCDE1234F2Z5). The 14th character must be 'Z'.");
+        setMessageType("error");
+        return;
+      }
     }
 
     if (mobile && mobile.length !== 10) {
@@ -65,7 +74,7 @@ function CompanySettings() {
     try {
       await updateCompany({
         name: companyName,
-        gstNumber,
+        gstNumber: trimmedGst,
         mobileNumber: mobile,
         address,
         financialYear,
@@ -77,7 +86,16 @@ function CompanySettings() {
       setMessageType("success");
     } catch (err) {
       console.error("Failed to save company settings:", err);
-      setMessage("Failed to save settings. Please try again.");
+      const serverError = err.response?.data;
+      let errMsg = "Failed to save settings. Please try again.";
+      if (serverError) {
+        if (serverError.error === "Validation failed" && Array.isArray(serverError.details)) {
+          errMsg = `Validation failed: ${serverError.details.map(d => `${d.field}: ${d.message}`).join(", ")}`;
+        } else {
+          errMsg = serverError.message || serverError.error || errMsg;
+        }
+      }
+      setMessage(errMsg);
       setMessageType("error");
     }
   };
@@ -124,7 +142,7 @@ function CompanySettings() {
               type="text"
               placeholder="GST Number"
               value={gstNumber}
-              onChange={(e) => setGstNumber(e.target.value)}
+              onChange={(e) => setGstNumber(e.target.value.toUpperCase())}
               className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
             />
             <input
