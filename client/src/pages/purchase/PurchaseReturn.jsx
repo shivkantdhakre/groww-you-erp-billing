@@ -27,6 +27,14 @@ function PurchaseReturn() {
   const items = useStore((state) => state.items);
   const fetchVendors = useStore((state) => state.fetchVendors);
   const fetchItems = useStore((state) => state.fetchItems);
+  const user = useStore((state) => state.user);
+
+  const getBranchStock = (item) => {
+    if (!item) return 0;
+    return user?.branchId
+      ? (item.branchStocks?.find((b) => b.branchId === user.branchId)?.stock ?? 0)
+      : (item.branchStocks?.reduce((sum, b) => sum + b.stock, 0) ?? 0);
+  };
 
   const fetchPurchaseReturns = useCallback(async () => {
     setLoadingReturns(true);
@@ -73,9 +81,10 @@ function PurchaseReturn() {
     }
 
     // Client-side stock check for return
-    if (selectedItem && returnQty > selectedItem.openingStock) {
+    const stock = getBranchStock(selectedItem);
+    if (selectedItem && returnQty > stock) {
       setMessage(
-        `Insufficient stock to perform return. Available: ${selectedItem.openingStock}, Requested: ${returnQty}`
+        `Insufficient stock to perform return. Available: ${stock}, Requested: ${returnQty}`
       );
       setMessageType("error");
       return;
@@ -230,7 +239,7 @@ function PurchaseReturn() {
                 <div className="flex justify-between w-full">
                   <span className="font-semibold text-foreground">{opt.name}</span>
                   <span className="text-sm text-muted-foreground">
-                    Stock: {opt.openingStock} | Cost: ₹{opt.purchasePrice}
+                    Stock: {getBranchStock(opt)} | Cost: ₹{opt.purchasePrice}
                   </span>
                 </div>
               )}
@@ -245,7 +254,7 @@ function PurchaseReturn() {
             />
             {selectedItem && (
               <p className="text-xs text-muted-foreground mt-1">
-                Current Stock: <span className="font-bold text-foreground">{selectedItem.openingStock}</span>
+                Current Stock: <span className="font-bold text-foreground">{getBranchStock(selectedItem)}</span>
               </p>
             )}
           </div>

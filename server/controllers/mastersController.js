@@ -137,7 +137,7 @@ export const getItems = async (req, res) => {
       companyId: req.user.companyId,
       isActive: true
     };
-    const result = await paginate(prisma.item, whereClause, req.query, null, { name: "asc" });
+    const result = await paginate(prisma.item, whereClause, req.query, { branchStocks: true }, { name: "asc" });
     res.status(200).json(result);
   } catch (error) {
     console.error("Error fetching items:", error);
@@ -149,22 +149,50 @@ export const getItems = async (req, res) => {
 export const createItem = async (req, res) => {
   try {
     const { name, sku, category, unit, purchasePrice, salePrice, gstPercentage, openingStock, minStockAlert, hsnCode } = req.body;
-    const newItem = await prisma.item.create({
-      data: {
-        companyId: req.user.companyId,
-        name,
-        sku,
-        category,
-        unit,
-        purchasePrice: parseFloat(purchasePrice) || 0.0,
-        salePrice: parseFloat(salePrice) || 0.0,
-        gstPercentage: parseFloat(gstPercentage) || 0.0,
-        openingStock: parseInt(openingStock) || 0,
-        minStockAlert: parseInt(minStockAlert) || 0,
-        hsnCode,
-        isActive: true
+    
+    const newItem = await prisma.$transaction(async (tx) => {
+      const item = await tx.item.create({
+        data: {
+          companyId: req.user.companyId,
+          name,
+          sku,
+          category,
+          unit,
+          purchasePrice: parseFloat(purchasePrice) || 0.0,
+          salePrice: parseFloat(salePrice) || 0.0,
+          gstPercentage: parseFloat(gstPercentage) || 0.0,
+          openingStock: parseInt(openingStock) || 0,
+          minStockAlert: parseInt(minStockAlert) || 0,
+          hsnCode,
+          isActive: true
+        }
+      });
+
+      const branches = await tx.branch.findMany({
+        where: { companyId: req.user.companyId }
+      });
+
+      if (branches.length > 0) {
+        const hqBranch = branches.find(b => b.name === 'HQ - Main Branch') || branches[0];
+        for (const branch of branches) {
+          await tx.branchStock.create({
+            data: {
+              branchId: branch.id,
+              itemId: item.id,
+              stock: branch.id === hqBranch.id ? item.openingStock : 0
+            }
+          });
+        }
       }
+
+      const itemWithStocks = await tx.item.findUnique({
+        where: { id: item.id },
+        include: { branchStocks: true }
+      });
+
+      return itemWithStocks;
     });
+
     res.status(201).json(newItem);
   } catch (error) {
     console.error("Error creating item:", error);
@@ -258,9 +286,12 @@ export const updateItem = async (req, res) => {
         purchasePrice: purchasePrice !== undefined ? parseFloat(purchasePrice) : undefined,
         salePrice: salePrice !== undefined ? parseFloat(salePrice) : undefined,
         gstPercentage: gstPercentage !== undefined ? parseFloat(gstPercentage) : undefined,
-        openingStock: openingStock !== undefined ? parseInt(openingStock) : undefined,
+        // Force openingStock to be immutable after creation by omitting it from update
         minStockAlert: minStockAlert !== undefined ? parseInt(minStockAlert) : undefined,
         hsnCode,
+      },
+      include: {
+        branchStocks: true
       }
     });
     res.status(200).json(updated);

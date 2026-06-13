@@ -700,7 +700,7 @@ export const getSummary = async (req, res) => {
       // Items for low stock check
       prisma.item.findMany({
         where: { companyId: req.user.companyId, isActive: true },
-        select: { id: true, name: true, openingStock: true, minStockAlert: true },
+        select: { id: true, name: true, openingStock: true, minStockAlert: true, branchStocks: true },
       }),
       // Recent Activities queries
       prisma.customer.findMany({
@@ -791,8 +791,14 @@ export const getSummary = async (req, res) => {
 
     // Low stock items filtering
     const lowStockItems = itemsList
-      .filter(i => i.openingStock < (i.minStockAlert ?? 10))
-      .map(i => ({ name: i.name, stock: i.openingStock }));
+      .map(i => {
+        const liveStock = i.branchStocks && i.branchStocks.length > 0
+          ? i.branchStocks.reduce((sum, bs) => sum + bs.stock, 0)
+          : i.openingStock;
+        return { name: i.name, stock: liveStock, minStockAlert: i.minStockAlert };
+      })
+      .filter(i => i.stock < (i.minStockAlert ?? 10))
+      .map(i => ({ name: i.name, stock: i.stock }));
 
     const lowStockItemsCount = lowStockItems.length;
 

@@ -9,6 +9,7 @@ function Inventory() {
   const addItemStore = useStore((state) => state.addItem);
   const updateItemStore = useStore((state) => state.updateItem);
   const deleteItemStore = useStore((state) => state.deleteItem);
+  const user = useStore((state) => state.user);
 
   const [name, setName] = useState("");
   const [sku, setSku] = useState("");
@@ -258,7 +259,10 @@ function Inventory() {
             placeholder="Opening Stock"
             value={openingStock}
             onChange={(e) => setOpeningStock(e.target.value)}
-            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
+            disabled={editId !== null}
+            className={`bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition ${
+              editId !== null ? "opacity-50 cursor-not-allowed" : ""
+            }`}
           />
 
           <input
@@ -351,6 +355,7 @@ function Inventory() {
                   <th className="text-left p-4 font-semibold text-sm">Purchase Price</th>
                   <th className="text-left p-4 font-semibold text-sm">Sale Price</th>
                   <th className="text-left p-4 font-semibold text-sm">Opening Stock</th>
+                  <th className="text-left p-4 font-semibold text-sm">Available Stock</th>
                   <th className="text-left p-4 font-semibold text-sm">Stock Status</th>
                   <th className="text-left p-4 font-semibold text-sm">Action</th>
                 </tr>
@@ -361,32 +366,38 @@ function Inventory() {
                   .filter((item) =>
                     item.name.toLowerCase().includes(search.toLowerCase())
                   )
-                  .map((item, index) => (
-                    <tr
-                      key={item.id}
-                      className="border-t border-border hover:bg-muted/30 transition"
-                    >
-                      <td className="p-4 text-foreground">{index + 1}</td>
-                      <td className="p-4 text-foreground font-semibold">{item.name}</td>
-                      <td className="p-4 text-muted-foreground font-mono">{item.sku || "N/A"}</td>
-                      <td className="p-4 text-foreground">{item.category || "N/A"}</td>
-                      <td className="p-4 text-muted-foreground font-mono">{item.hsnCode || "N/A"}</td>
-                      <td className="p-4 text-foreground">{item.gstPercentage || 0}%</td>
-                      <td className="p-4 text-foreground">{item.unit}</td>
-                      <td className="p-4 text-foreground">₹ {item.purchasePrice}</td>
-                      <td className="p-4 text-foreground">₹ {item.salePrice}</td>
-                      <td className="p-4 text-foreground">{item.openingStock}</td>
-                      <td className="p-4">
-                        {Number(item.openingStock) < (item.minStockAlert || 10) ? (
-                          <span className="bg-destructive/10 text-destructive px-3 py-1 rounded-full text-xs font-bold">
-                            Low Stock
-                          </span>
-                        ) : (
-                          <span className="bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full text-xs font-bold">
-                            In Stock
-                          </span>
-                        )}
-                      </td>
+                  .map((item, index) => {
+                    const activeBranchStock = user?.branchId
+                      ? (item.branchStocks?.find((b) => b.branchId === user.branchId)?.stock ?? 0)
+                      : (item.branchStocks?.reduce((sum, b) => sum + b.stock, 0) ?? 0);
+
+                    return (
+                      <tr
+                        key={item.id}
+                        className="border-t border-border hover:bg-muted/30 transition"
+                      >
+                        <td className="p-4 text-foreground">{index + 1}</td>
+                        <td className="p-4 text-foreground font-semibold">{item.name}</td>
+                        <td className="p-4 text-muted-foreground font-mono">{item.sku || "N/A"}</td>
+                        <td className="p-4 text-foreground">{item.category || "N/A"}</td>
+                        <td className="p-4 text-muted-foreground font-mono">{item.hsnCode || "N/A"}</td>
+                        <td className="p-4 text-foreground">{item.gstPercentage || 0}%</td>
+                        <td className="p-4 text-foreground">{item.unit}</td>
+                        <td className="p-4 text-foreground">₹ {item.purchasePrice}</td>
+                        <td className="p-4 text-foreground">₹ {item.salePrice}</td>
+                        <td className="p-4 text-foreground">{item.openingStock}</td>
+                        <td className="p-4 text-foreground font-semibold font-mono">{activeBranchStock}</td>
+                        <td className="p-4">
+                          {Number(activeBranchStock) < (item.minStockAlert || 10) ? (
+                            <span className="bg-destructive/10 text-destructive px-3 py-1 rounded-full text-xs font-bold">
+                              Low Stock
+                            </span>
+                          ) : (
+                            <span className="bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full text-xs font-bold">
+                              In Stock
+                            </span>
+                          )}
+                        </td>
 
                       <td className="p-4">
                         <div className="flex gap-2">
@@ -418,7 +429,8 @@ function Inventory() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}`
               </tbody>
             </table>
           </div>

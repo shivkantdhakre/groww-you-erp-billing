@@ -17,6 +17,7 @@ function InvoiceTable({
   itemSearchRefs,
   quantityRefs
 }) {
+  const user = useStore((state) => state.user);
   const ROW_HEIGHT = 60;
   const MAX_VISIBLE_ROWS = 8;
   const parentRef = useRef(null);
@@ -108,14 +109,19 @@ function InvoiceTable({
                     placeholder="Search Item..."
                     selectedId={item.itemId}
                     searchFields={["name", "sku"]}
-                    customRender={(opt) => (
-                      <div className="flex justify-between w-full text-xs">
-                        <span className="font-semibold text-foreground">{opt.name}</span>
-                        <span className="text-muted-foreground font-mono">
-                          Stock: {opt.openingStock} | Cost: ₹{opt.purchasePrice}
-                        </span>
-                      </div>
-                    )}
+                    customRender={(opt) => {
+                      const stock = user?.branchId
+                        ? (opt.branchStocks?.find((b) => b.branchId === user.branchId)?.stock ?? 0)
+                        : (opt.branchStocks?.reduce((sum, b) => sum + b.stock, 0) ?? 0);
+                      return (
+                        <div className="flex justify-between w-full text-xs">
+                          <span className="font-semibold text-foreground">{opt.name}</span>
+                          <span className="text-muted-foreground font-mono">
+                            Stock: {stock} | Cost: ₹{opt.purchasePrice}
+                          </span>
+                        </div>
+                      );
+                    }}
                     onSelect={(opt) => updateItemDetails(item.id, opt)}
                     onClear={() => clearItemDetails(item.id)}
                   />
@@ -334,6 +340,7 @@ function PurchaseInvoice() {
   const items = useStore((state) => state.items);
   const fetchVendors = useStore((state) => state.fetchVendors);
   const fetchItems = useStore((state) => state.fetchItems);
+  const user = useStore((state) => state.user);
 
   const fetchPurchaseInvoices = useCallback(async () => {
     setLoadingPurchases(true);
@@ -545,6 +552,9 @@ function PurchaseInvoice() {
         const gstPct = Number(dbItem.gstPercentage) || 0;
         const subtotal = rate * qty;
         const gstAmount = Math.round((subtotal * gstPct / 100) * 100) / 100;
+        const stock = user?.branchId
+          ? (dbItem.branchStocks?.find((b) => b.branchId === user.branchId)?.stock ?? 0)
+          : (dbItem.branchStocks?.reduce((sum, b) => sum + b.stock, 0) ?? 0);
         return {
           ...item,
           itemId: dbItem.id,
@@ -552,7 +562,7 @@ function PurchaseInvoice() {
           rate,
           gstPercentage: gstPct,
           amount: Math.round((subtotal + gstAmount) * 100) / 100,
-          currentStock: dbItem.openingStock
+          currentStock: stock
         };
       }
       return item;
