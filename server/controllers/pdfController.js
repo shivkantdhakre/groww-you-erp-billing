@@ -50,8 +50,8 @@ export const generateInvoicePDF = async (req, res) => {
     // 5. Upload buffer to cloud storage (or local storage fallback)
     const pdfUrl = await pdfService.uploadPDF(invoice, pdfBuffer);
 
-    // 6. Update database record only for A4
-    if (layout === 'A4') {
+    // 6. Update database record only for A4 and only if upload succeeded
+    if (layout === 'A4' && pdfUrl) {
       await prisma.invoice.update({
         where: { id: invoice.id },
         data: { pdfUrl }

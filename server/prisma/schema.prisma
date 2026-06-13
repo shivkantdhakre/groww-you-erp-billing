@@ -32,6 +32,7 @@ model Company {
   nicUsername          String?
   nicPassword          String?
   subscription         Subscription?
+  sequences            Sequence[]
   
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
@@ -166,6 +167,7 @@ model Invoice {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
+  @@unique([companyId, branchId, invoiceType, invoiceNo])
   @@index([companyId, invoiceNo])
   @@index([companyId, branchId])
   @@index([companyId, invoiceDate])
@@ -252,6 +254,7 @@ model Voucher {
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
 
+  @@unique([companyId, branchId, type, voucherNo])
   @@index([companyId, type])
   @@index([companyId, branchId])
   @@index([companyId, voucherDate])
@@ -287,6 +290,7 @@ model Return {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
+  @@unique([companyId, branchId, returnType, returnNo])
   @@index([companyId, returnNo])
   @@index([companyId, branchId])
   @@index([companyId, returnDate])
@@ -335,6 +339,7 @@ model Branch {
   branchStocks          BranchStock[]
   nicUsername           String?
   nicPassword           String?
+  sequences             Sequence[]
   
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
@@ -424,4 +429,17 @@ model WebhookEvent {
   processedAt DateTime @default(now())
 }
 
+model Sequence {
+  id        Int      @id @default(autoincrement())
+  companyId Int
+  branchId  Int
+  type      String   // e.g. "SALE_INVOICE", "PURCHASE_INVOICE", "SALE_RETURN", "PURCHASE_RETURN", "PAYMENT_VOUCHER", "RECEIPT_VOUCHER", "CONTRA_VOUCHER", "JOURNAL_VOUCHER"
+  value     Int      @default(0)
+  
+  company   Company  @relation(fields: [companyId], references: [id])
+  branch    Branch   @relation(fields: [branchId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
+  @@unique([companyId, branchId, type])
+}

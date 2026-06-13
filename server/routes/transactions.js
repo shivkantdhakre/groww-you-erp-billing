@@ -17,7 +17,7 @@ import {
   cancelVoucher
 } from "../controllers/vouchersController.js";
 import { verifyTokenAndTenant } from "../middleware/authMiddleware.js";
-import { checkSubscription } from "../middleware/checkSubscription.js";
+import { checkSubscription, limitInvoiceCount } from "../middleware/checkSubscription.js";
 
 const router = express.Router();
 
@@ -26,12 +26,12 @@ router.use(verifyTokenAndTenant);
 
 // --- SALES INVOICES ---
 router.get("/sales-invoices", getSalesInvoices);
-router.post("/sales-invoices", checkSubscription, createSalesInvoice);
+router.post("/sales-invoices", checkSubscription, limitInvoiceCount, createSalesInvoice);
 router.get("/sales-invoices/:id", getSalesInvoiceById);
 
 // --- PURCHASE INVOICES ---
 router.get("/purchase-invoices", getPurchaseInvoices);
-router.post("/purchase-invoices", checkSubscription, createPurchaseInvoice);
+router.post("/purchase-invoices", checkSubscription, limitInvoiceCount, createPurchaseInvoice);
 router.get("/purchase-invoices/:id", getPurchaseInvoiceById);
 
 // --- RETURNS ---

@@ -14,12 +14,37 @@ const modelsWithBranch = [
   'Invoice', 'StockMovement', 'FinancialTransaction', 'Voucher', 'Return', 'BranchStock'
 ];
 
+// Helper to check if a where clause is a simple unique search shape (no nested relation objects or operators)
+const isSimpleUniqueWhere = (where) => {
+  if (!where || typeof where !== 'object') return false;
+  for (const key of Object.keys(where)) {
+    const val = where[key];
+    if (val && typeof val === 'object') {
+      // If it's a composite key, verify its properties are primitives
+      if (key.includes('_')) {
+        for (const subKey of Object.keys(val)) {
+          const subVal = val[subKey];
+          if (subVal && typeof subVal === 'object') {
+            return false;
+          }
+        }
+      } else {
+        // Any other nested object (e.g., relation queries or operators) is not simple
+        return false;
+      }
+    }
+  }
+  return true;
+};
+
 export const prisma = basePrisma.$extends({
   query: {
     $allModels: {
       async $allOperations({ model, operation, args, query }) {
         const store = contextStorage.getStore();
         const user = store?.user;
+
+        let didInject = false;
 
         // 1. Read Operations Isolation (findMany, findFirst, findUnique, count, aggregate, groupBy)
         if ([
@@ -31,7 +56,10 @@ export const prisma = basePrisma.$extends({
 
           // Apply Company ID Filter (RLS)
           if (modelsWithCompany.includes(model) && user?.companyId) {
-            args.where.companyId = user.companyId;
+            if (args.where.companyId !== user.companyId) {
+              args.where.companyId = user.companyId;
+              didInject = true;
+            }
           }
 
           // Apply Branch ID Filter (RLS)
@@ -46,39 +74,36 @@ export const prisma = basePrisma.$extends({
                 throw err;
               }
               // Force restrict to the user's branchId
-              args.where.branchId = user.branchId;
+              if (args.where.branchId !== user.branchId) {
+                args.where.branchId = user.branchId;
+                didInject = true;
+              }
             } else {
               // Admin roles:
               // Apply branchId filter only if they are in a specific branch context
               if (user?.branchId) {
-                args.where.branchId = user.branchId;
+                if (args.where.branchId !== user.branchId) {
+                  args.where.branchId = user.branchId;
+                  didInject = true;
+                }
               }
             }
           }
 
           // Convert findUnique to findFirst to support non-unique filtering (like companyId / branchId)
-          if (operation === 'findUnique') {
+          if (operation === 'findUnique' && didInject && isSimpleUniqueWhere(args.where)) {
             const newArgs = { ...args };
-            if (newArgs.where) {
-              newArgs.where = { ...newArgs.where };
-              for (const key of Object.keys(newArgs.where)) {
-                if (key.includes('_') && typeof newArgs.where[key] === 'object' && newArgs.where[key] !== null) {
-                  Object.assign(newArgs.where, newArgs.where[key]);
-                  delete newArgs.where[key];
-                }
+            newArgs.where = { ...newArgs.where };
+            for (const key of Object.keys(newArgs.where)) {
+              if (key.includes('_') && typeof newArgs.where[key] === 'object' && newArgs.where[key] !== null) {
+                Object.assign(newArgs.where, newArgs.where[key]);
+                delete newArgs.where[key];
               }
             }
             
-            const internalParams = arguments[0].__internalParams;
-            const transaction = internalParams?.transaction;
             const clientModelName = model.charAt(0).toLowerCase() + model.slice(1);
-
-            if (transaction && transaction.kind === 'itx') {
-              const transactionClient = prisma._createItxClient(transaction);
-              return transactionClient[clientModelName].findFirst(newArgs);
-            } else {
-              return prisma[clientModelName].findFirst(newArgs);
-            }
+            const client = Prisma.getExtensionContext(this) || prisma;
+            return client[clientModelName].findFirst(newArgs);
           }
         }
 

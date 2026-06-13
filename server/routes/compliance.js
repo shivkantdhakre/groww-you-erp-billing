@@ -12,22 +12,27 @@ import {
   resolveOrphanReturn,
 } from '../controllers/complianceController.js';
 import { verifyTokenAndTenant } from '../middleware/authMiddleware.js';
-import { checkSubscription } from '../middleware/checkSubscription.js';
+import { checkSubscription, requireFeature } from '../middleware/checkSubscription.js';
 
 const router = express.Router();
 
-// Enforce authentication and subscription check on all compliance routes
+// Enforce authentication and active subscription status check globally
 router.use(verifyTokenAndTenant);
 router.use(checkSubscription);
 
-router.get('/gst/health', getDataHealthStatus);
-router.post('/gst/otp/request', requestOtp);
-router.post('/gst/otp/verify', verifyOtp);
-router.get('/gst/gstr1/preview', previewGstr1);
-router.post('/gst/gstr1/file', fileGstr1);
-router.get('/gst/gstr3b/summary', getGstr3bSummary);
-router.post('/ewaybill/generate/:invoiceId', generateEwayBill);
-router.get('/gst/session-status', getSessionStatus);
+// --- GSTR FILING ROUTES (Restricted to Professional/Enterprise tiers) ---
+router.get('/gst/health', requireFeature('gstFiling'), getDataHealthStatus);
+router.post('/gst/otp/request', requireFeature('gstFiling'), requestOtp);
+router.post('/gst/otp/verify', requireFeature('gstFiling'), verifyOtp);
+router.get('/gst/gstr1/preview', requireFeature('gstFiling'), previewGstr1);
+router.post('/gst/gstr1/file', requireFeature('gstFiling'), fileGstr1);
+router.get('/gst/gstr3b/summary', requireFeature('gstFiling'), getGstr3bSummary);
+router.get('/gst/session-status', requireFeature('gstFiling'), getSessionStatus);
+
+// --- E-WAY BILL ROUTES (Restricted to Professional/Enterprise tiers) ---
+router.post('/ewaybill/generate/:invoiceId', requireFeature('ewayBill'), generateEwayBill);
+
+// --- MOCK ORPHAN RESOLUTIONS ---
 router.get('/orphans', getOrphanedReturns);
 router.post('/orphans/resolve', resolveOrphanReturn);
 

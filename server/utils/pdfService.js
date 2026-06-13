@@ -69,7 +69,7 @@ class SimpleSemaphore {
       const next = this.queue.shift();
       next();
     } else {
-      this.current--;
+      this.current = Math.max(0, this.current - 1);
     }
   }
 }
@@ -487,11 +487,6 @@ class PDFService {
 
       if (layout === 'Thermal') {
         pdfOptions.width = '80mm';
-        // Wait, for thermal, we can compute the body page height dynamically 
-        // to avoid trailing white spaces on roll printers.
-        const bodyHeight = await page.evaluate(() => document.documentElement.offsetHeight);
-        // Add safety margins of 10mm
-        pdfOptions.height = `${bodyHeight + 40}px`;
         pdfOptions.margin = { top: '2mm', bottom: '2mm', left: '2mm', right: '2mm' };
       } else {
         pdfOptions.format = 'A4';
@@ -499,7 +494,16 @@ class PDFService {
       }
 
       const renderPromise = (async () => {
+        // Set content and wait for it to load completely first
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+
+        if (layout === 'Thermal') {
+          // Measure the height after the content is rendered
+          const bodyHeight = await page.evaluate(() => document.documentElement.offsetHeight);
+          // Add safety margins of 10mm (approx 40px)
+          pdfOptions.height = `${bodyHeight + 40}px`;
+        }
+
         return await page.pdf(pdfOptions);
       })();
 

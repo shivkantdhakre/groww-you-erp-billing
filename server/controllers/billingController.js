@@ -1,6 +1,7 @@
 import prisma from '../utils/prisma.js';
 import crypto from 'crypto';
 import axios from 'axios';
+import { clearSubscriptionCache } from '../middleware/checkSubscription.js';
 
 /**
  * GET /api/billing/plans
@@ -178,6 +179,9 @@ export const verifyPayment = async (req, res) => {
       })
     ]);
 
+    // Evict local in-memory subscription cache to ensure instant update propagation
+    clearSubscriptionCache(companyId);
+
     res.status(200).json({ success: true, message: 'Payment verified and subscription activated.' });
   } catch (error) {
     console.error('Verify Payment Error:', error);
@@ -340,6 +344,9 @@ export const handleWebhook = async (req, res) => {
           }
         })
       ]);
+
+      // Evict local in-memory subscription cache
+      clearSubscriptionCache(companyId);
 
       console.log(`Successfully updated Subscription to ACTIVE for Company ID: ${companyId}`);
     }

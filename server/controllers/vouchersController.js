@@ -1,5 +1,6 @@
 import prisma from "../utils/prisma.js";
 import { paginate } from "../utils/pagination.js";
+import { getSequenceNextValue, SEQUENCE_TYPES } from "../utils/sequence.js";
 
 // Get vouchers with optional filters and date bounding
 export const getVouchers = async (req, res) => {
@@ -101,10 +102,22 @@ export const createVoucher = async (req, res) => {
         }
       }
 
-      // 2. Generate sequential voucher number inside transaction block
-      const count = await tx.voucher.count({
-        where: { companyId: req.user.companyId, branchId: req.user.branchId, type },
-      });
+      // Map parameter type to Sequence helper type
+      const seqTypes = {
+        PAYMENT: SEQUENCE_TYPES.PAYMENT_VOUCHER,
+        RECEIPT: SEQUENCE_TYPES.RECEIPT_VOUCHER,
+        CONTRA: SEQUENCE_TYPES.CONTRA_VOUCHER,
+        JOURNAL: SEQUENCE_TYPES.JOURNAL_VOUCHER
+      };
+      const sequenceType = seqTypes[type] || SEQUENCE_TYPES.PAYMENT_VOUCHER;
+
+      // 2. Generate sequential voucher number inside transaction block (concurrency-safe)
+      const seqValue = await getSequenceNextValue(
+        req.user.companyId,
+        req.user.branchId,
+        sequenceType,
+        tx
+      );
 
       const prefixes = {
         PAYMENT: "PV",
@@ -113,7 +126,7 @@ export const createVoucher = async (req, res) => {
         JOURNAL: "JV",
       };
       const prefix = prefixes[type] || "VCH";
-      const voucherNo = `${prefix}-${String(count + 1).padStart(4, "0")}`;
+      const voucherNo = `${prefix}-${String(seqValue).padStart(4, "0")}`;
 
       // 3. Create the Voucher
       const voucher = await tx.voucher.create({

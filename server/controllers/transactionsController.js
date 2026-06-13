@@ -1,5 +1,6 @@
 import prisma from "../utils/prisma.js";
 import { paginate } from "../utils/pagination.js";
+import { getSequenceNextValue, SEQUENCE_TYPES } from "../utils/sequence.js";
 
 // ==========================================
 // SALES INVOICE CONTROLLERS
@@ -63,12 +64,15 @@ export const createSalesInvoice = async (req, res) => {
         throw new Error("Invalid or inactive customer selected");
       }
 
-      // 3. Generate sequential invoice number
-      const invoiceCount = await tx.invoice.count({
-        where: { companyId: req.user.companyId, branchId: req.user.branchId, invoiceType: "SALE" }
-      });
+      // 3. Generate sequential invoice number (concurrency-safe)
+      const seqValue = await getSequenceNextValue(
+        req.user.companyId,
+        req.user.branchId,
+        SEQUENCE_TYPES.SALE_INVOICE,
+        tx
+      );
       const prefix = company.invoicePrefix || "GY-";
-      const invoiceNo = `${prefix}${String(invoiceCount + 1).padStart(4, "0")}`;
+      const invoiceNo = `${prefix}${String(seqValue).padStart(4, "0")}`;
 
       let totalQty = 0;
       let grandTotal = 0;
@@ -394,11 +398,14 @@ export const createPurchaseInvoice = async (req, res) => {
       // 3. Sequential invoice number generation or use vendor custom invoice number
       let invoiceNo = customInvoiceNo;
       if (!invoiceNo) {
-        const invoiceCount = await tx.invoice.count({
-          where: { companyId: req.user.companyId, branchId: req.user.branchId, invoiceType: "PURCHASE" }
-        });
+        const seqValue = await getSequenceNextValue(
+          req.user.companyId,
+          req.user.branchId,
+          SEQUENCE_TYPES.PURCHASE_INVOICE,
+          tx
+        );
         const prefix = company.invoicePrefix || "GY-";
-        invoiceNo = `${prefix}PUR-${String(invoiceCount + 1).padStart(4, "0")}`;
+        invoiceNo = `${prefix}PUR-${String(seqValue).padStart(4, "0")}`;
       }
 
       let totalQty = 0;
@@ -609,12 +616,15 @@ export const createSalesReturn = async (req, res) => {
         throw new Error("Invalid or inactive item selected");
       }
 
-      // 4. Generate return number
-      const returnCount = await tx.return.count({
-        where: { companyId: req.user.companyId, branchId: req.user.branchId, returnType: "SALE" }
-      });
+      // 4. Generate return number (concurrency-safe)
+      const seqValue = await getSequenceNextValue(
+        req.user.companyId,
+        req.user.branchId,
+        SEQUENCE_TYPES.SALE_RETURN,
+        tx
+      );
       const prefix = company.invoicePrefix || "GY-";
-      const returnNo = `${prefix}SRT-${String(returnCount + 1).padStart(4, "0")}`;
+      const returnNo = `${prefix}SRT-${String(seqValue).padStart(4, "0")}`;
 
       // 5. Update Inventory (Sales Return: item returned back into stock)
       await tx.branchStock.upsert({
@@ -790,12 +800,15 @@ export const createPurchaseReturn = async (req, res) => {
         throw new Error("Invalid or inactive item selected");
       }
 
-      // 4. Generate return number
-      const returnCount = await tx.return.count({
-        where: { companyId: req.user.companyId, branchId: req.user.branchId, returnType: "PURCHASE" }
-      });
+      // 4. Generate return number (concurrency-safe)
+      const seqValue = await getSequenceNextValue(
+        req.user.companyId,
+        req.user.branchId,
+        SEQUENCE_TYPES.PURCHASE_RETURN,
+        tx
+      );
       const prefix = company.invoicePrefix || "GY-";
-      const returnNo = `${prefix}PRT-${String(returnCount + 1).padStart(4, "0")}`;
+      const returnNo = `${prefix}PRT-${String(seqValue).padStart(4, "0")}`;
 
       // Ensure BranchStock record exists (concurrency-safe)
       const branchStock = await tx.branchStock.upsert({
