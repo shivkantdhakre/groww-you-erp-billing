@@ -134,21 +134,19 @@ function AppContent() {
 
 function App() {
   const token = useStore((state) => state.token);
+  const user = useStore((state) => state.user);
+  const logout = useStore((state) => state.logout);
 
-  // Global cache preloading immediately after authentication
+  // Synchronize token and user authentication state consistency
   useEffect(() => {
-    if (token) {
-      const { fetchCustomers, fetchVendors, fetchItems, fetchNotifications } = useStore.getState();
-      fetchCustomers().catch(() => {});
-      fetchVendors().catch(() => {});
-      fetchItems().catch(() => {});
-      fetchNotifications().catch(() => {});
+    if (!!token !== !!user) {
+      logout();
     }
-  }, [token]);
+  }, [token, user, logout]);
 
   // Subscription state synchronization (window focus/mount)
   useEffect(() => {
-    if (token) {
+    if (token && user) {
       const { verifyStatus } = useStore.getState();
       verifyStatus().catch(() => {});
 
@@ -160,9 +158,9 @@ function App() {
         window.removeEventListener("focus", handleFocus);
       };
     }
-  }, [token]);
+  }, [token, user]);
 
-  if (!token) {
+  if (!token || !user) {
     return (
       <BrowserRouter>
         <Routes>

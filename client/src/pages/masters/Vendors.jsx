@@ -43,8 +43,8 @@ function Vendors() {
       setMessageType("error");
       return;
     }
-    if (mobile.length !== 10) {
-      setMessage("Mobile number must be 10 digits");
+    if (!/^[0-9]{10}$/.test(mobile)) {
+      setMessage("Invalid Mobile Number (must be exactly 10 digits)");
       setMessageType("error");
       return;
     }
@@ -54,10 +54,13 @@ function Vendors() {
       return;
     }
     const trimmedGstin = gstin.trim().toUpperCase();
-    if (trimmedGstin && trimmedGstin.length !== 15) {
-      setMessage("GSTIN number must be 15 characters");
-      setMessageType("error");
-      return;
+    if (trimmedGstin) {
+      const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+      if (!gstinRegex.test(trimmedGstin)) {
+        setMessage("Invalid GSTIN Number (must follow standard 15-character format, e.g. 29AAAAA1111A1Z1)");
+        setMessageType("error");
+        return;
+      }
     }
 
     const mobileExists = vendors.some(

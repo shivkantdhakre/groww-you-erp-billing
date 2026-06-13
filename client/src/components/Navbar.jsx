@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStore } from "../store/useStore";
 import api from "../utils/api";
@@ -29,6 +29,30 @@ function Navbar() {
   const [loadingSearch, setLoadingSearch] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+
+  const searchRef = useRef(null);
+  const notificationsRef = useRef(null);
+  const profileRef = useRef(null);
+
+  // Dismiss dropdowns when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setShowSearchDropdown(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setShowProfile(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // Theme Toggler state
   const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
@@ -57,8 +81,12 @@ function Navbar() {
       try {
         const res = await api.get(`/search?q=${encodeURIComponent(search)}`);
         setSearchResults(res.data);
+        if (res.data.length > 0) {
+          setShowSearchDropdown(true);
+        }
       } catch (err) {
         console.error("Global search failed:", err);
+        setSearchResults([]);
       } finally {
         setLoadingSearch(false);
       }
@@ -72,12 +100,16 @@ function Navbar() {
     setSearch(val);
     if (!val.trim()) {
       setSearchResults([]);
+      setShowSearchDropdown(false);
+    } else {
+      setShowSearchDropdown(true);
     }
   };
 
   const handleResultClick = (result) => {
     setSearch("");
     setSearchResults([]);
+    setShowSearchDropdown(false);
     navigate(result.link);
   };
 
@@ -87,16 +119,21 @@ function Navbar() {
     <div className="bg-card border-b border-border shadow px-6 py-4 flex justify-between items-center relative text-foreground no-print">
       
       {/* Search Input Box */}
-      <div className="w-2/3 relative">
+      <div ref={searchRef} className="w-2/3 relative">
         <input
           type="text"
           placeholder="Search Customers, Vendors, Invoices, Items..."
           value={search}
           onChange={handleSearchChange}
+          onFocus={() => {
+            if (search.trim()) {
+              setShowSearchDropdown(true);
+            }
+          }}
           className="w-full border border-border bg-card text-foreground p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
         />
 
-        {search && (
+        {search && showSearchDropdown && (
           <div className="absolute bg-card border border-border rounded-lg shadow-lg w-full mt-1 z-50 max-h-80 overflow-y-auto text-foreground">
             {loadingSearch ? (
               <div className="p-3 text-muted-foreground flex items-center justify-center gap-2">
@@ -144,7 +181,7 @@ function Navbar() {
         </button>
         
         {/* Notification Bell Dropdown */}
-        <div className="relative">
+        <div ref={notificationsRef} className="relative">
           <button
             onClick={() => setShowNotifications(!showNotifications)}
             className="relative p-2 rounded-lg hover:bg-muted transition-colors cursor-pointer text-muted-foreground hover:text-foreground flex items-center justify-center"
@@ -207,7 +244,7 @@ function Navbar() {
         </div>
 
         {/* User Profile Dropdown */}
-        <div className="relative">
+        <div ref={profileRef} className="relative">
           <button
             onClick={() => setShowProfile(!showProfile)}
             className="flex items-center gap-2 bg-muted px-3 py-2 rounded-lg hover:bg-muted/80 transition-colors cursor-pointer text-foreground"

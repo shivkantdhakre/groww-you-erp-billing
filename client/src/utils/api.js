@@ -25,15 +25,25 @@ api.interceptors.request.use(
 );
 
 // Global Error Handler: If the token expires, log the user out
+let logoutHandler = null;
+
+export const registerLogoutHandler = (handler) => {
+  logoutHandler = handler;
+};
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
       console.error('Session expired. Please log in again.');
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      // Force redirect back to login screen
-      window.location.href = '/login'; 
+      if (logoutHandler) {
+        logoutHandler();
+      } else {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        // Force redirect back to login screen
+        window.location.href = '/login'; 
+      }
     }
     return Promise.reject(error);
   }

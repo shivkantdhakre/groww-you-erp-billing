@@ -16,8 +16,10 @@ export default function Login() {
   const [showForgot, setShowForgot] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [gstNumber, setGstNumber] = useState("");
   const [mobileNumber, setMobileNumber] = useState("");
+  const [forgotErrors, setForgotErrors] = useState({});
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -49,11 +51,30 @@ export default function Login() {
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     const trimmedGst = gstNumber.trim().toUpperCase();
-    if (!forgotEmail || !newPassword || (!trimmedGst && !mobileNumber)) {
-      setError("Please fill email, new password, and at least one tenant verification factor (GSTIN or Mobile).");
+    const errors = {};
+
+    if (!forgotEmail) {
+      errors.email = "Registered email is required.";
+    }
+    if (!newPassword) {
+      errors.newPassword = "New password is required.";
+    } else if (newPassword.length < 6) {
+      errors.newPassword = "Password must be at least 6 characters long.";
+    }
+    if (newPassword !== confirmPassword) {
+      errors.confirmPassword = "Passwords do not match.";
+    }
+    if (!trimmedGst && !mobileNumber) {
+      errors.verification = "Either Company GSTIN or Registered Mobile is required for tenant verification.";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setForgotErrors(errors);
+      setError("Please resolve the validation errors below.");
       return;
     }
 
+    setForgotErrors({});
     setError("");
     setSuccess("");
     setLoading(true);
@@ -70,8 +91,10 @@ export default function Login() {
       // Clear states
       setForgotEmail("");
       setNewPassword("");
+      setConfirmPassword("");
       setGstNumber("");
       setMobileNumber("");
+      setForgotErrors({});
       setShowForgot(false);
     } catch (err) {
       console.error("Forgot password failed:", err);
@@ -140,6 +163,8 @@ export default function Login() {
                     setShowForgot(true);
                     setError("");
                     setSuccess("");
+                    setConfirmPassword("");
+                    setForgotErrors({});
                   }}
                   className="text-xs text-primary hover:text-primary/80 cursor-pointer font-medium"
                 >
@@ -166,6 +191,12 @@ export default function Login() {
           </form>
         ) : (
           <form onSubmit={handleForgotPassword} className="space-y-4">
+            {forgotErrors.verification && (
+              <div className="p-3 text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-lg font-semibold">
+                ⚠️ {forgotErrors.verification}
+              </div>
+            )}
+
             <div>
               <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-1">
                 <Mail className="w-4 h-4 shrink-0 text-muted-foreground/70" strokeWidth={1.5} aria-hidden="true" />
@@ -176,22 +207,29 @@ export default function Login() {
                 value={forgotEmail}
                 onChange={(e) => setForgotEmail(e.target.value)}
                 placeholder="admin@growwyou.com"
-                className="w-full px-4 py-2.5 rounded-lg bg-card border border-border text-foreground placeholder-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                className={`w-full px-4 py-2.5 rounded-lg bg-card border text-foreground placeholder-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
+                  forgotErrors.email ? "border-destructive focus:ring-destructive" : "border-border"
+                }`}
                 required
               />
+              {forgotErrors.email && (
+                <span className="text-xs text-destructive mt-1 block font-semibold">{forgotErrors.email}</span>
+              )}
             </div>
 
             <div>
               <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-1">
                 <Building className="w-4 h-4 shrink-0 text-muted-foreground/70" strokeWidth={1.5} aria-hidden="true" />
-                <span>Company GSTIN (Verification Factor)</span>
+                <span>Company GSTIN (Tenant Verification)</span>
               </label>
               <input
                 type="text"
                 value={gstNumber}
                 onChange={(e) => setGstNumber(e.target.value.toUpperCase())}
                 placeholder="27AAACG1234D1Z5"
-                className="w-full px-4 py-2.5 rounded-lg bg-card border border-border text-foreground placeholder-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                className={`w-full px-4 py-2.5 rounded-lg bg-card border text-foreground placeholder-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
+                  forgotErrors.verification ? "border-destructive focus:ring-destructive" : "border-border"
+                }`}
               />
             </div>
 
@@ -200,14 +238,16 @@ export default function Login() {
             <div>
               <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-1">
                 <Phone className="w-4 h-4 shrink-0 text-muted-foreground/70" strokeWidth={1.5} aria-hidden="true" />
-                <span>Company Registered Mobile (Verification Factor)</span>
+                <span>Registered Mobile (Tenant Verification)</span>
               </label>
               <input
                 type="text"
                 value={mobileNumber}
                 onChange={(e) => setMobileNumber(e.target.value)}
                 placeholder="9876543210"
-                className="w-full px-4 py-2.5 rounded-lg bg-card border border-border text-foreground placeholder-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                className={`w-full px-4 py-2.5 rounded-lg bg-card border text-foreground placeholder-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
+                  forgotErrors.verification ? "border-destructive focus:ring-destructive" : "border-border"
+                }`}
               />
             </div>
 
@@ -221,9 +261,34 @@ export default function Login() {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="New Password"
-                className="w-full px-4 py-2.5 rounded-lg bg-card border border-border text-foreground placeholder-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                className={`w-full px-4 py-2.5 rounded-lg bg-card border text-foreground placeholder-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
+                  forgotErrors.newPassword ? "border-destructive focus:ring-destructive" : "border-border"
+                }`}
                 required
               />
+              {forgotErrors.newPassword && (
+                <span className="text-xs text-destructive mt-1 block font-semibold">{forgotErrors.newPassword}</span>
+              )}
+            </div>
+
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-1">
+                <Lock className="w-4 h-4 shrink-0 text-muted-foreground/70" strokeWidth={1.5} aria-hidden="true" />
+                <span>Confirm New Password</span>
+              </label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm Password"
+                className={`w-full px-4 py-2.5 rounded-lg bg-card border text-foreground placeholder-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
+                  forgotErrors.confirmPassword ? "border-destructive focus:ring-destructive" : "border-border"
+                }`}
+                required
+              />
+              {forgotErrors.confirmPassword && (
+                <span className="text-xs text-destructive mt-1 block font-semibold">{forgotErrors.confirmPassword}</span>
+              )}
             </div>
 
             <div className="flex gap-2 pt-2">
@@ -240,6 +305,8 @@ export default function Login() {
                   setShowForgot(false);
                   setError("");
                   setSuccess("");
+                  setConfirmPassword("");
+                  setForgotErrors({});
                 }}
                 className="py-3 px-4 bg-secondary text-secondary-foreground hover:bg-secondary/80 font-semibold rounded-lg shadow-lg focus:outline-none transition-all duration-200 cursor-pointer"
               >

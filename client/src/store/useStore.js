@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import api from "../utils/api";
+import api, { registerLogoutHandler } from "../utils/api";
 
 export const useStore = create((set, get) => ({
   // Auth State
@@ -364,3 +364,7 @@ export const useStore = create((set, get) => ({
     }
   },
 }));
+
+registerLogoutHandler(() => {
+  useStore.getState().logout();
+});

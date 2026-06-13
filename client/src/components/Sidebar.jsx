@@ -66,30 +66,48 @@ function Sidebar() {
 
     // Auto-open active categories on route change
     useEffect(() => {
-        const timer = setTimeout(() => {
-            if (["/customers", "/vendors", "/inventory"].includes(pathname)) {
-                setMasters(true);
-            }
-            if (["/sales-invoice", "/sales-return"].includes(pathname)) {
-                setSales(true);
-            }
-            if (["/purchase-invoice", "/purchase-return"].includes(pathname)) {
-                setPurchase(true);
-            }
-            if (["/payment-voucher", "/receipt-voucher", "/journal-voucher", "/contra-voucher"].includes(pathname)) {
-                setAccounts(true);
-            }
-            if (["/customer-ledger", "/vendor-ledger", "/cash-book", "/bank-book", "/day-book"].includes(pathname)) {
-                setBooks(true);
-            }
-            if (["/reports-dashboard", "/sales-report", "/purchase-report", "/stock-report", "/outstanding-report", "/compliance-dashboard"].includes(pathname)) {
-                setReports(true);
-            }
-            if (["/company-settings", "/user-management", "/role-management", "/backup-restore", "/pricing"].includes(pathname)) {
-                setSettings(true);
-            }
-        }, 0);
-        return () => clearTimeout(timer);
+        /* eslint-disable react-hooks/set-state-in-effect */
+        if (
+            ["/customers", "/vendors", "/inventory"].includes(pathname)
+        ) {
+            setMasters(true);
+        }
+        if (
+            ["/sales-invoice", "/sales-return"].includes(pathname) ||
+            pathname.startsWith("/print/sales-invoice") ||
+            pathname.startsWith("/print/thermal-invoice")
+        ) {
+            setSales(true);
+        }
+        if (
+            ["/purchase-invoice", "/purchase-return"].includes(pathname) ||
+            pathname.startsWith("/print/purchase-invoice")
+        ) {
+            setPurchase(true);
+        }
+        if (
+            ["/payment-voucher", "/receipt-voucher", "/journal-voucher", "/contra-voucher"].includes(pathname) ||
+            pathname.startsWith("/print/payment-voucher") ||
+            pathname.startsWith("/print/receipt-voucher")
+        ) {
+            setAccounts(true);
+        }
+        if (
+            ["/customer-ledger", "/vendor-ledger", "/cash-book", "/bank-book", "/day-book"].includes(pathname)
+        ) {
+            setBooks(true);
+        }
+        if (
+            ["/reports-dashboard", "/sales-report", "/purchase-report", "/stock-report", "/outstanding-report", "/compliance-dashboard"].includes(pathname)
+        ) {
+            setReports(true);
+        }
+        if (
+            ["/company-settings", "/user-management", "/role-management", "/backup-restore", "/pricing", "/profile-settings"].includes(pathname)
+        ) {
+            setSettings(true);
+        }
+        /* eslint-enable react-hooks/set-state-in-effect */
     }, [pathname]);
 
     // Helpers to style links
