@@ -101,7 +101,16 @@ function Customers() {
         setMessageType("success");
       } catch (err) {
         console.error("Failed to update customer:", err);
-        setMessage(err.response?.data?.error || "Failed to update customer in database.");
+        const serverError = err.response?.data;
+        let errMsg = "Failed to update customer in database.";
+        if (serverError) {
+          if (serverError.error === "Validation failed" && Array.isArray(serverError.details)) {
+            errMsg = `Validation failed: ${serverError.details.map(d => `${d.field}: ${d.message}`).join(", ")}`;
+          } else {
+            errMsg = serverError.message || serverError.error || errMsg;
+          }
+        }
+        setMessage(errMsg);
         setMessageType("error");
       }
       return;
@@ -129,7 +138,16 @@ function Customers() {
       setMessageType("success");
     } catch (err) {
       console.error("Failed to save customer:", err);
-      setMessage(err.response?.data?.message || "Failed to save customer to database.");
+      const serverError = err.response?.data;
+      let errMsg = "Failed to save customer to database.";
+      if (serverError) {
+        if (serverError.error === "Validation failed" && Array.isArray(serverError.details)) {
+          errMsg = `Validation failed: ${serverError.details.map(d => `${d.field}: ${d.message}`).join(", ")}`;
+        } else {
+          errMsg = serverError.message || serverError.error || errMsg;
+        }
+      }
+      setMessage(errMsg);
       setMessageType("error");
     }
   };

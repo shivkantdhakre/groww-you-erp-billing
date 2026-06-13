@@ -107,7 +107,16 @@ function Vendors() {
         setMessageType("success");
       } catch (err) {
         console.error("Failed to update vendor:", err);
-        setMessage(err.response?.data?.error || "Failed to update vendor in database.");
+        const serverError = err.response?.data;
+        let errMsg = "Failed to update vendor in database.";
+        if (serverError) {
+          if (serverError.error === "Validation failed" && Array.isArray(serverError.details)) {
+            errMsg = `Validation failed: ${serverError.details.map(d => `${d.field}: ${d.message}`).join(", ")}`;
+          } else {
+            errMsg = serverError.message || serverError.error || errMsg;
+          }
+        }
+        setMessage(errMsg);
         setMessageType("error");
       }
       return;
@@ -139,7 +148,16 @@ function Vendors() {
       setMessageType("success");
     } catch (err) {
       console.error("Failed to save vendor:", err);
-      setMessage(err.response?.data?.message || "Failed to save vendor to database.");
+      const serverError = err.response?.data;
+      let errMsg = "Failed to save vendor to database.";
+      if (serverError) {
+        if (serverError.error === "Validation failed" && Array.isArray(serverError.details)) {
+          errMsg = `Validation failed: ${serverError.details.map(d => `${d.field}: ${d.message}`).join(", ")}`;
+        } else {
+          errMsg = serverError.message || serverError.error || errMsg;
+        }
+      }
+      setMessage(errMsg);
       setMessageType("error");
     }
   };
