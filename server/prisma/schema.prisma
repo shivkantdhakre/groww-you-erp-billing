@@ -31,6 +31,7 @@ model Company {
   branches             Branch[]
   nicUsername          String?
   nicPassword          String?
+  subscription         Subscription?
   
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
@@ -357,4 +358,70 @@ model BranchStock {
   @@index([branchId])
   @@index([itemId])
 }
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  UNPAID
+  CANCELLED
+  EXPIRED
+}
+
+model SubscriptionPlan {
+  id            Int            @id @default(autoincrement())
+  name          String         
+  code          String         @unique 
+  price         Float
+  interval      String         
+  branchLimit   Int            @default(1)
+  staffLimit    Int            @default(1)
+  features      Json           
+  isActive      Boolean        @default(true)
+  
+  subscriptions Subscription[]
+  createdAt     DateTime       @default(now())
+}
+
+model Subscription {
+  id                     Int                @id @default(autoincrement())
+  companyId              Int                @unique
+  company                Company            @relation(fields: [companyId], references: [id])
+  planId                 Int
+  plan                   SubscriptionPlan   @relation(fields: [planId], references: [id])
+  status                 SubscriptionStatus @default(TRIAL)
+  trialEndsAt            DateTime?
+  currentPeriodStart     DateTime           @default(now())
+  currentPeriodEnd       DateTime
+  cancelAtPeriodEnd      Boolean            @default(false)
+  
+  gatewayName            String             
+  gatewayCustomerId      String?            
+  gatewaySubscriptionId  String?            @unique 
+  
+  invoices               SubscriptionInvoice[]
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+}
+
+model SubscriptionInvoice {
+  id             Int          @id @default(autoincrement())
+  subscriptionId Int
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
+  invoiceNo      String       @unique
+  amount         Float
+  currency       String       @default("INR")
+  status         String       
+  pdfUrl         String?      
+  billingDate    DateTime     @default(now())
+  
+  createdAt      DateTime     @default(now())
+}
+
+model WebhookEvent {
+  id          String   @id 
+  gateway     String   
+  processedAt DateTime @default(now())
+}
+
 

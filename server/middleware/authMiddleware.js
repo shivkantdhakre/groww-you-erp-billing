@@ -29,7 +29,8 @@ export const verifyTokenAndTenant = (req, res, next) => {
       role: decoded.role,
       subRole: decoded.subRole,
       companyId: decoded.companyId,
-      branchId: branchId
+      branchId: branchId,
+      subscription: decoded.subscription || null
     };
 
     contextStorage.run({ user: req.user }, () => {

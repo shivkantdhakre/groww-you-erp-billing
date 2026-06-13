@@ -12,11 +12,13 @@ import {
   resolveOrphanReturn,
 } from '../controllers/complianceController.js';
 import { verifyTokenAndTenant } from '../middleware/authMiddleware.js';
+import { checkSubscription } from '../middleware/checkSubscription.js';
 
 const router = express.Router();
 
-// Enforce authentication on all compliance routes
+// Enforce authentication and subscription check on all compliance routes
 router.use(verifyTokenAndTenant);
+router.use(checkSubscription);
 
 router.get('/gst/health', getDataHealthStatus);
 router.post('/gst/otp/request', requestOtp);

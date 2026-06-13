@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Link } from "react-router-dom";
 import { useStore } from "./store/useStore";
 
 import Navbar from "./components/Navbar";
@@ -42,6 +42,7 @@ import UserManagement from "./pages/settings/UserManagement";
 import RoleManagement from "./pages/settings/RoleManagement";
 import BackupRestore from "./pages/settings/BackupRestore";
 import ProfileSettings from "./pages/settings/ProfileSettings";
+import PricingPlans from "./pages/settings/PricingPlans";
 import SalesInvoicePrint from "./pages/print/SalesInvoicePrint";
 import PurchaseInvoicePrint from "./pages/print/PurchaseInvoicePrint";
 import PaymentVoucherPrint from "./pages/print/PaymentVoucherPrint";
@@ -51,6 +52,8 @@ import ThermalInvoicePrint from "./pages/print/ThermalInvoicePrint";
 function AppContent() {
   const location = useLocation();
   const isPrintPage = location.pathname.startsWith("/print");
+  const user = useStore((state) => state.user);
+  const subscription = user?.subscription;
 
   const routes = (
     <Routes>
@@ -88,6 +91,7 @@ function AppContent() {
       <Route path="/profile-settings" element={<ProfileSettings />} />
       <Route path="/role-management" element={<RoleManagement />} />
       <Route path="/backup-restore" element={<BackupRestore />} />
+      <Route path="/pricing" element={<PricingPlans />} />
       
       {/* Print Templates */}
       <Route path="/print/sales-invoice" element={<SalesInvoicePrint />} />
@@ -110,6 +114,14 @@ function AppContent() {
       <Sidebar />
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
+        {subscription?.status === "PAST_DUE" && (
+          <div className="bg-amber-500 text-white px-6 py-2.5 text-center text-sm font-bold flex justify-center items-center gap-2 animate-pulse no-print shrink-0">
+            <span>⚠️ Subscription payment renewal is past due! ERP operations will lock soon.</span>
+            <Link to="/pricing" className="underline ml-2 hover:text-amber-100 transition font-extrabold">
+              Update Payment Details &rarr;
+            </Link>
+          </div>
+        )}
         <Navbar />
         <div className="p-6 flex-1 overflow-y-auto">
           <Breadcrumb />
@@ -131,6 +143,22 @@ function App() {
       fetchVendors().catch(() => {});
       fetchItems().catch(() => {});
       fetchNotifications().catch(() => {});
+    }
+  }, [token]);
+
+  // Subscription state synchronization (window focus/mount)
+  useEffect(() => {
+    if (token) {
+      const { verifyStatus } = useStore.getState();
+      verifyStatus().catch(() => {});
+
+      const handleFocus = () => {
+        verifyStatus().catch(() => {});
+      };
+      window.addEventListener("focus", handleFocus);
+      return () => {
+        window.removeEventListener("focus", handleFocus);
+      };
     }
   }, [token]);
 

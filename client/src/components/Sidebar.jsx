@@ -85,7 +85,7 @@ function Sidebar() {
             if (["/reports-dashboard", "/sales-report", "/purchase-report", "/stock-report", "/outstanding-report", "/compliance-dashboard"].includes(pathname)) {
                 setReports(true);
             }
-            if (["/company-settings", "/user-management", "/role-management", "/backup-restore"].includes(pathname)) {
+            if (["/company-settings", "/user-management", "/role-management", "/backup-restore", "/pricing"].includes(pathname)) {
                 setSettings(true);
             }
         }, 0);
@@ -314,6 +314,10 @@ function Sidebar() {
                             <Link to="/role-management" className={linkClass("/role-management")}>
                                 <NavIcon icon={ShieldCheck} isSubLink />
                                 <span>Role Management</span>
+                            </Link>
+                            <Link to="/pricing" className={linkClass("/pricing")}>
+                                <NavIcon icon={CreditCard} isSubLink />
+                                <span>Pricing Plans</span>
                             </Link>
                         </div>
                     </div>

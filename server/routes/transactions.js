@@ -17,6 +17,7 @@ import {
   cancelVoucher
 } from "../controllers/vouchersController.js";
 import { verifyTokenAndTenant } from "../middleware/authMiddleware.js";
+import { checkSubscription } from "../middleware/checkSubscription.js";
 
 const router = express.Router();
 
@@ -25,24 +26,24 @@ router.use(verifyTokenAndTenant);
 
 // --- SALES INVOICES ---
 router.get("/sales-invoices", getSalesInvoices);
-router.post("/sales-invoices", createSalesInvoice);
+router.post("/sales-invoices", checkSubscription, createSalesInvoice);
 router.get("/sales-invoices/:id", getSalesInvoiceById);
 
 // --- PURCHASE INVOICES ---
 router.get("/purchase-invoices", getPurchaseInvoices);
-router.post("/purchase-invoices", createPurchaseInvoice);
+router.post("/purchase-invoices", checkSubscription, createPurchaseInvoice);
 router.get("/purchase-invoices/:id", getPurchaseInvoiceById);
 
 // --- RETURNS ---
 router.get("/sales-returns", getSalesReturns);
-router.post("/sales-returns", createSalesReturn);
+router.post("/sales-returns", checkSubscription, createSalesReturn);
 
 router.get("/purchase-returns", getPurchaseReturns);
-router.post("/purchase-returns", createPurchaseReturn);
+router.post("/purchase-returns", checkSubscription, createPurchaseReturn);
 
 // --- VOUCHERS (Contra, Journal, Payment, Receipt) ---
 router.get("/vouchers", getVouchers);
-router.post("/vouchers", createVoucher);
+router.post("/vouchers", checkSubscription, createVoucher);
 router.post("/vouchers/:id/cancel", cancelVoucher);
 
 export default router;

@@ -13,6 +13,7 @@ import usersRouter from "./routes/users.js";
 import pdfRouter from "./routes/pdf.js";
 import complianceRouter from "./routes/compliance.js";
 import branchRouter from "./routes/branch.js";
+import billingRouter from "./routes/billing.js";
 import prisma from "./utils/prisma.js";
 import pdfService from "./utils/pdfService.js";
 import path from "path";
@@ -27,10 +28,14 @@ const corsOptions = {
   credentials: true,
 };
 app.use(cors(corsOptions));
+
+// Configure raw buffer parser for billing webhooks before parsing standard JSON body
+app.use("/api/billing/webhooks", express.raw({ type: "application/json" }));
 app.use(express.json());
 
 // Mount routes
 app.use("/api/auth", authRouter);
+app.use("/api/billing", billingRouter);
 app.use("/api/masters", mastersRouter);
 app.use("/api/transactions", transactionsRouter);
 app.use("/api/reports", reportsRouter);

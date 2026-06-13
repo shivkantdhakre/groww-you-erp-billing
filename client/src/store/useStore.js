@@ -342,4 +342,25 @@ export const useStore = create((set, get) => ({
       throw err;
     }
   },
+
+  verifyStatus: async () => {
+    try {
+      const res = await api.get("/auth/verify-status");
+      const { token, subscription } = res.data;
+      const currentUser = get().user;
+      if (currentUser) {
+        const updatedUser = { ...currentUser, subscription };
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+        localStorage.setItem("token", token);
+        set({ token, user: updatedUser });
+      }
+      return subscription;
+    } catch (err) {
+      console.error("Failed to verify subscription status:", err);
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        get().logout();
+      }
+      throw err;
+    }
+  },
 }));
