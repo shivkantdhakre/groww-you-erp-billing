@@ -102,8 +102,7 @@ export const prisma = basePrisma.$extends({
             }
             
             const clientModelName = model.charAt(0).toLowerCase() + model.slice(1);
-            const client = Prisma.getExtensionContext(this) || prisma;
-            return client[clientModelName].findFirst(newArgs);
+            return prisma[clientModelName].findFirst(newArgs);
           }
         }
 
