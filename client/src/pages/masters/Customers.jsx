@@ -51,7 +51,8 @@ function Customers() {
       setMessageType("error");
       return;
     }
-    if (gstin && gstin.length !== 15) {
+    const trimmedGstin = gstin.trim().toUpperCase();
+    if (trimmedGstin && trimmedGstin.length !== 15) {
       setMessage("Invalid GSTIN Number (must be 15 characters)");
       setMessageType("error");
       return;
@@ -69,7 +70,7 @@ function Customers() {
 
     const gstinExists = customers.some(
       (customer) =>
-        customer.gstin === gstin && customer.gstin !== "" && customer.id !== editId
+        customer.gstin === trimmedGstin && customer.gstin !== "" && customer.id !== editId
     );
 
     if (gstinExists) {
@@ -84,7 +85,7 @@ function Customers() {
           name,
           mobile,
           address,
-          gstin,
+          gstin: trimmedGstin,
           pincode,
           openingBalance: parseFloat(openingBalance) || 0.0,
           creditLimit: parseFloat(creditLimit) || 0.0
@@ -120,7 +121,7 @@ function Customers() {
       await addCustomerStore({
         name,
         mobile,
-        gstin,
+        gstin: trimmedGstin,
         address,
         pincode,
         openingBalance: parseFloat(openingBalance) || 0.0,
@@ -211,7 +212,7 @@ function Customers() {
             type="text"
             placeholder="GSTIN Number"
             value={gstin}
-            onChange={(e) => setGstin(e.target.value)}
+            onChange={(e) => setGstin(e.target.value.toUpperCase())}
             className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 

@@ -53,7 +53,8 @@ function Vendors() {
       setMessageType("error");
       return;
     }
-    if (gstin && gstin.length !== 15) {
+    const trimmedGstin = gstin.trim().toUpperCase();
+    if (trimmedGstin && trimmedGstin.length !== 15) {
       setMessage("GSTIN number must be 15 characters");
       setMessageType("error");
       return;
@@ -71,7 +72,7 @@ function Vendors() {
 
     const gstinExists = vendors.some(
       (vendor) =>
-        vendor.gstin === gstin && vendor.gstin !== "" && vendor.id !== editId,
+        vendor.gstin === trimmedGstin && vendor.gstin !== "" && vendor.id !== editId,
     );
 
     if (gstinExists) {
@@ -86,7 +87,7 @@ function Vendors() {
           name,
           mobile,
           address,
-          gstin,
+          gstin: trimmedGstin,
           pincode,
           openingBalance: parseFloat(openingBalance) || 0.0,
           creditLimit: parseFloat(creditLimit) || 0.0,
@@ -126,7 +127,7 @@ function Vendors() {
       await addVendorStore({
         name,
         mobile,
-        gstin,
+        gstin: trimmedGstin,
         address,
         pincode,
         openingBalance: parseFloat(openingBalance) || 0.0,
@@ -220,7 +221,7 @@ function Vendors() {
             type="text"
             placeholder="GSTIN Number"
             value={gstin}
-            onChange={(e) => setGstin(e.target.value)}
+            onChange={(e) => setGstin(e.target.value.toUpperCase())}
             className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
