@@ -17,6 +17,7 @@ function Customers() {
   const [address, setAddress] = useState("");
   const [openingBalance, setOpeningBalance] = useState("");
   const [creditLimit, setCreditLimit] = useState("");
+  const [pincode, setPincode] = useState("");
 
   const [search, setSearch] = useState("");
 
@@ -42,6 +43,11 @@ function Customers() {
     }
     if (mobile.length !== 10) {
       setMessage("Invalid Mobile Number (must be 10 digits)");
+      setMessageType("error");
+      return;
+    }
+    if (!pincode || pincode.length !== 6 || !/^[1-9][0-9]{5}$/.test(pincode)) {
+      setMessage("Pincode must be exactly 6 digits and not start with 0");
       setMessageType("error");
       return;
     }
@@ -79,6 +85,7 @@ function Customers() {
           mobile,
           address,
           gstin,
+          pincode,
           openingBalance: parseFloat(openingBalance) || 0.0,
           creditLimit: parseFloat(creditLimit) || 0.0
         });
@@ -87,6 +94,7 @@ function Customers() {
         setMobile("");
         setGstin("");
         setAddress("");
+        setPincode("");
         setOpeningBalance("");
         setCreditLimit("");
         setMessage("Customer Updated Successfully");
@@ -105,6 +113,7 @@ function Customers() {
         mobile,
         gstin,
         address,
+        pincode,
         openingBalance: parseFloat(openingBalance) || 0.0,
         creditLimit: parseFloat(creditLimit) || 0.0
       });
@@ -113,6 +122,7 @@ function Customers() {
       setMobile("");
       setGstin("");
       setAddress("");
+      setPincode("");
       setOpeningBalance("");
       setCreditLimit("");
       setMessage("Customer Saved Successfully");
@@ -213,6 +223,15 @@ function Customers() {
             onChange={(e) => setCreditLimit(e.target.value)}
             className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
+
+          {/* Pincode */}
+          <input
+            type="text"
+            placeholder="Pincode (6 digits)"
+            value={pincode}
+            onChange={(e) => setPincode(e.target.value)}
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
+          />
         </div>
 
         <div className="mt-4 flex gap-2">
@@ -230,6 +249,7 @@ function Customers() {
               setMobile("");
               setGstin("");
               setAddress("");
+              setPincode("");
               setOpeningBalance("");
               setCreditLimit("");
             }}
@@ -288,6 +308,7 @@ function Customers() {
                   <th className="text-left p-4 font-semibold text-sm">Mobile</th>
                   <th className="text-left p-4 font-semibold text-sm">GSTIN</th>
                   <th className="text-left p-4 font-semibold text-sm">Address</th>
+                  <th className="text-left p-4 font-semibold text-sm">Pincode</th>
                   <th className="text-left p-4 font-semibold text-sm">Opening Balance</th>
                   <th className="text-left p-4 font-semibold text-sm">Credit Limit</th>
                   <th className="text-left p-4 font-semibold text-sm">Action</th>
@@ -309,9 +330,10 @@ function Customers() {
                       <td className="p-4 text-muted-foreground">{customer.mobile}</td>
                       <td className="p-4 text-muted-foreground font-mono">{customer.gstin || "N/A"}</td>
                       <td className="p-4 text-foreground">{customer.address || "N/A"}</td>
+                      <td className="p-4 text-foreground font-mono">{customer.pincode || "N/A"}</td>
                       <td className="p-4 text-foreground">₹ {customer.openingBalance || 0}</td>
                       <td className="p-4 text-foreground">₹ {customer.creditLimit || 0}</td>
-
+ 
                       <td className="p-4">
                         <button
                           onClick={() => {
@@ -320,6 +342,7 @@ function Customers() {
                             setMobile(customer.mobile);
                             setGstin(customer.gstin || "");
                             setAddress(customer.address || "");
+                            setPincode(customer.pincode || "");
                             setOpeningBalance(customer.openingBalance || "");
                             setCreditLimit(customer.creditLimit || "");
                           }}

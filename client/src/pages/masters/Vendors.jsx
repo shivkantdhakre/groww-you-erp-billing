@@ -19,6 +19,7 @@ function Vendors() {
   const [creditLimit, setCreditLimit] = useState("");
   const [contactPerson, setContactPerson] = useState("");
   const [creditDays, setCreditDays] = useState("");
+  const [pincode, setPincode] = useState("");
 
   const [search, setSearch] = useState("");
 
@@ -44,6 +45,11 @@ function Vendors() {
     }
     if (mobile.length !== 10) {
       setMessage("Mobile number must be 10 digits");
+      setMessageType("error");
+      return;
+    }
+    if (!pincode || pincode.length !== 6 || !/^[1-9][0-9]{5}$/.test(pincode)) {
+      setMessage("Pincode must be exactly 6 digits and not start with 0");
       setMessageType("error");
       return;
     }
@@ -81,6 +87,7 @@ function Vendors() {
           mobile,
           address,
           gstin,
+          pincode,
           openingBalance: parseFloat(openingBalance) || 0.0,
           creditLimit: parseFloat(creditLimit) || 0.0,
           contactPerson,
@@ -91,6 +98,7 @@ function Vendors() {
         setMobile("");
         setGstin("");
         setAddress("");
+        setPincode("");
         setOpeningBalance("");
         setCreditLimit("");
         setContactPerson("");
@@ -111,6 +119,7 @@ function Vendors() {
         mobile,
         gstin,
         address,
+        pincode,
         openingBalance: parseFloat(openingBalance) || 0.0,
         creditLimit: parseFloat(creditLimit) || 0.0,
         contactPerson,
@@ -121,6 +130,7 @@ function Vendors() {
       setMobile("");
       setGstin("");
       setAddress("");
+      setPincode("");
       setOpeningBalance("");
       setCreditLimit("");
       setContactPerson("");
@@ -240,6 +250,15 @@ function Vendors() {
             onChange={(e) => setCreditDays(e.target.value)}
             className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
+
+          {/* Pincode */}
+          <input
+            type="text"
+            placeholder="Pincode (6 digits)"
+            value={pincode}
+            onChange={(e) => setPincode(e.target.value)}
+            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
+          />
         </div>
 
         <div className="mt-4 flex gap-2">
@@ -257,6 +276,7 @@ function Vendors() {
               setMobile("");
               setGstin("");
               setAddress("");
+              setPincode("");
               setOpeningBalance("");
               setCreditLimit("");
               setContactPerson("");
@@ -317,6 +337,7 @@ function Vendors() {
                   <th className="text-left p-4 font-semibold text-sm">Mobile</th>
                   <th className="text-left p-4 font-semibold text-sm">GSTIN</th>
                   <th className="text-left p-4 font-semibold text-sm">Address</th>
+                  <th className="text-left p-4 font-semibold text-sm">Pincode</th>
                   <th className="text-left p-4 font-semibold text-sm">Opening Balance</th>
                   <th className="text-left p-4 font-semibold text-sm">Credit Limit</th>
                   <th className="text-left p-4 font-semibold text-sm">Contact Person</th>
@@ -340,11 +361,12 @@ function Vendors() {
                       <td className="p-4 text-muted-foreground">{vendor.mobile}</td>
                       <td className="p-4 text-muted-foreground font-mono">{vendor.gstin || "N/A"}</td>
                       <td className="p-4 text-foreground">{vendor.address || "N/A"}</td>
+                      <td className="p-4 text-foreground font-mono">{vendor.pincode || "N/A"}</td>
                       <td className="p-4 text-foreground">₹ {vendor.openingBalance || 0}</td>
                       <td className="p-4 text-foreground">₹ {vendor.creditLimit || 0}</td>
                       <td className="p-4 text-foreground">{vendor.contactPerson || "N/A"}</td>
                       <td className="p-4 text-foreground">{vendor.creditDays || "N/A"}</td>
-
+ 
                       <td className="p-4">
                         <div className="flex gap-2">
                           <button
@@ -354,6 +376,7 @@ function Vendors() {
                               setMobile(vendor.mobile);
                               setGstin(vendor.gstin || "");
                               setAddress(vendor.address || "");
+                              setPincode(vendor.pincode || "");
                               setOpeningBalance(vendor.openingBalance || "");
                               setCreditLimit(vendor.creditLimit || "");
                               setContactPerson(vendor.contactPerson || "");

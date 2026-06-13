@@ -23,7 +23,7 @@ export const getCustomers = async (req, res) => {
 // Create a new customer safely tied to the company
 export const createCustomer = async (req, res) => {
   try {
-    const { name, mobile, address, gstin, openingBalance, creditLimit } = req.body;
+    const { name, mobile, address, gstin, openingBalance, creditLimit, pincode } = req.body;
     
     const newCustomer = await prisma.customer.create({
       data: {
@@ -32,6 +32,7 @@ export const createCustomer = async (req, res) => {
         mobile,
         address,
         gstin,
+        pincode,
         openingBalance: parseFloat(openingBalance) || 0.0,
         outstandingBalance: 0.0,
         creditLimit: parseFloat(creditLimit) || 0.0,
@@ -86,7 +87,7 @@ export const getVendors = async (req, res) => {
 // Create a vendor safely
 export const createVendor = async (req, res) => {
   try {
-    const { name, mobile, address, gstin, openingBalance } = req.body;
+    const { name, mobile, address, gstin, openingBalance, pincode } = req.body;
     const newVendor = await prisma.vendor.create({
       data: {
         companyId: req.user.companyId,
@@ -94,6 +95,7 @@ export const createVendor = async (req, res) => {
         mobile,
         address,
         gstin,
+        pincode,
         openingBalance: parseFloat(openingBalance) || 0.0,
         outstandingBalance: 0.0,
         isActive: true
@@ -146,7 +148,7 @@ export const getItems = async (req, res) => {
 // Create an item safely
 export const createItem = async (req, res) => {
   try {
-    const { name, sku, category, unit, purchasePrice, salePrice, gstPercentage, openingStock, minStockAlert } = req.body;
+    const { name, sku, category, unit, purchasePrice, salePrice, gstPercentage, openingStock, minStockAlert, hsnCode } = req.body;
     const newItem = await prisma.item.create({
       data: {
         companyId: req.user.companyId,
@@ -159,6 +161,7 @@ export const createItem = async (req, res) => {
         gstPercentage: parseFloat(gstPercentage) || 0.0,
         openingStock: parseInt(openingStock) || 0,
         minStockAlert: parseInt(minStockAlert) || 0,
+        hsnCode,
         isActive: true
       }
     });
@@ -190,7 +193,7 @@ export const deleteItem = async (req, res) => {
 // Update Customer (tenant-isolated)
 export const updateCustomer = async (req, res) => {
   const { id } = req.params;
-  const { name, mobile, address, gstin, openingBalance, creditLimit } = req.body;
+  const { name, mobile, address, gstin, openingBalance, creditLimit, pincode } = req.body;
   try {
     const updated = await prisma.customer.update({
       where: { id: parseInt(id) },
@@ -199,6 +202,7 @@ export const updateCustomer = async (req, res) => {
         mobile,
         address,
         gstin,
+        pincode,
         openingBalance: openingBalance !== undefined ? parseFloat(openingBalance) : undefined,
         creditLimit: creditLimit !== undefined ? parseFloat(creditLimit) : undefined,
       }
@@ -216,7 +220,7 @@ export const updateCustomer = async (req, res) => {
 // Update Vendor (tenant-isolated)
 export const updateVendor = async (req, res) => {
   const { id } = req.params;
-  const { name, mobile, address, gstin, openingBalance } = req.body;
+  const { name, mobile, address, gstin, openingBalance, pincode } = req.body;
   try {
     const updated = await prisma.vendor.update({
       where: { id: parseInt(id) },
@@ -225,6 +229,7 @@ export const updateVendor = async (req, res) => {
         mobile,
         address,
         gstin,
+        pincode,
         openingBalance: openingBalance !== undefined ? parseFloat(openingBalance) : undefined,
       }
     });

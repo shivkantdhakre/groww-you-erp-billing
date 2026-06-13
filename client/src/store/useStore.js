@@ -93,8 +93,8 @@ export const useStore = create((set, get) => ({
 
   addVendor: async (vendorData) => {
     try {
-      const { name, mobile, address, gstin, openingBalance } = vendorData;
-      const res = await api.post("/masters/vendors", { name, mobile, address, gstin, openingBalance });
+      const { name, mobile, address, gstin, openingBalance, pincode } = vendorData;
+      const res = await api.post("/masters/vendors", { name, mobile, address, gstin, openingBalance, pincode });
       const fullVendor = { ...vendorData, ...res.data };
       set((state) => ({
         vendors: [...state.vendors, fullVendor],
@@ -122,8 +122,8 @@ export const useStore = create((set, get) => ({
 
   addItem: async (itemData) => {
     try {
-      const { name, sku, category, unit, purchasePrice, salePrice, gstPercentage, openingStock, minStockAlert } = itemData;
-      const res = await api.post("/masters/items", { name, sku, category, unit, purchasePrice, salePrice, gstPercentage, openingStock, minStockAlert });
+      const { name, sku, category, unit, purchasePrice, salePrice, gstPercentage, openingStock, minStockAlert, hsnCode } = itemData;
+      const res = await api.post("/masters/items", { name, sku, category, unit, purchasePrice, salePrice, gstPercentage, openingStock, minStockAlert, hsnCode });
       const fullItem = { ...itemData, ...res.data };
       set((state) => ({
         items: [...state.items, fullItem],
