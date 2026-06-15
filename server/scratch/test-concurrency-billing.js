@@ -1,5 +1,6 @@
 import { prisma } from "../utils/prisma.js";
 import { getSequenceNextValue, SEQUENCE_TYPES } from "../utils/sequence.js";
+import { contextStorage } from "../utils/context.js";
 
 async function runTest() {
   console.log("=== Concurrency Billing Sequence Test ===");
@@ -33,22 +34,25 @@ async function runTest() {
     const concurrencyCount = 10;
     console.log(`Spawning ${concurrencyCount} concurrent transactions...`);
 
-    const promises = Array.from({ length: concurrencyCount }).map(async (_, index) => {
-      return prisma.$transaction(async (tx) => {
-        // Add a slight artificial delay to maximize overlap opportunity
-        await new Promise((resolve) => setTimeout(resolve, Math.random() * 50));
-        
-        const seqVal = await getSequenceNextValue(
-          company.id,
-          branch.id,
-          SEQUENCE_TYPES.SALE_INVOICE,
-          tx
-        );
-        return seqVal;
+    const results = await contextStorage.run({ user: { companyId: company.id, branchId: branch.id, role: "COMPANY_ADMIN" } }, async () => {
+      const promises = Array.from({ length: concurrencyCount }).map(async (_, index) => {
+        return prisma.$transaction(async (tx) => {
+          // Add a slight artificial delay to maximize overlap opportunity
+          await new Promise((resolve) => setTimeout(resolve, Math.random() * 50));
+          
+          const seqVal = await getSequenceNextValue(
+            company.id,
+            branch.id,
+            SEQUENCE_TYPES.SALE_INVOICE,
+            tx
+          );
+          return seqVal;
+        });
       });
+
+      return Promise.all(promises);
     });
 
-    const results = await Promise.all(promises);
     console.log("Raw Sequence values received:", results);
 
     // 3. Verify results
