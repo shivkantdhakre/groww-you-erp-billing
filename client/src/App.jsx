@@ -43,6 +43,7 @@ import RoleManagement from "./pages/settings/RoleManagement";
 import BackupRestore from "./pages/settings/BackupRestore";
 import ProfileSettings from "./pages/settings/ProfileSettings";
 import PricingPlans from "./pages/settings/PricingPlans";
+import RazorpayCheckoutTest from "./pages/settings/RazorpayCheckoutTest";
 import SalesInvoicePrint from "./pages/print/SalesInvoicePrint";
 import PurchaseInvoicePrint from "./pages/print/PurchaseInvoicePrint";
 import PaymentVoucherPrint from "./pages/print/PaymentVoucherPrint";
@@ -92,6 +93,7 @@ function AppContent() {
       <Route path="/role-management" element={<RoleManagement />} />
       <Route path="/backup-restore" element={<BackupRestore />} />
       <Route path="/pricing" element={<PricingPlans />} />
+      <Route path="/checkout-test" element={<RazorpayCheckoutTest />} />
       
       {/* Print Templates */}
       <Route path="/print/sales-invoice" element={<SalesInvoicePrint />} />

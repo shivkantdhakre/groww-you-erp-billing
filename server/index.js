@@ -14,6 +14,7 @@ import pdfRouter from "./routes/pdf.js";
 import complianceRouter from "./routes/compliance.js";
 import branchRouter from "./routes/branch.js";
 import billingRouter from "./routes/billing.js";
+import razorpayRouter from "./routes/razorpay.js";
 import prisma from "./utils/prisma.js";
 import pdfService from "./utils/pdfService.js";
 import path from "path";
@@ -36,6 +37,7 @@ app.use(express.json());
 // Mount routes
 app.use("/api/auth", authRouter);
 app.use("/api/billing", billingRouter);
+app.use("/api", razorpayRouter);
 app.use("/api/masters", mastersRouter);
 app.use("/api/transactions", transactionsRouter);
 app.use("/api/reports", reportsRouter);

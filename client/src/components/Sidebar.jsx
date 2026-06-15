@@ -108,7 +108,7 @@ function Sidebar() {
             setReports(true);
         }
         if (
-            ["/company-settings", "/user-management", "/role-management", "/backup-restore", "/pricing", "/profile-settings"].includes(pathname)
+            ["/company-settings", "/user-management", "/role-management", "/backup-restore", "/pricing", "/profile-settings", "/checkout-test"].includes(pathname)
         ) {
             setSettings(true);
         }
@@ -363,6 +363,10 @@ function Sidebar() {
                             <Link to="/pricing" className={linkClass("/pricing")}>
                                 <NavIcon icon={CreditCard} isSubLink />
                                 <span>Pricing Plans</span>
+                            </Link>
+                            <Link to="/checkout-test" className={linkClass("/checkout-test")}>
+                                <NavIcon icon={CreditCard} isSubLink />
+                                <span>Checkout Test</span>
                             </Link>
                         </div>
                     </div>
