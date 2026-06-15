@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Vibration 
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { useStore } from '../../store/useStore';
 import { Ionicons } from '@expo/vector-icons';
+import api from '../../utils/api';
 
 export default function ScannerScreen() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -11,6 +12,7 @@ export default function ScannerScreen() {
   const [scanned, setScanned] = useState(false);
   const [scannedItem, setScannedItem] = useState<any | null>(null);
   const [scannedCode, setScannedCode] = useState<string | null>(null);
+  const [searching, setSearching] = useState(false);
 
   if (!permission) {
     return (
@@ -24,7 +26,7 @@ export default function ScannerScreen() {
     return (
       <View className="flex-1 bg-[#0A0F1D] justify-center items-center px-6">
         <View className="bg-[#1A1F2E] border border-gray-800 rounded-2xl p-6 items-center shadow-xl max-w-sm">
-          <Ionicons name="camera-outline" size={48} color="#9CA3AF" mb-4 />
+          <Ionicons name="camera-outline" size={48} color="#9CA3AF" style={{ marginBottom: 16 }} />
           <Text className="text-white text-lg font-bold text-center mb-2">Camera Access Required</Text>
           <Text className="text-gray-400 text-sm text-center mb-6">
             We need camera access to scan item barcodes on the warehouse floor.
@@ -40,14 +42,42 @@ export default function ScannerScreen() {
     );
   }
 
-  const handleBarCodeScanned = ({ data }: BarcodeScanningResult) => {
+  const handleBarCodeScanned = async ({ data }: BarcodeScanningResult) => {
+    // 1. Sanitize the barcode data immediately to strip off carriage returns, newlines, or whitespace
+    const sanitizedCode = data.trim();
+
+    // 2. Immediately engage the scanner lock to prevent duplicate scanning callbacks
     setScanned(true);
-    setScannedCode(data);
+    setScannedCode(sanitizedCode);
     Vibration.vibrate(100); // 100ms vibration feedback
 
-    // Look up the SKU locally in our Zustand cache array (supports instant offline audits)
-    const foundItem = items.find((i: any) => i.sku === data);
+    setSearching(true);
+    
+    // Look up in the local Zustand cache first
+    let foundItem = items.find((i: any) => i.sku === sanitizedCode);
+    
+    // Check connection status dynamically
+    const isOffline = useStore.getState().isOffline;
+    if (!isOffline) {
+      try {
+        // Query the live backend for fresh stock allocations
+        const res = await api.get(`/masters/items?search=${sanitizedCode}`);
+        const fetchedData = res.data.data || res.data;
+        if (Array.isArray(fetchedData)) {
+          const remoteItem = fetchedData.find((i: any) => i.sku === sanitizedCode);
+          if (remoteItem) {
+            foundItem = remoteItem;
+            // 3. Opportunistic Cache Warming: Sync this fresh profile with local Zustand cache
+            useStore.getState().upsertCachedItem(remoteItem);
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to fetch fresh barcode item, falling back to cache:", err);
+      }
+    }
+
     setScannedItem(foundItem || null);
+    setSearching(false);
   };
 
   const handleReset = () => {
@@ -95,7 +125,12 @@ export default function ScannerScreen() {
       {scanned && (
         <View style={styles.sheetContainer} className="bg-[#0A0F1D]/95 border-t border-gray-800 px-6 py-8 shadow-2xl">
           
-          {scannedItem ? (
+          {searching ? (
+            <View className="items-center py-12">
+              <ActivityIndicator size="large" color="#F7941D" />
+              <Text className="text-gray-400 text-sm mt-4">Querying database for SKU "{scannedCode}"...</Text>
+            </View>
+          ) : scannedItem ? (
             // Success State: Product Found
             <View>
               <View className="flex-row items-center gap-2 mb-4">
@@ -134,7 +169,7 @@ export default function ScannerScreen() {
           ) : (
             // Error State: Product Not Found
             <View className="items-center py-6">
-              <Ionicons name="warning-outline" size={48} color="#EF4444" mb-3 />
+              <Ionicons name="warning-outline" size={48} color="#EF4444" style={{ marginBottom: 12 }} />
               <Text className="text-white text-lg font-bold text-center">Catalog SKU Not Recognized</Text>
               <Text className="text-gray-400 text-sm text-center mt-2 mb-6">
                 Barcode value <Text className="font-mono text-white">"{scannedCode}"</Text> does not exist in your active inventory catalog.

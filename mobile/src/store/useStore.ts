@@ -27,6 +27,7 @@ interface StoreState {
   logout: () => Promise<void>;
   fetchItems: () => Promise<void>;
   fetchSummary: () => Promise<void>;
+  upsertCachedItem: (item: any) => void;
 }
 
 export const useStore = create<StoreState>()(
@@ -58,6 +59,18 @@ export const useStore = create<StoreState>()(
       setOffline: (isOffline) => set({ isOffline }),
       setLastSyncedAt: (lastSyncedAt) => set({ lastSyncedAt }),
       setHasHydrated: (hasHydrated) => set({ hasHydrated }),
+      upsertCachedItem: (item) => {
+        set((state) => {
+          const index = state.items.findIndex((i: any) => i.id === item.id || i.sku === item.sku);
+          const newItems = [...state.items];
+          if (index > -1) {
+            newItems[index] = item;
+          } else {
+            newItems.unshift(item);
+          }
+          return { items: newItems };
+        });
+      },
 
       initializeAuth: async () => {
         try {
