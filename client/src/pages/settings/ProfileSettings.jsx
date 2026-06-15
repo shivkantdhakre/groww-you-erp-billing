@@ -246,7 +246,7 @@ function ProfileSettings() {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     className="w-full pl-3 pr-10 py-3 bg-card text-foreground border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                    placeholder="Min 6 characters"
+                    placeholder="••••••••"
                   />
                   <button
                     type="button"
