@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useStore } from "../../store/useStore";
+import TableWrapper from "../../components/common/TableWrapper";
 
 function Inventory() {
   // Bind to global Zustand store
@@ -341,7 +342,7 @@ function Inventory() {
             className="bg-card text-foreground border border-border p-3 rounded-lg mb-4 w-full focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
-          <div className="bg-card text-foreground rounded-xl border border-border shadow-sm overflow-hidden">
+          <TableWrapper>
             <table className="w-full">
               <thead className="bg-secondary text-secondary-foreground border-b border-border">
                 <tr>
@@ -433,7 +434,7 @@ function Inventory() {
                   })}`
               </tbody>
             </table>
-          </div>
+          </TableWrapper>
         </>
       )}
     </div>

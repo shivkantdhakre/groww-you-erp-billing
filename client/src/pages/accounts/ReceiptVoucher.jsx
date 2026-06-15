@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useStore } from "../../store/useStore";
+import TableWrapper from "../../components/common/TableWrapper";
 import api from "../../utils/api";
 
 function ReceiptVoucher() {
@@ -216,7 +217,7 @@ function ReceiptVoucher() {
                     />
                 </div>
 
-                <div className="overflow-x-auto">
+                <TableWrapper className="!border-none !rounded-none !shadow-none !bg-transparent">
                     <table className="w-full text-sm">
                         <thead className="bg-secondary/40 text-muted-foreground border-b border-border">
                             <tr>
@@ -268,7 +269,7 @@ function ReceiptVoucher() {
                         </tbody>
 
                     </table>
-                </div>
+                </TableWrapper>
             </div>
         </div>
     );

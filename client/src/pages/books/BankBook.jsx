@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import TableWrapper from "../../components/common/TableWrapper";
 import api from "../../utils/api";
 
 function BankBook() {
@@ -166,42 +167,40 @@ function BankBook() {
                     </div>
 
                     {/* Table */}
-                    <div className="bg-card rounded-xl border border-border shadow-sm mt-6 overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead className="bg-secondary/40 text-muted-foreground border-b border-border">
-                                    <tr>
-                                        <th className="p-4 text-left font-semibold">Date</th>
-                                        <th className="p-4 text-left font-semibold">Voucher No</th>
-                                        <th className="p-4 text-left font-semibold">Particulars</th>
-                                        <th className="p-4 text-right font-semibold">Deposit (Dr)</th>
-                                        <th className="p-4 text-right font-semibold">Withdrawal (Cr)</th>
-                                        <th className="p-4 text-right font-semibold">Balance</th>
-                                    </tr>
-                                </thead>
+                    <TableWrapper className="mt-6">
+                        <table className="w-full text-sm">
+                            <thead className="bg-secondary/40 text-muted-foreground border-b border-border">
+                                <tr>
+                                    <th className="p-4 text-left font-semibold">Date</th>
+                                    <th className="p-4 text-left font-semibold">Voucher No</th>
+                                    <th className="p-4 text-left font-semibold">Particulars</th>
+                                    <th className="p-4 text-right font-semibold">Deposit (Dr)</th>
+                                    <th className="p-4 text-right font-semibold">Withdrawal (Cr)</th>
+                                    <th className="p-4 text-right font-semibold">Balance</th>
+                                </tr>
+                            </thead>
 
-                                <tbody className="divide-y divide-border">
-                                    {filteredEntries.map((item, index) => (
-                                        <tr key={index} className="hover:bg-secondary/20 transition-colors duration-150">
-                                            <td className="p-4 text-muted-foreground">{item.date}</td>
-                                            <td className="p-4 font-mono font-semibold text-foreground">{item.voucherNo}</td>
-                                            <td className="p-4 text-foreground font-medium text-left">{item.particulars}</td>
-                                            <td className="p-4 text-right font-mono text-emerald-600 dark:text-emerald-500">₹ {item.receipt.toFixed(2)}</td>
-                                            <td className="p-4 text-right font-mono text-destructive">₹ {item.payment.toFixed(2)}</td>
-                                            <td className="p-4 text-right font-mono font-bold text-foreground">₹ {item.balance.toFixed(2)}</td>
-                                        </tr>
-                                    ))}
-                                    {filteredEntries.length === 0 && (
-                                        <tr>
-                                            <td colSpan="6" className="p-8 text-muted-foreground text-center font-medium">
-                                                No bank transactions found for this period.
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                            <tbody className="divide-y divide-border">
+                                {filteredEntries.map((item, index) => (
+                                    <tr key={index} className="hover:bg-secondary/20 transition-colors duration-150">
+                                        <td className="p-4 text-muted-foreground">{item.date}</td>
+                                        <td className="p-4 font-mono font-semibold text-foreground">{item.voucherNo}</td>
+                                        <td className="p-4 text-foreground font-medium text-left">{item.particulars}</td>
+                                        <td className="p-4 text-right font-mono text-emerald-600 dark:text-emerald-500">₹ {item.receipt.toFixed(2)}</td>
+                                        <td className="p-4 text-right font-mono text-destructive">₹ {item.payment.toFixed(2)}</td>
+                                        <td className="p-4 text-right font-mono font-bold text-foreground">₹ {item.balance.toFixed(2)}</td>
+                                    </tr>
+                                ))}
+                                {filteredEntries.length === 0 && (
+                                    <tr>
+                                        <td colSpan="6" className="p-8 text-muted-foreground text-center font-medium">
+                                            No bank transactions found for this period.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </TableWrapper>
                 </>
             )}
         </div>

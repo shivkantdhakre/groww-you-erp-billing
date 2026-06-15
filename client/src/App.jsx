@@ -123,7 +123,7 @@ function AppContent() {
           </div>
         )}
         <Navbar />
-        <div className="p-6 flex-1 overflow-y-auto">
+        <div className="p-4 sm:p-6 flex-1 overflow-y-auto">
           <Breadcrumb />
           {routes}
         </div>

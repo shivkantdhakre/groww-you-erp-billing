@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import TableWrapper from "../components/common/TableWrapper";
 import api from "../utils/api";
 
 function ReportsDashboard() {
@@ -121,62 +122,64 @@ function ReportsDashboard() {
                     </h2>
                 </div>
 
-                <table className="w-full text-sm">
-                    <thead className="bg-secondary/40 text-muted-foreground border-b border-border">
-                        <tr>
-                            <th className="p-4 text-left font-semibold">
-                                Report Name
-                            </th>
-                            <th className="p-4 text-center font-semibold">
-                                Action
-                            </th>
-                        </tr>
-                    </thead>
+                <TableWrapper className="!border-none !rounded-none !shadow-none !bg-transparent">
+                    <table className="w-full text-sm">
+                        <thead className="bg-secondary/40 text-muted-foreground border-b border-border">
+                            <tr>
+                                <th className="p-4 text-left font-semibold">
+                                    Report Name
+                                </th>
+                                <th className="p-4 text-center font-semibold">
+                                    Action
+                                </th>
+                            </tr>
+                        </thead>
 
-                    <tbody className="divide-y divide-border">
-                        <tr className="hover:bg-secondary/20 transition-colors duration-150">
-                            <td className="p-4 text-left font-medium text-foreground">
-                                Sales Report
-                            </td>
-                            <td className="p-4 text-center">
-                                <button
-                                    onClick={() => navigate("/sales-report")}
-                                    className="text-primary hover:underline cursor-pointer font-medium"
-                                >
-                                    View Report
-                                </button>
-                            </td>
-                        </tr>
+                        <tbody className="divide-y divide-border">
+                            <tr className="hover:bg-secondary/20 transition-colors duration-150">
+                                <td className="p-4 text-left font-medium text-foreground">
+                                    Sales Report
+                                </td>
+                                <td className="p-4 text-center">
+                                    <button
+                                        onClick={() => navigate("/sales-report")}
+                                        className="text-primary hover:underline cursor-pointer font-medium"
+                                    >
+                                        View Report
+                                    </button>
+                                </td>
+                            </tr>
 
-                        <tr className="hover:bg-secondary/20 transition-colors duration-150">
-                            <td className="p-4 text-left font-medium text-foreground">
-                                Purchase Report
-                            </td>
-                            <td className="p-4 text-center">
-                                <button
-                                    onClick={() => navigate("/purchase-report")}
-                                    className="text-primary hover:underline cursor-pointer font-medium"
-                                >
-                                    View Report
-                                </button>
-                            </td>
-                        </tr>
+                            <tr className="hover:bg-secondary/20 transition-colors duration-150">
+                                <td className="p-4 text-left font-medium text-foreground">
+                                    Purchase Report
+                                </td>
+                                <td className="p-4 text-center">
+                                    <button
+                                        onClick={() => navigate("/purchase-report")}
+                                        className="text-primary hover:underline cursor-pointer font-medium"
+                                    >
+                                        View Report
+                                    </button>
+                                </td>
+                            </tr>
 
-                        <tr className="hover:bg-secondary/20 transition-colors duration-150">
-                            <td className="p-4 text-left font-medium text-foreground">
-                                Stock Report
-                            </td>
-                            <td className="p-4 text-center">
-                                <button
-                                    onClick={() => navigate("/stock-report")}
-                                    className="text-primary hover:underline cursor-pointer font-medium"
-                                >
-                                    View Report
-                                </button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                            <tr className="hover:bg-secondary/20 transition-colors duration-150">
+                                <td className="p-4 text-left font-medium text-foreground">
+                                    Stock Report
+                                </td>
+                                <td className="p-4 text-center">
+                                    <button
+                                        onClick={() => navigate("/stock-report")}
+                                        className="text-primary hover:underline cursor-pointer font-medium"
+                                    >
+                                        View Report
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </TableWrapper>
             </div>
         </div>
     );

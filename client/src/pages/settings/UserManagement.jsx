@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useStore } from "../../store/useStore";
 import ValidationMessage from "../../components/common/ValidationMessage";
+import { Eye, EyeOff } from "lucide-react";
+import TableWrapper from "../../components/common/TableWrapper";
 
 function UserManagement() {
   const users = useStore((state) => state.users);
@@ -15,6 +17,9 @@ function UserManagement() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [selectedRole, setSelectedRole] = useState(""); // UI selected role: "Administrator", "Manager", "Accountant"
+
+  // Password Visibility State
+  const [showPassword, setShowPassword] = useState(false);
 
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
@@ -32,6 +37,7 @@ function UserManagement() {
     setPassword("");
     setSelectedRole("");
     setEditUserId(null);
+    setShowPassword(false);
   };
 
   const handleSaveUser = async () => {
@@ -106,6 +112,7 @@ function UserManagement() {
     setName(user.name);
     setEmail(user.email);
     setPassword(""); // Keep password blank unless changing
+    setShowPassword(false);
 
     // Map DB role back to UI Selected Role
     if (user.role === "COMPANY_ADMIN") {
@@ -171,13 +178,27 @@ function UserManagement() {
             className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
           />
 
-          <input
-            type="password"
-            placeholder={editUserId ? "New Password (Optional)" : "Password (Min 6 chars)"}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder={editUserId ? "New Password (Optional)" : "Password (Min 6 chars)"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full pl-3 pr-10 py-3 bg-card text-foreground border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition-all"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-foreground transition-colors cursor-pointer focus:outline-none"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? (
+                <EyeOff className="w-4 h-4" strokeWidth={1.5} />
+              ) : (
+                <Eye className="w-4 h-4" strokeWidth={1.5} />
+              )}
+            </button>
+          </div>
 
           <select
             value={selectedRole}
@@ -214,7 +235,7 @@ function UserManagement() {
       </div>
 
       {/* Users Table */}
-      <div className="bg-card text-foreground p-6 rounded-xl border border-border shadow-sm mt-6 overflow-x-auto">
+      <TableWrapper className="mt-6">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-secondary text-secondary-foreground border-b border-border">
@@ -274,7 +295,7 @@ function UserManagement() {
             )}
           </tbody>
         </table>
-      </div>
+      </TableWrapper>
     </div>
   );
 }

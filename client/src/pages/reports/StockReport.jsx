@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useStore } from "../../store/useStore";
+import TableWrapper from "../../components/common/TableWrapper";
 import api from "../../utils/api";
 
 function StockReport() {
@@ -151,7 +152,7 @@ function StockReport() {
           </div>
 
           {/* Table */}
-          <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+          <TableWrapper>
             <table className="w-full text-center">
               <thead className="bg-muted text-muted-foreground border-b border-border text-sm font-semibold">
                 <tr>
@@ -198,7 +199,7 @@ function StockReport() {
                 )}
               </tbody>
             </table>
-          </div>
+          </TableWrapper>
         </>
       )}
     </div>

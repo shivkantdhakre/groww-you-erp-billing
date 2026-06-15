@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import TableWrapper from "../../components/common/TableWrapper";
 import api from "../../utils/api";
 
 function OutstandingReport() {
@@ -105,40 +106,38 @@ function OutstandingReport() {
           </div>
 
           {/* Table */}
-          <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-secondary/40 text-muted-foreground border-b border-border">
-                  <tr>
-                    <th className="p-4 text-left font-semibold">Name</th>
-                    <th className="p-4 text-center font-semibold">Mobile</th>
-                    <th className="p-4 text-right font-semibold">Outstanding Amount</th>
-                  </tr>
-                </thead>
+          <TableWrapper>
+            <table className="w-full text-sm">
+              <thead className="bg-secondary/40 text-muted-foreground border-b border-border">
+                <tr>
+                  <th className="p-4 text-left font-semibold">Name</th>
+                  <th className="p-4 text-center font-semibold">Mobile</th>
+                  <th className="p-4 text-right font-semibold">Outstanding Amount</th>
+                </tr>
+              </thead>
 
-                <tbody className="divide-y divide-border">
-                  {(activeTab === "customer" ? customerData : vendorData).map(
-                    (item, index) => (
-                      <tr key={index} className="hover:bg-secondary/20 transition-colors duration-150">
-                        <td className="p-4 text-left font-medium text-foreground">{item.name}</td>
-                        <td className="p-4 text-center text-muted-foreground">{item.mobile || "-"}</td>
-                        <td className={`p-4 text-right font-mono font-bold ${activeTab === "customer" ? "text-emerald-600 dark:text-emerald-500" : "text-destructive"}`}>
-                          ₹ {item.outstanding.toFixed(2)}
-                        </td>
-                      </tr>
-                    )
-                  )}
-                  {(activeTab === "customer" ? customerData : vendorData).length === 0 && (
-                    <tr>
-                      <td colSpan="3" className="p-8 text-center text-muted-foreground font-medium">
-                        No outstanding balances found.
+              <tbody className="divide-y divide-border">
+                {(activeTab === "customer" ? customerData : vendorData).map(
+                  (item, index) => (
+                    <tr key={index} className="hover:bg-secondary/20 transition-colors duration-150">
+                      <td className="p-4 text-left font-medium text-foreground">{item.name}</td>
+                      <td className="p-4 text-center text-muted-foreground">{item.mobile || "-"}</td>
+                      <td className={`p-4 text-right font-mono font-bold ${activeTab === "customer" ? "text-emerald-600 dark:text-emerald-500" : "text-destructive"}`}>
+                        ₹ {item.outstanding.toFixed(2)}
                       </td>
                     </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                  )
+                )}
+                {(activeTab === "customer" ? customerData : vendorData).length === 0 && (
+                  <tr>
+                    <td colSpan="3" className="p-8 text-center text-muted-foreground font-medium">
+                      No outstanding balances found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </TableWrapper>
         </>
       )}
     </div>

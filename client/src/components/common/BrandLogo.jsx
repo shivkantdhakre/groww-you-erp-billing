@@ -36,7 +36,7 @@ export default function BrandLogo({ size = 36, showText = true, className = '', 
       {showText && (
         <div className="flex flex-col justify-center leading-none text-[#1B3A5C] dark:text-foreground transition-colors duration-300">
           <span className="text-[17px] font-black tracking-wider font-sans">GROWW</span>
-          <span className="text-[15px] font-bold tracking-[0.2em] font-sans opacity-90">YOU ERP</span>
+          <span className="text-[15px] font-bold tracking-[0.125em] font-sans opacity-90">YOU ERP</span>
         </div>
       )}
     </div>

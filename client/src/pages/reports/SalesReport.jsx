@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useStore } from "../../store/useStore";
+import TableWrapper from "../../components/common/TableWrapper";
 import api from "../../utils/api";
 
 function SalesReport() {
@@ -132,40 +133,38 @@ function SalesReport() {
                     </div>
 
                     {/* Table */}
-                    <div className="bg-card rounded-xl border border-border shadow-sm mt-6 overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead className="bg-secondary/40 text-muted-foreground border-b border-border">
-                                    <tr>
-                                        <th className="p-4 text-left font-semibold">Invoice No</th>
-                                        <th className="p-4 text-left font-semibold">Date</th>
-                                        <th className="p-4 text-left font-semibold">Customer</th>
-                                        <th className="p-4 text-center font-semibold">Qty</th>
-                                        <th className="p-4 text-right font-semibold">Amount</th>
-                                    </tr>
-                                </thead>
+                    <TableWrapper className="mt-6">
+                        <table className="w-full text-sm">
+                            <thead className="bg-secondary/40 text-muted-foreground border-b border-border">
+                                <tr>
+                                    <th className="p-4 text-left font-semibold">Invoice No</th>
+                                    <th className="p-4 text-left font-semibold">Date</th>
+                                    <th className="p-4 text-left font-semibold">Customer</th>
+                                    <th className="p-4 text-center font-semibold">Qty</th>
+                                    <th className="p-4 text-right font-semibold">Amount</th>
+                                </tr>
+                            </thead>
 
-                                <tbody className="divide-y divide-border">
-                                    {salesData.map((sale) => (
-                                        <tr key={sale.id} className="hover:bg-secondary/20 transition-colors duration-150">
-                                            <td className="p-4 font-mono font-semibold text-foreground">{sale.invoiceNo}</td>
-                                            <td className="p-4 text-muted-foreground">{sale.invoiceDate.split("T")[0]}</td>
-                                            <td className="p-4 text-left text-foreground font-medium">{sale.customer?.name}</td>
-                                            <td className="p-4 text-center text-foreground">{sale.totalQty}</td>
-                                            <td className="p-4 text-right font-mono font-bold text-foreground">₹ {sale.grandTotal.toFixed(2)}</td>
-                                        </tr>
-                                    ))}
-                                    {salesData.length === 0 && (
-                                        <tr>
-                                            <td colSpan="5" className="p-8 text-center text-muted-foreground font-medium">
-                                                No sales invoices found for this period.
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                            <tbody className="divide-y divide-border">
+                                {salesData.map((sale) => (
+                                    <tr key={sale.id} className="hover:bg-secondary/20 transition-colors duration-150">
+                                        <td className="p-4 font-mono font-semibold text-foreground">{sale.invoiceNo}</td>
+                                        <td className="p-4 text-muted-foreground">{sale.invoiceDate.split("T")[0]}</td>
+                                        <td className="p-4 text-left text-foreground font-medium">{sale.customer?.name}</td>
+                                        <td className="p-4 text-center text-foreground">{sale.totalQty}</td>
+                                        <td className="p-4 text-right font-mono font-bold text-foreground">₹ {sale.grandTotal.toFixed(2)}</td>
+                                    </tr>
+                                ))}
+                                {salesData.length === 0 && (
+                                    <tr>
+                                        <td colSpan="5" className="p-8 text-center text-muted-foreground font-medium">
+                                            No sales invoices found for this period.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </TableWrapper>
                 </>
             )}
         </div>

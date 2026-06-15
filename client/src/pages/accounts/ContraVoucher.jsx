@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import CommonModal from "../../components/common/CommonModal";
+import TableWrapper from "../../components/common/TableWrapper";
 import api from "../../utils/api";
 
 function ContraVoucher() {
@@ -224,7 +225,7 @@ function ContraVoucher() {
                     <h2 className="text-xl font-bold">Voucher Journal</h2>
                 </div>
 
-                <div className="overflow-x-auto">
+                <TableWrapper className="!border-none !rounded-none !shadow-none !bg-transparent">
                     <table className="w-full text-sm">
 
                         <thead className="bg-secondary/40 text-muted-foreground border-b border-border">
@@ -275,7 +276,7 @@ function ContraVoucher() {
                         </tbody>
 
                     </table>
-                </div>
+                </TableWrapper>
 
             </div>
             <CommonModal

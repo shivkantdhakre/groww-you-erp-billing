@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useStore } from "../../store/useStore";
 import ValidationMessage from "../../components/common/ValidationMessage";
+import { Eye, EyeOff } from "lucide-react";
 
 function ProfileSettings() {
   const user = useStore((state) => state.user);
@@ -17,6 +18,11 @@ function ProfileSettings() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  // Password Visibility States
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Notifications State
   const [message, setMessage] = useState("");
@@ -86,6 +92,9 @@ function ProfileSettings() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      setShowCurrentPassword(false);
+      setShowNewPassword(false);
+      setShowConfirmPassword(false);
     } catch (err) {
       setMessage(err.response?.data?.error || "Failed to change password");
       setMessageType("error");
@@ -103,6 +112,9 @@ function ProfileSettings() {
           onClick={() => {
             setActiveTab("profile");
             clearMessages();
+            setShowCurrentPassword(false);
+            setShowNewPassword(false);
+            setShowConfirmPassword(false);
           }}
           className={`py-3 px-6 font-semibold border-b-2 transition-colors ${
             activeTab === "profile"
@@ -116,6 +128,9 @@ function ProfileSettings() {
           onClick={() => {
             setActiveTab("password");
             clearMessages();
+            setShowCurrentPassword(false);
+            setShowNewPassword(false);
+            setShowConfirmPassword(false);
           }}
           className={`py-3 px-6 font-semibold border-b-2 transition-colors ${
             activeTab === "password"
@@ -200,35 +215,77 @@ function ProfileSettings() {
             <div className="max-w-md space-y-4">
               <div className="flex flex-col">
                 <label className="text-sm font-medium text-muted-foreground mb-2">Current Password</label>
-                <input
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="bg-card text-foreground border border-border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="••••••••"
-                />
+                <div className="relative">
+                  <input
+                    type={showCurrentPassword ? "text" : "password"}
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="w-full pl-3 pr-10 py-3 bg-card text-foreground border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-foreground transition-colors cursor-pointer focus:outline-none"
+                    aria-label={showCurrentPassword ? "Hide password" : "Show password"}
+                  >
+                    {showCurrentPassword ? (
+                      <EyeOff className="w-4 h-4" strokeWidth={1.5} />
+                    ) : (
+                      <Eye className="w-4 h-4" strokeWidth={1.5} />
+                    )}
+                  </button>
+                </div>
               </div>
 
               <div className="flex flex-col">
                 <label className="text-sm font-medium text-muted-foreground mb-2">New Password</label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="bg-card text-foreground border border-border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="Min 6 characters"
-                />
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? "text" : "password"}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full pl-3 pr-10 py-3 bg-card text-foreground border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                    placeholder="Min 6 characters"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-foreground transition-colors cursor-pointer focus:outline-none"
+                    aria-label={showNewPassword ? "Hide password" : "Show password"}
+                  >
+                    {showNewPassword ? (
+                      <EyeOff className="w-4 h-4" strokeWidth={1.5} />
+                    ) : (
+                      <Eye className="w-4 h-4" strokeWidth={1.5} />
+                    )}
+                  </button>
+                </div>
               </div>
 
               <div className="flex flex-col">
                 <label className="text-sm font-medium text-muted-foreground mb-2">Confirm New Password</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="bg-card text-foreground border border-border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="••••••••"
-                />
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full pl-3 pr-10 py-3 bg-card text-foreground border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-foreground transition-colors cursor-pointer focus:outline-none"
+                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="w-4 h-4" strokeWidth={1.5} />
+                    ) : (
+                      <Eye className="w-4 h-4" strokeWidth={1.5} />
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
 

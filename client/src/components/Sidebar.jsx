@@ -34,7 +34,8 @@ import {
     Building,
     UserCog,
     HardDrive,
-    ShieldCheck
+    ShieldCheck,
+    X
 } from "lucide-react";
 
 // Lightweight helper to render navigation icons with layout/accessibility defaults
@@ -52,6 +53,8 @@ function NavIcon({ icon: Icon, isSubLink = false, ...props }) {
 
 function Sidebar() {
     const logout = useStore((state) => state.logout);
+    const sidebarOpen = useStore((state) => state.sidebarOpen);
+    const setSidebarOpen = useStore((state) => state.setSidebarOpen);
     const location = useLocation();
     const pathname = location.pathname;
 
@@ -66,6 +69,8 @@ function Sidebar() {
 
     // Auto-open active categories on route change
     useEffect(() => {
+        setSidebarOpen(false);
+
         /* eslint-disable react-hooks/set-state-in-effect */
         if (
             ["/customers", "/vendors", "/inventory"].includes(pathname)
@@ -108,7 +113,7 @@ function Sidebar() {
             setSettings(true);
         }
         /* eslint-enable react-hooks/set-state-in-effect */
-    }, [pathname]);
+    }, [pathname, setSidebarOpen]);
 
     // Helpers to style links
     const isLinkActive = (path) => pathname === path;
@@ -125,12 +130,34 @@ function Sidebar() {
         `w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer hover:bg-secondary text-foreground`;
 
     return (
-        <div className="w-64 glass-panel-blur h-screen sticky top-0 self-start p-5 flex flex-col justify-between border-r border-border text-foreground no-print shadow-xl">
-            <div className="flex flex-col flex-1 min-h-0">
-                {/* Brand Logo */}
-                <div className="flex items-center gap-3 mb-8 px-2 shrink-0">
-                    <BrandLogo size={34} showText={true} />
-                </div>
+        <>
+            {/* Backdrop overlay for mobile drawer layout */}
+            <div
+                className={`fixed inset-0 bg-black/60 z-40 lg:hidden transition-opacity duration-300 ${
+                    sidebarOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+                }`}
+                onClick={(e) => {
+                    if (e.target === e.currentTarget) setSidebarOpen(false);
+                }}
+            />
+
+            <div
+                className={`fixed inset-y-0 left-0 w-64 bg-card z-50 transform transition-transform duration-300 ease-in-out shadow-xl overflow-y-auto scrollbar-thin p-5 flex flex-col justify-between border-r border-border text-foreground no-print lg:sticky lg:top-0 lg:self-start lg:h-screen lg:inset-auto lg:z-auto lg:translate-x-0 lg:shadow-none lg:bg-transparent lg:glass-panel-blur ${
+                    sidebarOpen ? "translate-x-0" : "-translate-x-full"
+                }`}
+            >
+                <div className="flex flex-col flex-1 min-h-0">
+                    {/* Brand Logo and Mobile Close Button */}
+                    <div className="flex items-center justify-between mb-8 px-2 shrink-0">
+                        <BrandLogo size={34} showText={true} />
+                        <button
+                            onClick={() => setSidebarOpen(false)}
+                            className="lg:hidden p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer focus:outline-none transition-colors"
+                            aria-label="Close menu"
+                        >
+                            <X className="w-5 h-5 shrink-0" strokeWidth={1.5} />
+                        </button>
+                    </div>
 
                 {/* Navigation Items */}
                 <div className="space-y-1.5 overflow-y-auto flex-1 min-h-0 pr-1 scrollbar-thin">
@@ -354,6 +381,7 @@ function Sidebar() {
                 </button>
             </div>
         </div>
+        </>
     );
 }
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useStore } from "../../store/useStore";
+import TableWrapper from "../../components/common/TableWrapper";
 
 function Vendors() {
   // Bind to global Zustand store
@@ -350,7 +351,7 @@ function Vendors() {
           />
 
           {/* Table */}
-          <div className="bg-card text-foreground rounded-xl border border-border shadow-sm overflow-hidden">
+          <TableWrapper>
             <table className="w-full">
               <thead className="bg-secondary text-secondary-foreground border-b border-border">
                 <tr>
@@ -421,7 +422,7 @@ function Vendors() {
                   ))}
               </tbody>
             </table>
-          </div>
+          </TableWrapper>
         </>
       )}
     </div>

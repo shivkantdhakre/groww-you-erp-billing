@@ -10,7 +10,8 @@ import {
   User,
   KeyRound,
   Settings,
-  LogOut
+  LogOut,
+  Menu
 } from "lucide-react";
 
 function Navbar() {
@@ -22,6 +23,8 @@ function Navbar() {
   const notifications = useStore((state) => state.notifications);
   const markNotificationRead = useStore((state) => state.markNotificationRead);
   const clearNotifications = useStore((state) => state.clearNotifications);
+  const sidebarOpen = useStore((state) => state.sidebarOpen);
+  const setSidebarOpen = useStore((state) => state.setSidebarOpen);
 
   // Component UI state
   const [search, setSearch] = useState("");
@@ -118,49 +121,61 @@ function Navbar() {
   return (
     <div className="bg-card border-b border-border shadow px-6 py-4 flex justify-between items-center relative text-foreground no-print">
       
-      {/* Search Input Box */}
-      <div ref={searchRef} className="w-2/3 relative">
-        <input
-          type="text"
-          placeholder="Search Customers, Vendors, Invoices, Items..."
-          value={search}
-          onChange={handleSearchChange}
-          onFocus={() => {
-            if (search.trim()) {
-              setShowSearchDropdown(true);
-            }
-          }}
-          className="w-full border border-border bg-card text-foreground p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-        />
+      {/* Left side Search & Hamburger Section */}
+      <div className="flex items-center flex-1 min-w-0 mr-4">
+        {/* Hamburger Toggle Button for mobile/tablet */}
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="lg:hidden p-2 -ml-2 mr-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer focus:outline-none transition-colors flex items-center justify-center shrink-0"
+          aria-label="Toggle Navigation Sidebar"
+        >
+          <Menu className="w-6 h-6" strokeWidth={1.5} />
+        </button>
 
-        {search && showSearchDropdown && (
-          <div className="absolute bg-card border border-border rounded-lg shadow-lg w-full mt-1 z-50 max-h-80 overflow-y-auto text-foreground">
-            {loadingSearch ? (
-              <div className="p-3 text-muted-foreground flex items-center justify-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin shrink-0 text-primary" aria-hidden="true" />
-                <span>Searching...</span>
-              </div>
-            ) : searchResults.length > 0 ? (
-              searchResults.map((item, index) => (
-                <div
-                  key={index}
-                  onClick={() => handleResultClick(item)}
-                  className="p-3 hover:bg-muted cursor-pointer flex justify-between items-center border-b border-border last:border-0"
-                >
-                  <div>
-                    <span className="font-semibold">{item.name}</span>
-                    <span className="text-xs text-muted-foreground block">{item.details}</span>
-                  </div>
-                  <span className="text-xs font-semibold px-2 py-1 bg-primary/10 text-primary rounded uppercase">
-                    {item.type}
-                  </span>
+        {/* Search Input Box */}
+        <div ref={searchRef} className="w-full max-w-md md:max-w-lg lg:max-w-xl relative flex-1 min-w-0">
+          <input
+            type="text"
+            placeholder="Search..."
+            value={search}
+            onChange={handleSearchChange}
+            onFocus={() => {
+              if (search.trim()) {
+                setShowSearchDropdown(true);
+              }
+            }}
+            className="w-full border border-border bg-card text-foreground p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:truncate"
+          />
+
+          {search && showSearchDropdown && (
+            <div className="absolute bg-card border border-border rounded-lg shadow-lg w-full mt-1 z-50 max-h-80 overflow-y-auto text-foreground">
+              {loadingSearch ? (
+                <div className="p-3 text-muted-foreground flex items-center justify-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin shrink-0 text-primary" aria-hidden="true" />
+                  <span>Searching...</span>
                 </div>
-              ))
-            ) : (
-              <div className="p-3 text-muted-foreground text-center">No Results Found</div>
-            )}
-          </div>
-        )}
+              ) : searchResults.length > 0 ? (
+                searchResults.map((item, index) => (
+                  <div
+                    key={index}
+                    onClick={() => handleResultClick(item)}
+                    className="p-3 hover:bg-muted cursor-pointer flex justify-between items-center border-b border-border last:border-0"
+                  >
+                    <div>
+                      <span className="font-semibold">{item.name}</span>
+                      <span className="text-xs text-muted-foreground block">{item.details}</span>
+                    </div>
+                    <span className="text-xs font-semibold px-2 py-1 bg-primary/10 text-primary rounded uppercase">
+                      {item.type}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div className="p-3 text-muted-foreground text-center">No Results Found</div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Right Side Icons */}

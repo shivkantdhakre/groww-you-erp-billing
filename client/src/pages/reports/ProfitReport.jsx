@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useStore } from "../../store/useStore";
+import TableWrapper from "../../components/common/TableWrapper";
 import api from "../../utils/api";
 
 function ProfitReport() {
@@ -198,7 +199,7 @@ function ProfitReport() {
             <div className="p-5 border-b border-border">
               <h2 className="text-lg font-bold">Transaction Breakdown</h2>
             </div>
-            <div className="overflow-x-auto">
+            <TableWrapper className="!border-none !rounded-none !shadow-none !bg-transparent">
               <table className="w-full text-sm">
                 <thead className="bg-secondary/40 text-muted-foreground border-b border-border">
                   <tr>
@@ -238,7 +239,7 @@ function ProfitReport() {
                   )}
                 </tbody>
               </table>
-            </div>
+            </TableWrapper>
           </div>
         </>
       )}

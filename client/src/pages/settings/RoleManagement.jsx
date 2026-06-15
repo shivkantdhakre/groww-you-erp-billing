@@ -1,4 +1,5 @@
 import { useState } from "react";
+import TableWrapper from "../../components/common/TableWrapper";
 
 function RoleManagement() {
   const [role, setRole] = useState("Admin");
@@ -45,7 +46,8 @@ function RoleManagement() {
 
       <div className="bg-card text-foreground p-6 rounded-xl border border-border shadow-sm">
 
-        <table className="w-full">
+        <TableWrapper>
+          <table className="w-full">
 
           <thead className="bg-secondary text-secondary-foreground">
 
@@ -88,6 +90,7 @@ function RoleManagement() {
           </tbody>
 
         </table>
+        </TableWrapper>
 
         <button
           className="bg-primary text-primary-foreground hover:bg-primary/95 px-6 py-2.5 rounded-lg mt-5 font-semibold transition cursor-pointer shadow-sm"

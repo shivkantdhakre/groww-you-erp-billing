@@ -12,6 +12,10 @@ export const useStore = create((set, get) => ({
     }
   })(),
 
+  // UI Responsive States
+  sidebarOpen: false,
+  setSidebarOpen: (isOpen) => set({ sidebarOpen: isOpen }),
+
   // Master Data Cache
   customers: [],
   vendors: [],

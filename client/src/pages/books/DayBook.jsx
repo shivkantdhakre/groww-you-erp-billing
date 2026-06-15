@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import TableWrapper from "../../components/common/TableWrapper";
 import api from "../../utils/api";
 
 function DayBook() {
@@ -129,45 +130,43 @@ function DayBook() {
                     </div>
 
                     {/* Table */}
-                    <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead className="bg-secondary/40 text-muted-foreground border-b border-border">
-                                    <tr>
-                                        <th className="p-4 text-left font-semibold">Date</th>
-                                        <th className="p-4 text-left font-semibold">Voucher/Invoice No</th>
-                                        <th className="p-4 text-left font-semibold">Type</th>
-                                        <th className="p-4 text-left font-semibold">Particulars</th>
-                                        <th className="p-4 text-right font-semibold">Debit (Dr)</th>
-                                        <th className="p-4 text-right font-semibold">Credit (Cr)</th>
-                                    </tr>
-                                </thead>
+                    <TableWrapper>
+                        <table className="w-full text-sm">
+                            <thead className="bg-secondary/40 text-muted-foreground border-b border-border">
+                                <tr>
+                                    <th className="p-4 text-left font-semibold">Date</th>
+                                    <th className="p-4 text-left font-semibold">Voucher/Invoice No</th>
+                                    <th className="p-4 text-left font-semibold">Type</th>
+                                    <th className="p-4 text-left font-semibold">Particulars</th>
+                                    <th className="p-4 text-right font-semibold">Debit (Dr)</th>
+                                    <th className="p-4 text-right font-semibold">Credit (Cr)</th>
+                                </tr>
+                            </thead>
 
-                                <tbody className="divide-y divide-border">
-                                    {entries.map((item, index) => (
-                                        <tr key={index} className={`hover:bg-secondary/20 transition-colors duration-150 ${item.isCancelled ? "bg-destructive/10 text-muted-foreground line-through" : ""}`}>
-                                            <td className="p-4 text-muted-foreground">{item.date}</td>
-                                            <td className="p-4 font-mono font-semibold text-foreground">{item.voucherNo}</td>
-                                            <td className="p-4 text-foreground font-medium">
-                                                {item.type}
-                                                {item.isCancelled && <span className="text-destructive text-xs font-bold ml-1.5">(Voided)</span>}
-                                            </td>
-                                            <td className="p-4 text-left text-muted-foreground">{item.particulars}</td>
-                                            <td className="p-4 text-right font-mono text-destructive">₹ {item.debit.toFixed(2)}</td>
-                                            <td className="p-4 text-right font-mono text-emerald-600 dark:text-emerald-500">₹ {item.credit.toFixed(2)}</td>
-                                        </tr>
-                                    ))}
-                                    {entries.length === 0 && (
-                                        <tr>
-                                            <td colSpan="6" className="p-8 text-muted-foreground text-center font-medium">
-                                                No transactions recorded on this day.
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                            <tbody className="divide-y divide-border">
+                                {entries.map((item, index) => (
+                                    <tr key={index} className={`hover:bg-secondary/20 transition-colors duration-150 ${item.isCancelled ? "bg-destructive/10 text-muted-foreground line-through" : ""}`}>
+                                        <td className="p-4 text-muted-foreground">{item.date}</td>
+                                        <td className="p-4 font-mono font-semibold text-foreground">{item.voucherNo}</td>
+                                        <td className="p-4 text-foreground font-medium">
+                                            {item.type}
+                                            {item.isCancelled && <span className="text-destructive text-xs font-bold ml-1.5">(Voided)</span>}
+                                        </td>
+                                        <td className="p-4 text-left text-muted-foreground">{item.particulars}</td>
+                                        <td className="p-4 text-right font-mono text-destructive">₹ {item.debit.toFixed(2)}</td>
+                                        <td className="p-4 text-right font-mono text-emerald-600 dark:text-emerald-500">₹ {item.credit.toFixed(2)}</td>
+                                    </tr>
+                                ))}
+                                {entries.length === 0 && (
+                                    <tr>
+                                        <td colSpan="6" className="p-8 text-muted-foreground text-center font-medium">
+                                            No transactions recorded on this day.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </TableWrapper>
                 </>
             )}
         </div>

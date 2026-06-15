@@ -2,7 +2,7 @@ import { useState } from "react";
 import api from "../utils/api";
 import { useStore } from "../store/useStore";
 import BrandLogo from "../components/common/BrandLogo";
-import { Mail, Lock, Building, Phone } from "lucide-react";
+import { Mail, Lock, Building, Phone, Eye, EyeOff } from "lucide-react";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -11,6 +11,11 @@ export default function Login() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const login = useStore((state) => state.login);
+
+  // Password Visibility States
+  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Forgot Password States
   const [showForgot, setShowForgot] = useState(false);
@@ -145,7 +150,7 @@ export default function Login() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@growwyou.com"
+                placeholder="example@gmail.com"
                 className="w-full px-4 py-3 rounded-lg bg-card border border-border text-foreground placeholder-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                 required
               />
@@ -165,20 +170,37 @@ export default function Login() {
                     setSuccess("");
                     setConfirmPassword("");
                     setForgotErrors({});
+                    setShowPassword(false);
+                    setShowNewPassword(false);
+                    setShowConfirmPassword(false);
                   }}
                   className="text-xs text-primary hover:text-primary/80 cursor-pointer font-medium"
                 >
                   Forgot Password?
                 </button>
               </div>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-4 py-3 rounded-lg bg-card border border-border text-foreground placeholder-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                required
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full pl-4 pr-10 py-3 rounded-lg bg-card border border-border text-foreground placeholder-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-foreground transition-colors cursor-pointer focus:outline-none"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" strokeWidth={1.5} />
+                  ) : (
+                    <Eye className="w-4 h-4" strokeWidth={1.5} />
+                  )}
+                </button>
+              </div>
             </div>
 
             <button
@@ -206,7 +228,7 @@ export default function Login() {
                 type="email"
                 value={forgotEmail}
                 onChange={(e) => setForgotEmail(e.target.value)}
-                placeholder="admin@growwyou.com"
+                placeholder="example@gmail.com"
                 className={`w-full px-4 py-2.5 rounded-lg bg-card border text-foreground placeholder-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
                   forgotErrors.email ? "border-destructive focus:ring-destructive" : "border-border"
                 }`}
@@ -256,16 +278,30 @@ export default function Login() {
                 <Lock className="w-4 h-4 shrink-0 text-muted-foreground/70" strokeWidth={1.5} aria-hidden="true" />
                 <span>New Password</span>
               </label>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="New Password"
-                className={`w-full px-4 py-2.5 rounded-lg bg-card border text-foreground placeholder-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
-                  forgotErrors.newPassword ? "border-destructive focus:ring-destructive" : "border-border"
-                }`}
-                required
-              />
+              <div className="relative">
+                <input
+                  type={showNewPassword ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="New Password"
+                  className={`w-full pl-4 pr-10 py-2.5 rounded-lg bg-card border text-foreground placeholder-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
+                    forgotErrors.newPassword ? "border-destructive focus:ring-destructive" : "border-border"
+                  }`}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-foreground transition-colors cursor-pointer focus:outline-none"
+                  aria-label={showNewPassword ? "Hide password" : "Show password"}
+                >
+                  {showNewPassword ? (
+                    <EyeOff className="w-4 h-4" strokeWidth={1.5} />
+                  ) : (
+                    <Eye className="w-4 h-4" strokeWidth={1.5} />
+                  )}
+                </button>
+              </div>
               {forgotErrors.newPassword && (
                 <span className="text-xs text-destructive mt-1 block font-semibold">{forgotErrors.newPassword}</span>
               )}
@@ -276,16 +312,30 @@ export default function Login() {
                 <Lock className="w-4 h-4 shrink-0 text-muted-foreground/70" strokeWidth={1.5} aria-hidden="true" />
                 <span>Confirm New Password</span>
               </label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirm Password"
-                className={`w-full px-4 py-2.5 rounded-lg bg-card border text-foreground placeholder-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
-                  forgotErrors.confirmPassword ? "border-destructive focus:ring-destructive" : "border-border"
-                }`}
-                required
-              />
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm Password"
+                  className={`w-full pl-4 pr-10 py-2.5 rounded-lg bg-card border text-foreground placeholder-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
+                    forgotErrors.confirmPassword ? "border-destructive focus:ring-destructive" : "border-border"
+                  }`}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-foreground transition-colors cursor-pointer focus:outline-none"
+                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="w-4 h-4" strokeWidth={1.5} />
+                  ) : (
+                    <Eye className="w-4 h-4" strokeWidth={1.5} />
+                  )}
+                </button>
+              </div>
               {forgotErrors.confirmPassword && (
                 <span className="text-xs text-destructive mt-1 block font-semibold">{forgotErrors.confirmPassword}</span>
               )}
@@ -307,6 +357,9 @@ export default function Login() {
                   setSuccess("");
                   setConfirmPassword("");
                   setForgotErrors({});
+                  setShowPassword(false);
+                  setShowNewPassword(false);
+                  setShowConfirmPassword(false);
                 }}
                 className="py-3 px-4 bg-secondary text-secondary-foreground hover:bg-secondary/80 font-semibold rounded-lg shadow-lg focus:outline-none transition-all duration-200 cursor-pointer"
               >
