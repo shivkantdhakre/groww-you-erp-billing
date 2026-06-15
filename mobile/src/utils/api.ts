@@ -28,19 +28,115 @@ api.interceptors.request.use(
   }
 );
 
-// Response Interceptor: Catch 401 Unauthorized errors and force clear local session
+import * as LocalAuthentication from 'expo-local-authentication';
+
+interface FailedRequest {
+  config: any;
+  resolve: (value: any) => void;
+  reject: (reason: any) => void;
+}
+
+let isReauthenticating = false;
+let failedQueue: FailedRequest[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.config.headers = {
+        ...prom.config.headers,
+        'Authorization': `Bearer ${token}`
+      };
+      prom.resolve(api(prom.config));
+    }
+  });
+  failedQueue = [];
+};
+
+// Response Interceptor: Catch 401 Unauthorized errors and perform biometric re-auth
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response && error.response.status === 401) {
-      console.warn('Session expired or unauthorized. Logging out.');
-      try {
-        // Trigger Zustand store logout to clear secure keychain and local storage
-        await useStore.getState().logout();
-      } catch (logoutErr) {
-        console.error('Error logging out during 401 interception:', logoutErr);
+    const originalRequest = error.config;
+
+    if (error.response && error.response.status === 401 && !originalRequest._retry) {
+      if (isReauthenticating) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ config: originalRequest, resolve, reject });
+        });
       }
+
+      originalRequest._retry = true;
+      isReauthenticating = true;
+
+      return new Promise(async (resolve, reject) => {
+        try {
+          const hasHardware = await LocalAuthentication.hasHardwareAsync();
+          const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+          const savedEmail = await SecureStore.getItemAsync('saved_email');
+          const savedPassword = await SecureStore.getItemAsync('saved_password');
+          const savedOptIn = await SecureStore.getItemAsync('biometric_opt_in');
+
+          if (hasHardware && isEnrolled && savedEmail && savedPassword && savedOptIn === 'true') {
+            const authResult = await LocalAuthentication.authenticateAsync({
+              promptMessage: 'Session expired. Please authenticate to renew login.',
+              fallbackLabel: 'Enter Password'
+            });
+
+            if (authResult.success) {
+              try {
+                const loginRes = await axios.post(`${api.defaults.baseURL}/auth/login`, {
+                  email: savedEmail,
+                  password: savedPassword
+                });
+
+                const { token, user } = loginRes.data;
+                if (token) {
+                  await useStore.getState().setToken(token);
+                  useStore.getState().setUser(user);
+                  useStore.getState().setManualLogout(false);
+                  useStore.getState().setOffline(false);
+
+                  originalRequest.headers = {
+                    ...originalRequest.headers,
+                    'Authorization': `Bearer ${token}`
+                  };
+
+                  processQueue(null, token);
+                  resolve(api(originalRequest));
+                  return;
+                }
+              } catch (refreshErr: any) {
+                console.error('Background token refresh failed:', refreshErr);
+                if (!refreshErr.response || refreshErr.code === 'ERR_NETWORK') {
+                  useStore.getState().setOffline(true);
+                  processQueue(refreshErr, null);
+                  reject(refreshErr);
+                  return;
+                }
+              }
+            }
+          }
+        } catch (biometricErr) {
+          console.error('Biometric re-authentication logic failed:', biometricErr);
+        }
+
+        console.warn('Session expired or unauthorized. Logging out.');
+        try {
+          await useStore.getState().logout();
+        } catch (logoutErr) {
+          console.error('Error logging out during 401 interception:', logoutErr);
+        }
+
+        const rejectError = new Error('Session expired');
+        processQueue(rejectError, null);
+        reject(rejectError);
+      }).finally(() => {
+        isReauthenticating = false;
+      });
     }
+
     return Promise.reject(error);
   }
 );

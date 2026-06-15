@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { View, Text, FlatList, TextInput, TouchableOpacity, RefreshControl, ActivityIndicator } from "react-native";
 import { useStore } from "../../store/useStore";
 import { Ionicons } from "@expo/vector-icons";
+import { OfflineBanner } from "../../components/offline-banner";
 
 export default function InventoryScreen() {
   const items = useStore((state) => state.items);
@@ -63,6 +64,9 @@ export default function InventoryScreen() {
 
   return (
     <View className="flex-1 bg-[#0A0F1D] px-5 pt-4">
+      
+      {/* Offline Status Warning Banner */}
+      <OfflineBanner />
       
       {/* Search Header Container */}
       <View className="flex-row items-center bg-[#1A1F2E] border border-gray-800 rounded-xl px-4 py-1 mb-4">

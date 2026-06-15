@@ -11,11 +11,17 @@ interface StoreState {
   summary: any | null;
   loading: boolean;
   manualLogout: boolean;
+  isOffline: boolean;
+  lastSyncedAt: string | null;
+  hasHydrated: boolean;
   setToken: (token: string | null) => Promise<void>;
   setUser: (user: any | null) => void;
   setItems: (items: any[]) => void;
   setSummary: (summary: any | null) => void;
   setManualLogout: (val: boolean) => void;
+  setOffline: (val: boolean) => void;
+  setLastSyncedAt: (val: string | null) => void;
+  setHasHydrated: (val: boolean) => void;
   initializeAuth: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -32,6 +38,9 @@ export const useStore = create<StoreState>()(
       summary: null,
       loading: false,
       manualLogout: false,
+      isOffline: false,
+      lastSyncedAt: null,
+      hasHydrated: false,
 
       setToken: async (token) => {
         if (token) {
@@ -46,6 +55,9 @@ export const useStore = create<StoreState>()(
       setItems: (items) => set({ items }),
       setSummary: (summary) => set({ summary }),
       setManualLogout: (manualLogout) => set({ manualLogout }),
+      setOffline: (isOffline) => set({ isOffline }),
+      setLastSyncedAt: (lastSyncedAt) => set({ lastSyncedAt }),
+      setHasHydrated: (hasHydrated) => set({ hasHydrated }),
 
       initializeAuth: async () => {
         try {
@@ -80,31 +92,58 @@ export const useStore = create<StoreState>()(
           const res = await api.get('/masters/items?limit=1000');
           // Handle standard backend envelope format
           const itemsData = res.data.data || res.data;
-          set({ items: itemsData });
+          set({ 
+            items: itemsData, 
+            isOffline: false, 
+            lastSyncedAt: new Date().toISOString() 
+          });
         } catch (err: any) {
           console.error("Failed to fetch items from API:", err);
+          if (!err.response || err.code === 'ERR_NETWORK') {
+            set({ isOffline: true });
+          }
+          throw err;
         }
       },
 
       fetchSummary: async () => {
         try {
           const res = await api.get('/reports/summary');
-          set({ summary: res.data });
+          set({ 
+            summary: res.data, 
+            isOffline: false, 
+            lastSyncedAt: new Date().toISOString() 
+          });
         } catch (err: any) {
           console.error("Failed to fetch summary from API:", err);
+          if (!err.response || err.code === 'ERR_NETWORK') {
+            set({ isOffline: true });
+          }
+          throw err;
         }
       }
     }),
     {
       name: 'groww-you-erp-mobile-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      // Persist dashboard summary, user, and items cache for offline access
+      // Persist dashboard summary, user, items cache, and offline settings for offline access
       partialize: (state) => ({
         user: state.user,
         items: state.items,
         summary: state.summary,
         manualLogout: state.manualLogout,
+        isOffline: state.isOffline,
+        lastSyncedAt: state.lastSyncedAt,
       }),
+      onRehydrateStorage: () => {
+        return (state, error) => {
+          if (error) {
+            console.error('An error occurred during Zustand store hydration:', error);
+          } else if (state) {
+            state.setHasHydrated(true);
+          }
+        };
+      },
     }
   )
 );

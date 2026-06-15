@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { View, Text, ScrollView, RefreshControl, ActivityIndicator, FlatList, Platform } from "react-native";
+import { View, Text, ScrollView, RefreshControl, ActivityIndicator } from "react-native";
 import { useStore } from "../../store/useStore";
 import { Ionicons } from "@expo/vector-icons";
+import { OfflineBanner } from "../../components/offline-banner";
 
 export default function DashboardScreen() {
   const summary = useStore((state) => state.summary);
@@ -10,15 +11,12 @@ export default function DashboardScreen() {
 
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [offline, setOffline] = useState(false);
 
   const loadDashboardData = async () => {
     try {
-      setOffline(false);
       await fetchSummary();
     } catch (err) {
       console.error("Failed to load dashboard metrics:", err);
-      setOffline(true);
     }
   };
 
@@ -63,16 +61,8 @@ export default function DashboardScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#F7941D" />
       }
     >
-      {/* Offline Status Warning */}
-      {offline && (
-        <View className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl flex-row items-center mb-5 gap-3">
-          <Ionicons name="cloud-offline-outline" size={24} color="#F59E0B" />
-          <View className="flex-1">
-            <Text className="text-amber-500 font-bold text-sm">Offline Mode</Text>
-            <Text className="text-amber-500/80 text-xs mt-0.5">Showing cached data from last active session.</Text>
-          </View>
-        </View>
-      )}
+      {/* Offline Status Warning Banner */}
+      <OfflineBanner />
 
       {/* Welcome Greeting */}
       <View className="mb-6">
