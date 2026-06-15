@@ -45,6 +45,16 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="invoices"
+        options={{
+          title: 'Sales Invoices',
+          tabBarLabel: 'Invoices',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="receipt-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="inventory"
         options={{
           title: 'Live Inventory',
@@ -62,6 +72,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="scan-outline" size={size} color={color} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="ui-demo"
+        options={{
+          title: 'UI Gallery',
+          href: null, // Hides from tab bar
         }}
       />
     </Tabs>

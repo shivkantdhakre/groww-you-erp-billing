@@ -8,6 +8,7 @@ interface StoreState {
   token: string | null;
   user: any | null;
   items: any[];
+  invoices: any[];
   summary: any | null;
   loading: boolean;
   manualLogout: boolean;
@@ -17,6 +18,7 @@ interface StoreState {
   setToken: (token: string | null) => Promise<void>;
   setUser: (user: any | null) => void;
   setItems: (items: any[]) => void;
+  setInvoices: (invoices: any[]) => void;
   setSummary: (summary: any | null) => void;
   setManualLogout: (val: boolean) => void;
   setOffline: (val: boolean) => void;
@@ -26,6 +28,7 @@ interface StoreState {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   fetchItems: () => Promise<void>;
+  fetchInvoices: () => Promise<void>;
   fetchSummary: () => Promise<void>;
   upsertCachedItem: (item: any) => void;
 }
@@ -36,6 +39,7 @@ export const useStore = create<StoreState>()(
       token: null,
       user: null,
       items: [],
+      invoices: [],
       summary: null,
       loading: false,
       manualLogout: false,
@@ -54,6 +58,7 @@ export const useStore = create<StoreState>()(
 
       setUser: (user) => set({ user }),
       setItems: (items) => set({ items }),
+      setInvoices: (invoices) => set({ invoices }),
       setSummary: (summary) => set({ summary }),
       setManualLogout: (manualLogout) => set({ manualLogout }),
       setOffline: (isOffline) => set({ isOffline }),
@@ -97,7 +102,7 @@ export const useStore = create<StoreState>()(
 
       logout: async () => {
         await get().setToken(null);
-        set({ user: null, summary: null, manualLogout: true });
+        set({ user: null, summary: null, invoices: [], manualLogout: true });
       },
 
       fetchItems: async () => {
@@ -112,6 +117,25 @@ export const useStore = create<StoreState>()(
           });
         } catch (err: any) {
           console.error("Failed to fetch items from API:", err);
+          if (!err.response || err.code === 'ERR_NETWORK') {
+            set({ isOffline: true });
+          }
+          throw err;
+        }
+      },
+
+      fetchInvoices: async () => {
+        try {
+          const res = await api.get('/transactions/sales-invoices?limit=50');
+          // Handle standard backend envelope format
+          const invoicesData = res.data.data || res.data;
+          set({ 
+            invoices: invoicesData, 
+            isOffline: false, 
+            lastSyncedAt: new Date().toISOString() 
+          });
+        } catch (err: any) {
+          console.error("Failed to fetch invoices from API:", err);
           if (!err.response || err.code === 'ERR_NETWORK') {
             set({ isOffline: true });
           }
@@ -143,6 +167,7 @@ export const useStore = create<StoreState>()(
       partialize: (state) => ({
         user: state.user,
         items: state.items,
+        invoices: state.invoices,
         summary: state.summary,
         manualLogout: state.manualLogout,
         isOffline: state.isOffline,
