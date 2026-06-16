@@ -24,8 +24,23 @@ const app = express();
 // Enable trust proxy for correct IP identification behind reverse proxies (like Render)
 app.set('trust proxy', 1);
 
+const allowedOrigins = [
+  'http://localhost:5173', // Vite Web App
+  'http://localhost:8081', // Expo Mobile Web App
+];
+
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1 || origin === process.env.FRONTEND_URL) {
+      return callback(null, true);
+    }
+    // Allow local development configurations dynamically (different ports, local IPs)
+    if (origin.startsWith('http://localhost:') || origin.startsWith('http://192.168.') || origin.startsWith('http://10.')) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
 };
 app.use(cors(corsOptions));

@@ -1,10 +1,20 @@
 import axios from 'axios';
-import * as SecureStore from 'expo-secure-store';
+import * as SecureStore from './secureStoreWrapper';
 import { useStore } from '../store/useStore';
+
+import { Platform } from 'react-native';
+
+const getBaseURL = () => {
+  const envUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (Platform.OS === 'web' && envUrl && envUrl.includes('10.0.2.2')) {
+    return envUrl.replace('10.0.2.2', 'localhost');
+  }
+  return envUrl || 'https://groww-you-erp-api.onrender.com/api';
+};
 
 // Custom Axios client for mobile API requests
 const api = axios.create({
-  baseURL: process.env.EXPO_PUBLIC_API_URL || 'https://groww-you-erp-api.onrender.com/api',
+  baseURL: getBaseURL(),
   headers: {
     'Content-Type': 'application/json',
   },
