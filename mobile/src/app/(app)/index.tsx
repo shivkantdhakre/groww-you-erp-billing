@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { View, Text, ScrollView, RefreshControl, ActivityIndicator, TouchableOpacity, Alert } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useStore } from "../../store/useStore";
 import { Ionicons } from "@expo/vector-icons";
 import { OfflineBanner } from "../../components/offline-banner";
@@ -85,7 +86,7 @@ export default function DashboardScreen() {
   const recentActivities = summary?.recentActivities || [];
 
   return (
-    <View className="flex-1 bg-[#0A0F1D]">
+    <SafeAreaView edges={["bottom", "left", "right"]} className="flex-1 bg-[#0A0F1D]">
       <ScrollView
         className="flex-1 px-5 pt-4"
         refreshControl={
@@ -232,6 +233,6 @@ export default function DashboardScreen() {
           </View>
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Vibration } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { useStore } from '../../store/useStore';
 import { Ionicons } from '@expo/vector-icons';
@@ -94,7 +95,7 @@ export default function ScannerScreen() {
   };
 
   return (
-    <View style={styles.container} className="bg-[#0A0F1D]">
+    <SafeAreaView edges={["bottom", "left", "right"]} style={styles.container} className="bg-[#0A0F1D]">
       
       {/* Viewfinder Camera Feed */}
       <CameraView
@@ -188,7 +189,7 @@ export default function ScannerScreen() {
         </View>
       )}
 
-    </View>
+    </SafeAreaView>
   );
 }
 

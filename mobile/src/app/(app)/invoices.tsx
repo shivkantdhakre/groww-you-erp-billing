@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { View, Text, FlatList, TextInput, TouchableOpacity, RefreshControl, ActivityIndicator, Alert } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useStore } from "../../store/useStore";
 import { Ionicons } from "@expo/vector-icons";
 import { OfflineBanner } from "../../components/offline-banner";
@@ -95,7 +96,7 @@ export default function InvoicesScreen() {
   }
 
   return (
-    <View className="flex-1 bg-[#0A0F1D] px-5 pt-4">
+    <SafeAreaView edges={["bottom", "left", "right"]} className="flex-1 bg-[#0A0F1D] px-5 pt-4">
       {/* Offline Status Warning Banner */}
       <OfflineBanner />
 
@@ -217,6 +218,6 @@ export default function InvoicesScreen() {
           </View>
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
