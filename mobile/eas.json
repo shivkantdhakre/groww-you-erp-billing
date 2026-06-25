@@ -13,12 +13,12 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://groww-you-erp-api.onrender.com/api"
+        "EXPO_PUBLIC_API_URL": "https://groww-you-erp-billing.onrender.com/api"
       }
     },
     "production": {
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://groww-you-erp-api.onrender.com/api"
+        "EXPO_PUBLIC_API_URL": "https://groww-you-erp-billing.onrender.com/api"
       }
     }
   },

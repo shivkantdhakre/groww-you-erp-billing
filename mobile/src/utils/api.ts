@@ -9,7 +9,7 @@ const getBaseURL = () => {
   if (Platform.OS === 'web' && envUrl && envUrl.includes('10.0.2.2')) {
     return envUrl.replace('10.0.2.2', 'localhost');
   }
-  return envUrl || 'https://groww-you-erp-api.onrender.com/api';
+  return envUrl || 'https://groww-you-erp-billing.onrender.com/api';
 };
 
 // Custom Axios client for mobile API requests
