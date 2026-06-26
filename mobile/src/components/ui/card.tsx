@@ -39,6 +39,7 @@ Card.Header = function CardHeader({ children, className = '', ...props }: CardPr
 Card.Title = function CardTitle({ children, className = '', ...props }: TextProps) {
   return (
     <Text 
+      maxFontSizeMultiplier={1.2}
       className={`text-white font-lexend font-bold text-base md:text-lg ${className}`}
       {...props}
     >

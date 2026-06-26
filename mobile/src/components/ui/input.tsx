@@ -26,7 +26,7 @@ export const Input = React.forwardRef<TextInput, InputProps>(
     return (
       <View className={`mb-4 ${className}`}>
         {label ? (
-          <Text className="text-gray-400 font-lexend font-semibold text-xs mb-1.5 uppercase tracking-wider">
+          <Text maxFontSizeMultiplier={1.2} className="text-gray-400 font-lexend font-semibold text-xs mb-1.5 uppercase tracking-wider">
             {label}
           </Text>
         ) : null}
@@ -51,6 +51,7 @@ export const Input = React.forwardRef<TextInput, InputProps>(
 
           <TextInput
             ref={ref}
+            maxFontSizeMultiplier={1.2}
             onFocus={handleFocus}
             onBlur={handleBlur}
             placeholderTextColor="#6B7280"
@@ -63,7 +64,7 @@ export const Input = React.forwardRef<TextInput, InputProps>(
         </View>
 
         {error ? (
-          <Text className="text-red-500 font-inter text-xs mt-1">
+          <Text maxFontSizeMultiplier={1.2} className="text-red-500 font-inter text-xs mt-1">
             {error}
           </Text>
         ) : null}
@@ -132,7 +133,7 @@ export const NumericInput = React.forwardRef<TextInput, NumericInputProps>(
     return (
       <View className={`mb-4 ${className}`}>
         {label ? (
-          <Text className="text-gray-400 font-lexend font-semibold text-xs mb-1.5 uppercase tracking-wider">
+          <Text maxFontSizeMultiplier={1.2} className="text-gray-400 font-lexend font-semibold text-xs mb-1.5 uppercase tracking-wider">
             {label}
           </Text>
         ) : null}
@@ -159,6 +160,7 @@ export const NumericInput = React.forwardRef<TextInput, NumericInputProps>(
           >
             <TextInput
               ref={ref}
+              maxFontSizeMultiplier={1.2}
               value={value}
               onChangeText={onChangeText}
               onFocus={handleFocus}
@@ -182,7 +184,7 @@ export const NumericInput = React.forwardRef<TextInput, NumericInputProps>(
         </View>
 
         {error ? (
-          <Text className="text-red-500 font-inter text-xs mt-1">
+          <Text maxFontSizeMultiplier={1.2} className="text-red-500 font-inter text-xs mt-1">
             {error}
           </Text>
         ) : null}

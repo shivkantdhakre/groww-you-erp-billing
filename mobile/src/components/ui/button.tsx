@@ -82,7 +82,7 @@ export const Button = React.forwardRef<React.ElementRef<typeof Pressable>, Butto
           <Ionicons name={icon as any} size={20} color={loaderColors[variant]} style={{ marginRight: 8 }} />
         ) : null}
         
-        <Text className={`font-lexend tracking-wide text-center ${
+        <Text maxFontSizeMultiplier={1.2} className={`font-lexend tracking-wide text-center ${
           textColors[variant]
         } ${textSizeStyles[size]}`}>
           {label}

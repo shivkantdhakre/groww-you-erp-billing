@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler';
 import { useEffect, useState } from 'react';
 import { useColorScheme, View, ActivityIndicator, Text, TextInput } from 'react-native';
 import { DarkTheme, DefaultTheme, ThemeProvider, Slot, useRouter, useSegments, useNavigationContainerRef } from 'expo-router';
@@ -22,11 +23,7 @@ import '../global.css';
 // Prevent the splash screen from auto-hiding before asset/store hydration
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-// Global accessibility configuration to prevent UI breakage from massive font scaling
-(Text as any).defaultProps = (Text as any).defaultProps || {};
-(Text as any).defaultProps.maxFontSizeMultiplier = 1.2;
-(TextInput as any).defaultProps = (TextInput as any).defaultProps || {};
-(TextInput as any).defaultProps.maxFontSizeMultiplier = 1.2;
+
 
 const integrations: any[] = [];
 let navigationIntegration: any = null;
