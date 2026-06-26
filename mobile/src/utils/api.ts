@@ -1,6 +1,5 @@
 import axios from 'axios';
 import * as SecureStore from './secureStoreWrapper';
-import { useStore } from '../store/useStore';
 
 import { Platform } from 'react-native';
 
@@ -11,6 +10,11 @@ const getBaseURL = () => {
   }
   return envUrl || 'https://groww-you-erp-billing.onrender.com/api';
 };
+
+// Lazy store accessor to avoid circular dependency (useStore → api → useStore)
+function getStore() {
+  return require('../store/useStore').useStore;
+}
 
 // Custom Axios client for mobile API requests
 const api = axios.create({
@@ -28,7 +32,7 @@ api.interceptors.request.use(
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
-      const selectedBranchId = useStore.getState().selectedBranchId;
+      const selectedBranchId = getStore().getState().selectedBranchId;
       if (selectedBranchId) {
         config.headers['x-branch-id'] = selectedBranchId.toString();
       }
@@ -107,10 +111,10 @@ api.interceptors.response.use(
 
                 const { token, user } = loginRes.data;
                 if (token) {
-                  await useStore.getState().setToken(token);
-                  useStore.getState().setUser(user);
-                  useStore.getState().setManualLogout(false);
-                  useStore.getState().setOffline(false);
+                  await getStore().getState().setToken(token);
+                  getStore().getState().setUser(user);
+                  getStore().getState().setManualLogout(false);
+                  getStore().getState().setOffline(false);
 
                   originalRequest.headers = {
                     ...originalRequest.headers,
@@ -124,7 +128,7 @@ api.interceptors.response.use(
               } catch (refreshErr: any) {
                 console.error('Background token refresh failed:', refreshErr);
                 if (!refreshErr.response || refreshErr.code === 'ERR_NETWORK') {
-                  useStore.getState().setOffline(true);
+                  getStore().getState().setOffline(true);
                   processQueue(refreshErr, null);
                   reject(refreshErr);
                   return;
@@ -138,7 +142,7 @@ api.interceptors.response.use(
 
         console.warn('Session expired or unauthorized. Logging out.');
         try {
-          await useStore.getState().logout();
+          await getStore().getState().logout();
         } catch (logoutErr) {
           console.error('Error logging out during 401 interception:', logoutErr);
         }

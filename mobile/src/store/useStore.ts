@@ -1,26 +1,15 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { createMMKV } from 'react-native-mmkv';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StateStorage } from 'zustand/middleware';
 import * as SecureStore from '../utils/secureStoreWrapper';
 import api from '../utils/api';
 import * as Sentry from '@sentry/react-native';
 
-const storage = createMMKV({
-  id: 'groww-you-erp-storage'
-});
-
-export const mmkvZustandStorage: StateStorage = {
-  setItem: (name, value) => {
-    return storage.set(name, value);
-  },
-  getItem: (name) => {
-    const value = storage.getString(name);
-    return value ?? null;
-  },
-  removeItem: (name) => {
-    return storage.remove(name);
-  },
+export const zustandStorage: StateStorage = {
+  setItem: (name, value) => AsyncStorage.setItem(name, value),
+  getItem: (name) => AsyncStorage.getItem(name),
+  removeItem: (name) => AsyncStorage.removeItem(name),
 };
 
 export interface Branch {
@@ -472,7 +461,7 @@ export const useStore = create<StoreState>()(
     }),
     {
       name: 'groww-you-erp-mobile-storage',
-      storage: createJSONStorage(() => mmkvZustandStorage),
+      storage: createJSONStorage(() => zustandStorage),
       partialize: (state) => ({
         user: state.user,
         items: state.items,

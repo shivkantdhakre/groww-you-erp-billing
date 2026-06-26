@@ -103,7 +103,7 @@ export default function LoginScreen() {
           {/* Header Branding */}
           <Animated.View entering={FadeInUp.duration(400).delay(100)} className="items-center mb-10">
             <Image
-              source={require('@/assets/images/logo-glow.png')}
+              source={require('@/assets/images/icon.png')}
               style={{ width: 120, height: 120, marginBottom: 16 }}
               contentFit="contain"
             />

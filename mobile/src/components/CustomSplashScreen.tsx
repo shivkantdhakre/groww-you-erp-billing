@@ -150,7 +150,7 @@ export function CustomSplashScreen({ appReady, onAnimationComplete }: CustomSpla
       <View style={styles.content}>
         {/* Animated Logo */}
         <AnimatedImage
-          source={require('@/assets/images/logo-glow.png')}
+          source={require('@/assets/images/icon.png')}
           style={[styles.logo, logoStyle]}
           contentFit="contain"
         />
