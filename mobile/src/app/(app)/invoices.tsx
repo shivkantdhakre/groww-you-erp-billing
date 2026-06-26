@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
-import { View, Text, FlatList, TextInput, TouchableOpacity, RefreshControl, ActivityIndicator, Alert } from "react-native";
-import BottomSheet, { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
-import { useRef } from "react";
+import { View, Text, FlatList, TextInput, TouchableOpacity, Pressable, RefreshControl, ActivityIndicator, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Card } from "../../components/ui/card";
 import { useStore } from "../../store/useStore";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import React from "react";
 import { Skeleton } from "../../components/ui/skeleton";
 import { OfflineBanner } from "../../components/offline-banner";
+import { EmptyState } from "../../components/ui/empty-state";
+import * as Haptics from "expo-haptics";
 import { shareInvoicePDF } from "../../utils/pdfShare";
 
 export default function InvoicesScreen() {
@@ -18,13 +18,13 @@ export default function InvoicesScreen() {
   const loadingMoreInvoices = useStore((state) => state.loadingMoreInvoices);
   const isOffline = useStore((state) => state.isOffline);
 
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const [filter, setFilter] = useState("all");
   const [selectedLayout, setSelectedLayout] = useState<"A4" | "Thermal">("A4");
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sharingId, setSharingId] = useState<number | null>(null);
-  const [sharingInvoice, setSharingInvoice] = useState<{id: number, no: string} | null>(null);
-  const shareSheetRef = useRef<BottomSheet>(null);
 
   const loadInvoices = async () => {
     try {
@@ -35,6 +35,7 @@ export default function InvoicesScreen() {
   };
 
   const handleRefresh = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setRefreshing(true);
     await loadInvoices();
     setRefreshing(false);
@@ -46,42 +47,62 @@ export default function InvoicesScreen() {
   }, []);
 
   const handleOpenShare = (invoiceId: number, invoiceNo: string) => {
-    setSharingInvoice({ id: invoiceId, no: invoiceNo });
-    shareSheetRef.current?.expand();
-  };
-
-  const handleConfirmShare = async () => {
-    if (!sharingInvoice) return;
     if (isOffline) {
       Alert.alert(
         "Connection Offline",
-        "PDF invoice generation requires an active network connection to fetch from the server. Please reconnect and try again.",
+        "PDF invoice generation requires an active network connection. Please reconnect and try again.",
         [{ text: "OK" }]
       );
       return;
     }
 
-    shareSheetRef.current?.close();
-    setSharingId(sharingInvoice.id);
-    try {
-      await shareInvoicePDF({ invoiceId: sharingInvoice.id, invoiceNo: sharingInvoice.no, layout: selectedLayout });
-    } catch (err: any) {
-      Alert.alert(
-        "Sharing Failed",
-        err.message || "An error occurred while compiling and sharing the invoice.",
-        [{ text: "OK" }]
-      );
-    } finally {
-      setSharingId(null);
-    }
+    Alert.alert(
+      `Share Invoice ${invoiceNo}`,
+      `Layout: ${selectedLayout === "A4" ? "A4 Standard" : "80mm Thermal"}`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Generate & Share",
+          onPress: async () => {
+            setSharingId(invoiceId);
+            try {
+              await shareInvoicePDF({ invoiceId, invoiceNo, layout: selectedLayout });
+            } catch (err: any) {
+              Alert.alert(
+                "Sharing Failed",
+                err.message || "An error occurred while sharing the invoice.",
+                [{ text: "OK" }]
+              );
+            } finally {
+              setSharingId(null);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const filteredInvoices = invoices.filter((inv: any) => {
     const q = searchQuery.toLowerCase().trim();
-    if (!q) return true;
-    const invNo = inv.invoiceNo?.toLowerCase() || "";
-    const custName = inv.customer?.name?.toLowerCase() || "";
-    return invNo.includes(q) || custName.includes(q);
+    if (q) {
+      const invNo = inv.invoiceNo?.toLowerCase() || "";
+      const custName = inv.customer?.name?.toLowerCase() || "";
+      if (!invNo.includes(q) && !custName.includes(q)) return false;
+    }
+    if (filter !== "all") {
+      const now = new Date();
+      const invDate = new Date(inv.invoiceDate);
+      if (filter === "today") {
+        if (invDate.toDateString() !== now.toDateString()) return false;
+      } else if (filter === "this week") {
+        const weekAgo = new Date(now);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        if (invDate < weekAgo) return false;
+      } else if (filter === "this month") {
+        if (invDate.getMonth() !== now.getMonth() || invDate.getFullYear() !== now.getFullYear()) return false;
+      }
+    }
+    return true;
   });
 
   const formatCurrency = (val: number) => {
@@ -129,7 +150,7 @@ export default function InvoicesScreen() {
       <OfflineBanner />
 
       {/* Search Header Container */}
-      <View className="flex-row items-center bg-[#1A1F2E] border border-gray-800 rounded-xl px-4 py-1 mb-4">
+      <View className="flex-row items-center bg-[#1A1F2E] border border-gray-800 rounded-xl px-4 py-1 mb-3">
         <Ionicons name="search" size={20} color="#6B7280" />
         <TextInput
           className="flex-1 ml-3 h-12 text-white font-medium"
@@ -148,7 +169,62 @@ export default function InvoicesScreen() {
         )}
       </View>
 
+      {/* Filter Chips */}
+      <View className="flex-row gap-2 mb-4">
+        {['All', 'Today', 'This Week', 'This Month'].map((f) => {
+          const active = filter === f.toLowerCase();
+          return (
+            <TouchableOpacity
+              key={f}
+              onPress={() => setFilter(f.toLowerCase())}
+              activeOpacity={0.7}
+              className={`px-4 py-2 rounded-xl border min-h-[36px] justify-center ${
+                active
+                  ? 'bg-[#F7941D]/10 border-[#F7941D]/30'
+                  : 'bg-[#1A1F2E] border-gray-800'
+              }`}
+            >
+              <Text className={`text-xs font-bold ${active ? 'text-[#F7941D]' : 'text-gray-400'}`}>
+                {f}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
 
+      {/* Layout Toggle (always visible) */}
+      <View className="flex-row bg-[#1A1F2E] border border-gray-800 rounded-xl p-1 mb-3">
+        <TouchableOpacity
+          onPress={() => setSelectedLayout("A4")}
+          activeOpacity={0.8}
+          className={`flex-1 py-2.5 rounded-lg items-center justify-center ${
+            selectedLayout === "A4" ? "bg-[#F7941D]" : ""
+          }`}
+        >
+          <Text
+            className={`text-sm font-black ${
+              selectedLayout === "A4" ? "text-white" : "text-gray-400"
+            }`}
+          >
+            A4 Standard
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setSelectedLayout("Thermal")}
+          activeOpacity={0.8}
+          className={`flex-1 py-2.5 rounded-lg items-center justify-center ${
+            selectedLayout === "Thermal" ? "bg-[#F7941D]" : ""
+          }`}
+        >
+          <Text
+            className={`text-sm font-black ${
+              selectedLayout === "Thermal" ? "text-white" : "text-gray-400"
+            }`}
+          >
+            80mm Thermal
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Invoices List */}
       <FlatList
@@ -169,15 +245,13 @@ export default function InvoicesScreen() {
           ) : null
         }
         ListEmptyComponent={
-          <View className="items-center py-20 px-4">
-            <Ionicons name="receipt-outline" size={48} color="#4B5563" />
-            <Text className="text-gray-400 text-sm font-semibold mt-4 font-inter text-center">
-              No matching sales invoices found.
-            </Text>
-            <Text className="text-gray-500 text-xs mt-2 text-center font-inter">
-              Navigate to the Billing tab to create your first invoice.
-            </Text>
-          </View>
+          <EmptyState
+            icon="receipt-outline"
+            title="No invoices found"
+            description={searchQuery ? "Try a different search term." : "Navigate to the Billing tab to create your first invoice."}
+            actionLabel={searchQuery ? undefined : "Go to Billing"}
+            onAction={searchQuery ? undefined : () => router.push('/(app)/billing')}
+          />
         }
         renderItem={renderItem}
       />
@@ -197,74 +271,21 @@ export default function InvoicesScreen() {
         </View>
       )}
 
-      {/* Share Bottom Sheet */}
-      <BottomSheet
-        ref={shareSheetRef}
-        index={-1}
-        snapPoints={['35%']}
-        enablePanDownToClose
-        backdropComponent={(props) => <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.6} />}
-        backgroundStyle={{ backgroundColor: '#1A1F2E' }}
-        handleIndicatorStyle={{ backgroundColor: '#4B5563', width: 40 }}
-      >
-        <View className="flex-1 p-6 pt-2">
-          <View className="flex-row justify-between items-center mb-6">
-            <Text className="text-white text-lg font-bold">Share Invoice {sharingInvoice?.no}</Text>
-            <TouchableOpacity onPress={() => shareSheetRef.current?.close()}>
-              <Ionicons name="close" size={24} color="#9CA3AF" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Layout Selection Control */}
-          <View className="flex-row bg-[#0A0F1D] border border-gray-800 rounded-xl p-1 mb-6">
-            <TouchableOpacity
-              onPress={() => setSelectedLayout("A4")}
-              activeOpacity={0.8}
-              className={`flex-1 py-3 rounded-lg items-center justify-center ${
-                selectedLayout === "A4" ? "bg-[#F7941D]" : ""
-              }`}
-            >
-              <Text
-                className={`text-sm font-black font-inter ${
-                  selectedLayout === "A4" ? "text-white" : "text-gray-400"
-                }`}
-              >
-                A4 Standard
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setSelectedLayout("Thermal")}
-              activeOpacity={0.8}
-              className={`flex-1 py-3 rounded-lg items-center justify-center ${
-                selectedLayout === "Thermal" ? "bg-[#F7941D]" : ""
-              }`}
-            >
-              <Text
-                className={`text-sm font-black font-inter ${
-                  selectedLayout === "Thermal" ? "text-white" : "text-gray-400"
-                }`}
-              >
-                80mm Thermal
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity
-            onPress={handleConfirmShare}
-            className="w-full bg-[#1B3A5C] py-3.5 rounded-xl items-center flex-row justify-center"
-          >
-            <Ionicons name="share-social" size={18} color="#FFF" style={{ marginRight: 8 }} />
-            <Text className="text-white font-bold text-sm">Generate & Share PDF</Text>
-          </TouchableOpacity>
-        </View>
-      </BottomSheet>
     </SafeAreaView>
   );
 }
 
 const InvoiceItem = React.memo(({ item, formatCurrency, formatDate, handleOpenShare }: any) => {
   return (
-    <Card className="p-4 mb-3 flex-row justify-between items-center">
+    <View className="bg-[#1A1F2E] border border-gray-800 rounded-2xl p-4 mb-3 flex-row justify-between items-center"
+      style={{
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.12,
+        shadowRadius: 4,
+        elevation: 2,
+      }}
+    >
       <View className="flex-1 mr-4">
         <View className="flex-row items-center gap-2">
           <Text className="text-white text-base font-bold font-lexend">
@@ -289,14 +310,13 @@ const InvoiceItem = React.memo(({ item, formatCurrency, formatDate, handleOpenSh
           {formatCurrency(item.grandTotal)}
         </Text>
         
-        <TouchableOpacity
+        <Pressable
           onPress={() => handleOpenShare(item.id, item.invoiceNo)}
-          activeOpacity={0.7}
           className="bg-[#F7941D]/10 border border-[#F7941D]/20 p-2.5 min-h-[44px] min-w-[44px] rounded-xl items-center justify-center"
         >
           <Ionicons name="share-social-outline" size={20} color="#F7941D" />
-        </TouchableOpacity>
+        </Pressable>
       </View>
-    </Card>
+    </View>
   );
 });

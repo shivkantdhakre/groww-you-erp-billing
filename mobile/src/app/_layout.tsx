@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Sentry from '@sentry/react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { CustomSplashScreen } from '../components/CustomSplashScreen';
+import { ToastProvider } from '../components/ui/toast';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   useFonts,
@@ -146,6 +147,7 @@ function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <ToastProvider>
       <View className="flex-1">
         {/* Render underlying views once Zustand hydrates */}
         {hasHydrated && (
@@ -176,6 +178,7 @@ function RootLayout() {
           />
         )}
       </View>
+      </ToastProvider>
       </ThemeProvider>
     </GestureHandlerRootView>
   );

@@ -38,7 +38,7 @@ export function PageHeader({ title, subtext, onBack, rightAction, showBack }: Pa
             <TouchableOpacity
               onPress={handleBack}
               activeOpacity={0.7}
-              className="mr-3.5 p-1 bg-gray-800/30 rounded-xl border border-gray-800/50"
+              className="mr-3.5 min-h-[44px] min-w-[44px] items-center justify-center bg-gray-800/30 rounded-xl border border-gray-800/50"
               accessibilityRole="button"
               accessibilityLabel="Go Back"
             >

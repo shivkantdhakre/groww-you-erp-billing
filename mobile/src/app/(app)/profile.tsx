@@ -84,8 +84,17 @@ export default function ProfileScreen() {
         {/* User Card */}
         <Card className="mb-5 items-center">
           <View className="w-20 h-20 rounded-full bg-[#F7941D]/10 border border-[#F7941D]/20 justify-center items-center mb-4">
-            <Ionicons name="person" size={40} color="#F7941D" />
+            {user?.name ? (
+              <Text className="text-[#F7941D] text-2xl font-black font-lexend">
+                {user.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+              </Text>
+            ) : (
+              <Ionicons name="person" size={40} color="#F7941D" />
+            )}
           </View>
+          <TouchableOpacity className="absolute top-0 right-0 bg-[#1A1F2E] border border-gray-800 rounded-full p-2">
+            <Ionicons name="camera-outline" size={16} color="#F7941D" />
+          </TouchableOpacity>
           <Text className="text-white text-xl font-bold font-lexend">{user?.name || "Groww You Member"}</Text>
           <Text className="text-gray-400 text-sm mt-1 font-inter">{user?.email || ""}</Text>
           

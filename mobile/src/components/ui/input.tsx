@@ -32,11 +32,11 @@ export const Input = React.forwardRef<TextInput, InputProps>(
         ) : null}
 
         <View
-          className={`flex-row items-center bg-[#1A1F2E] border rounded-2xl px-4 h-12.5 ${
+          className={`flex-row items-center bg-[#1A1F2E] border rounded-xl px-4 h-14 ${
             error
               ? 'border-red-500'
               : isFocused
-              ? 'border-action-orange' // brand orange
+              ? 'border-action-orange'
               : 'border-gray-800'
           }`}
         >
@@ -55,7 +55,7 @@ export const Input = React.forwardRef<TextInput, InputProps>(
             onFocus={handleFocus}
             onBlur={handleBlur}
             placeholderTextColor="#6B7280"
-            className="flex-1 text-white font-inter text-sm h-full"
+            className="flex-1 text-white font-inter text-sm"
             accessibilityLabel={label}
             {...props}
           />
@@ -143,14 +143,14 @@ export const NumericInput = React.forwardRef<TextInput, NumericInputProps>(
           <TouchableOpacity
             onPress={decrement}
             activeOpacity={0.7}
-            className="bg-[#1A1F2E] border border-gray-800 rounded-2xl w-12 h-12.5 items-center justify-center"
+            className="bg-[#1A1F2E] border border-gray-800 rounded-xl w-12 h-14 items-center justify-center"
           >
             <Ionicons name="remove" size={20} color="#FFFFFF" />
           </TouchableOpacity>
 
           {/* Core Input Wrapper */}
           <View
-            className={`flex-row items-center flex-1 bg-[#1A1F2E] border rounded-2xl px-4 h-12.5 ${
+            className={`flex-row items-center flex-1 bg-[#1A1F2E] border rounded-xl px-4 h-14 ${
               error
                 ? 'border-red-500'
                 : isFocused
@@ -167,7 +167,7 @@ export const NumericInput = React.forwardRef<TextInput, NumericInputProps>(
               onBlur={handleBlur}
               keyboardType="decimal-pad"
               placeholderTextColor="#6B7280"
-              className="flex-1 text-white font-inter text-center font-bold text-base h-full"
+              className="flex-1 text-white font-inter text-center font-bold text-base"
               accessibilityLabel={label}
               {...props}
             />
@@ -177,7 +177,7 @@ export const NumericInput = React.forwardRef<TextInput, NumericInputProps>(
           <TouchableOpacity
             onPress={increment}
             activeOpacity={0.7}
-            className="bg-[#1A1F2E] border border-gray-800 rounded-2xl w-12 h-12.5 items-center justify-center"
+            className="bg-[#1A1F2E] border border-gray-800 rounded-xl w-12 h-14 items-center justify-center"
           >
             <Ionicons name="add" size={20} color="#FFFFFF" />
           </TouchableOpacity>

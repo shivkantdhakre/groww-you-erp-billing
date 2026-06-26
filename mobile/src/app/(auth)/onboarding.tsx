@@ -3,8 +3,9 @@ import { View, Text, Dimensions, TouchableOpacity, NativeSyntheticEvent, NativeS
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useStore } from '../../store/useStore';
-import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
 
@@ -13,19 +14,25 @@ const SLIDES = [
     id: 1,
     title: "Welcome to Groww You",
     description: "Your comprehensive mobile wholesale ERP. Manage inventory, process sales, and track analytics from your pocket.",
-    icon: "cube-outline" as const
+    icon: "cube-outline" as const,
+    gradient: ['#0A0F1D', '#152238'] as const,
+    accentColor: '#60A5FA',
   },
   {
     id: 2,
     title: "Lightning Fast Billing",
     description: "Use the built-in hardware scanner to rapidly build carts. Supports both A4 and 80mm thermal receipt printing.",
-    icon: "barcode-outline" as const
+    icon: "barcode-outline" as const,
+    gradient: ['#0A0F1D', '#1B3A5C'] as const,
+    accentColor: '#F7941D',
   },
   {
     id: 3,
     title: "Always Offline Capable",
     description: "Internet connection dropped? No problem. Continue billing and we will automatically sync your outbox when you're back online.",
-    icon: "cloud-offline-outline" as const
+    icon: "cloud-offline-outline" as const,
+    gradient: ['#0A0F1D', '#1E3A8F'] as const,
+    accentColor: '#10B981',
   }
 ];
 
@@ -56,57 +63,110 @@ export default function OnboardingScreen() {
     router.replace('/(auth)/login');
   };
 
-  return (
-    <SafeAreaView className="flex-1 bg-[#0A0F1D]">
-      <Animated.ScrollView
-        ref={scrollRef}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={handleScroll}
-        scrollEventThrottle={16}
-        className="flex-1"
-      >
-        {SLIDES.map((slide, index) => (
-          <View key={slide.id} style={{ width, paddingHorizontal: 40 }} className="flex-1 justify-center items-center">
-            <View className="w-32 h-32 rounded-full bg-[#1B3A5C]/20 border border-[#1B3A5C]/40 justify-center items-center mb-10">
-              <Ionicons name={slide.icon} size={64} color="#60A5FA" />
-            </View>
-            <Text className="text-white text-3xl font-black text-center mb-4 font-lexend">
-              {slide.title}
-            </Text>
-            <Text className="text-gray-400 text-base text-center leading-relaxed font-inter">
-              {slide.description}
-            </Text>
-          </View>
-        ))}
-      </Animated.ScrollView>
+  const slide = SLIDES[currentIndex];
 
-      <View className="px-10 pb-10">
-        <View className="flex-row justify-center items-center gap-2 mb-10">
-          {SLIDES.map((_, index) => (
-            <View
-              key={index}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                index === currentIndex ? "w-8 bg-[#F7941D]" : "w-2 bg-gray-800"
-              }`}
-            />
-          ))}
+  return (
+    <View className="flex-1">
+      <LinearGradient
+        colors={slide.gradient}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+      />
+
+      {/* Decorative orb */}
+      <View
+        className="absolute rounded-full opacity-10"
+        style={{
+          width: width * 0.8,
+          height: width * 0.8,
+          borderRadius: width * 0.4,
+          backgroundColor: slide.accentColor,
+          top: -width * 0.25,
+          right: -width * 0.2,
+        }}
+      />
+
+      <SafeAreaView className="flex-1">
+        <View className="flex-1">
+          {/* Skip button */}
+          <View className="flex-row justify-end px-6 pt-2">
+            {currentIndex < SLIDES.length - 1 && (
+              <TouchableOpacity onPress={handleComplete} activeOpacity={0.7}>
+                <Text className="text-gray-400 text-sm font-semibold">Skip</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <Animated.ScrollView
+            ref={scrollRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={handleScroll}
+            scrollEventThrottle={16}
+            className="flex-1"
+          >
+            {SLIDES.map((s, index) => (
+              <View key={s.id} style={{ width }} className="flex-1 justify-center items-center px-10">
+                <View
+                  className="w-36 h-36 rounded-full justify-center items-center mb-10"
+                  style={{
+                    backgroundColor: `${s.accentColor}15`,
+                    borderColor: `${s.accentColor}30`,
+                    borderWidth: 1,
+                  }}
+                >
+                  <View
+                    className="w-28 h-28 rounded-full justify-center items-center"
+                    style={{ backgroundColor: `${s.accentColor}10` }}
+                  >
+                    <Ionicons name={s.icon} size={64} color={s.accentColor} />
+                  </View>
+                </View>
+                <Animated.View entering={FadeInDown.duration(400)}>
+                  <Text className="text-white text-3xl font-black text-center mb-4 font-lexend">
+                    {s.title}
+                  </Text>
+                  <Text className="text-gray-400 text-base text-center leading-relaxed font-inter">
+                    {s.description}
+                  </Text>
+                </Animated.View>
+              </View>
+            ))}
+          </Animated.ScrollView>
         </View>
 
-        <TouchableOpacity
-          onPress={handleNext}
-          activeOpacity={0.8}
-          className="w-full bg-[#1B3A5C] py-4 rounded-2xl flex-row justify-center items-center"
-        >
-          <Text className="text-white font-bold text-base mr-2">
-            {currentIndex === SLIDES.length - 1 ? "Get Started" : "Next"}
-          </Text>
-          {currentIndex < SLIDES.length - 1 && (
-            <Ionicons name="arrow-forward" size={20} color="#FFF" />
-          )}
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+        <View className="px-10 pb-10">
+          <View className="flex-row justify-center items-center gap-3 mb-10">
+            {SLIDES.map((_, index) => (
+              <View
+                key={index}
+                className={`rounded-full transition-all duration-300 ${
+                  index === currentIndex
+                    ? `w-8 h-2.5`
+                    : "w-2.5 h-2.5 bg-gray-800"
+                }`}
+                style={{
+                  backgroundColor: index === currentIndex ? slide.accentColor : undefined,
+                }}
+              />
+            ))}
+          </View>
+
+          <TouchableOpacity
+            onPress={handleNext}
+            activeOpacity={0.8}
+            className="w-full py-4 rounded-2xl flex-row justify-center items-center"
+            style={{ backgroundColor: slide.accentColor }}
+          >
+            <Text className="text-white font-bold text-base mr-2">
+              {currentIndex === SLIDES.length - 1 ? "Get Started" : "Next"}
+            </Text>
+            {currentIndex < SLIDES.length - 1 && (
+              <Ionicons name="arrow-forward" size={20} color="#FFF" />
+            )}
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    </View>
   );
 }

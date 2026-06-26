@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -19,6 +19,9 @@ import { useStore } from "../../store/useStore";
 import { Ionicons } from "@expo/vector-icons";
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from "expo-camera";
 import { OfflineBanner } from "../../components/offline-banner";
+import { showToast } from "../../components/ui/toast";
+import { ScanTargetOverlay } from "../../components/scan-target-overlay";
+import { Swipeable } from "react-native-gesture-handler";
 import api from "../../utils/api";
 
 interface CartItem {
@@ -52,6 +55,7 @@ export default function BillingScreen() {
 
   const customerSheetRef = useRef<BottomSheet>(null);
   const itemSheetRef = useRef<BottomSheet>(null);
+  const previewSheetRef = useRef<BottomSheet>(null);
   const [scannerVisible, setScannerVisible] = useState(false);
 
   // Search queries
@@ -95,7 +99,7 @@ export default function BillingScreen() {
       addToCart(product);
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    Alert.alert("Success", `Added ${product.name} to cart.`);
+    showToast({ message: `Added ${product.name} to cart.`, type: 'success', duration: 2000 });
     itemSheetRef.current?.close();
   };
 
@@ -175,79 +179,48 @@ export default function BillingScreen() {
   // Submit invoice
   const handleSubmit = async () => {
     if (!selectedCustomer) {
-      Alert.alert("Validation Error", "Please select a customer first.");
+      showToast({ message: "Please select a customer first.", type: 'warning', duration: 2000 });
       return;
     }
     if (cart.length === 0) {
-      Alert.alert("Validation Error", "Please add at least one product to the cart.");
+      showToast({ message: "Please add at least one product to the cart.", type: 'warning', duration: 2000 });
+      return;
+    }
+    previewSheetRef.current?.expand();
+  };
+
+  const handleConfirmSubmit = async () => {
+    previewSheetRef.current?.close();
+    const payload = {
+      customerId: selectedCustomer.id,
+      items: cart.map((c) => ({
+        itemId: c.item.id,
+        qty: c.qty
+      })),
+      invoiceDate: new Date().toISOString()
+    };
+
+    if (isOffline) {
+      queueOfflineInvoice(payload);
+      clearCart();
+      setSelectedCustomer(null);
+      showToast({ message: "Invoice queued for sync when back online.", type: 'info', duration: 3000 });
       return;
     }
 
-    Alert.alert(
-      "Confirm Submission",
-      "Are you sure you want to submit this invoice?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Submit Invoice",
-          style: "default",
-          onPress: async () => {
-            const payload = {
-              customerId: selectedCustomer.id,
-              items: cart.map((c) => ({
-                itemId: c.item.id,
-                qty: c.qty
-              })),
-              invoiceDate: new Date().toISOString()
-            };
-
-            if (isOffline) {
-              // Offline transaction
-              queueOfflineInvoice(payload);
-              Alert.alert(
-                "Offline Saved",
-                "Invoice saved offline and queued in the outbox. Inventory stocks have been adjusted optimistically.",
-                [
-                  {
-                    text: "OK",
-                    onPress: () => {
-                      clearCart();
-                      setSelectedCustomer(null);
-                    }
-                  }
-                ]
-              );
-              return;
-            }
-
-            // Online submission
-            setSubmitting(true);
-            try {
-              await api.post("/transactions/sales-invoices", payload);
-              Alert.alert("Success", "Sales invoice created successfully.", [
-                {
-                  text: "OK",
-                  onPress: () => {
-                    clearCart();
-                    setSelectedCustomer(null);
-                    fetchInvoices().catch(console.error);
-                    fetchSummary().catch(console.error);
-                  }
-                }
-              ]);
-            } catch (err: any) {
-              console.error(err);
-              Alert.alert(
-                "Submission Failed",
-                err.response?.data?.error || err.message || "Failed to create sales invoice."
-              );
-            } finally {
-              setSubmitting(false);
-            }
-          }
-        }
-      ]
-    );
+    setSubmitting(true);
+    try {
+      await api.post("/transactions/sales-invoices", payload);
+      showToast({ message: "Sales invoice created successfully.", type: 'success', duration: 2000 });
+      clearCart();
+      setSelectedCustomer(null);
+      fetchInvoices().catch(console.error);
+      fetchSummary().catch(console.error);
+    } catch (err: any) {
+      showToast({ message: err.response?.data?.error || err.message || "Submission failed.", type: 'error' });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // Filtered registers
@@ -377,6 +350,59 @@ export default function BillingScreen() {
       </View>
 
 
+
+      {/* Customer Picker Bottom Sheet */}
+      {/* Invoice Preview Bottom Sheet */}
+      <BottomSheet
+        ref={previewSheetRef}
+        index={-1}
+        snapPoints={['50%']}
+        enablePanDownToClose
+        backdropComponent={(props) => <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.6} />}
+        backgroundStyle={{ backgroundColor: '#1A1F2E' }}
+        handleIndicatorStyle={{ backgroundColor: '#4B5563', width: 40 }}
+      >
+        <View className="flex-1 p-6 pt-2">
+          <View className="flex-row justify-between items-center mb-6">
+            <Text className="text-white text-lg font-bold font-lexend">Invoice Preview</Text>
+            <TouchableOpacity onPress={() => previewSheetRef.current?.close()}>
+              <Ionicons name="close" size={24} color="#9CA3AF" />
+            </TouchableOpacity>
+          </View>
+
+          <View className="bg-[#0A0F1D]/50 border border-gray-900 rounded-2xl p-4 mb-4">
+            <View className="flex-row justify-between items-center mb-3 pb-3 border-b border-gray-800/40">
+              <Text className="text-gray-400 text-xs font-semibold">Customer</Text>
+              <Text className="text-white text-sm font-bold">{selectedCustomer?.name}</Text>
+            </View>
+            <View className="flex-row justify-between items-center mb-3 pb-3 border-b border-gray-800/40">
+              <Text className="text-gray-400 text-xs font-semibold">Items</Text>
+              <Text className="text-white text-sm font-bold">{cart.length}</Text>
+            </View>
+            <View className="flex-row justify-between items-center mb-3 pb-3 border-b border-gray-800/40">
+              <Text className="text-gray-400 text-xs font-semibold">Subtotal</Text>
+              <Text className="text-white text-sm font-bold">₹{calculateSubtotal().toFixed(2)}</Text>
+            </View>
+            <View className="flex-row justify-between items-center mb-3 pb-3 border-b border-gray-800/40">
+              <Text className="text-gray-400 text-xs font-semibold">GST</Text>
+              <Text className="text-white text-sm font-bold">₹{calculateGST().toFixed(2)}</Text>
+            </View>
+            <View className="flex-row justify-between items-center">
+              <Text className="text-gray-300 text-sm font-bold">Grand Total</Text>
+              <Text className="text-[#F7941D] text-lg font-black">₹{calculateGrandTotal().toFixed(2)}</Text>
+            </View>
+          </View>
+
+          <View className="flex-row gap-3">
+            <View className="flex-1">
+              <Button label="Cancel" variant="outline" onPress={() => previewSheetRef.current?.close()} />
+            </View>
+            <View className="flex-1">
+              <Button label={isOffline ? "Save Offline" : "Submit Invoice"} variant="primary" loading={submitting} onPress={handleConfirmSubmit} />
+            </View>
+          </View>
+        </View>
+      </BottomSheet>
 
       {/* Customer Picker Bottom Sheet */}
       <BottomSheet
@@ -521,19 +547,11 @@ export default function BillingScreen() {
               barcodeTypes: ["qr", "ean13", "code128", "code39"],
             }}
           />
-          <View style={styles.overlayContainer}>
-            <View style={styles.scanTargetBox}>
-              <View className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-action-orange" />
-              <View className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-action-orange" />
-              <View className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-action-orange" />
-              <View className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-action-orange" />
-            </View>
-            <Text className="text-white font-bold text-sm text-center mt-6 bg-[#0A0F1D]/80 px-4 py-2 rounded-full overflow-hidden border border-gray-800">
-              Align item barcode inside target box
-            </Text>
+          <ScanTargetOverlay />
+          <View className="absolute bottom-16 left-0 right-0 items-center">
             <TouchableOpacity
               onPress={() => setScannerVisible(false)}
-              className="mt-8 bg-red-600 px-6 py-3.5 rounded-2xl flex-row items-center"
+              className="bg-red-600 px-6 py-3.5 rounded-2xl flex-row items-center"
             >
               <Ionicons name="close-circle" size={18} color="#FFF" />
               <Text className="text-white font-bold text-sm ml-2">Cancel Scanning</Text>
@@ -545,70 +563,65 @@ export default function BillingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  overlayContainer: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  scanTargetBox: {
-    width: 260,
-    height: 260,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.25)",
-    backgroundColor: "transparent",
-    position: "relative",
-  },
-});
+const styles = StyleSheet.create({});
 
 const CartItemRow = React.memo(({ cartItem, isFirst, isLast, handleUpdateQty, handleRemoveProduct }: any) => {
   const subtotal = cartItem.item.salePrice * cartItem.qty;
   const gst = (subtotal * (cartItem.item.gstPercentage || 0)) / 100;
 
-  return (
-    <View 
-      className={`bg-[#1A1F2E] flex-row justify-between items-center py-4 px-4 border-gray-800 
-      ${isFirst ? 'rounded-t-2xl' : ''} 
-      ${isLast ? 'rounded-b-2xl' : 'border-b'}`}
-    >
-      <View className="flex-1 pr-3">
-        <Text className="text-white text-sm font-bold font-lexend" numberOfLines={1}>
-          {cartItem.item.name}
-        </Text>
-        <Text className="text-gray-400 text-[10px] mt-0.5 font-inter">
-          Rate: ₹{cartItem.item.salePrice} | GST: {cartItem.item.gstPercentage}% (₹{gst.toFixed(1)})
-        </Text>
-      </View>
-
-      <View className="flex-row items-center gap-2">
-        <TouchableOpacity
-          onPress={() => handleUpdateQty(cartItem.item.id, -1)}
-          className="min-h-[44px] min-w-[44px] rounded-full bg-[#0A0F1D] border border-gray-800 justify-center items-center"
-        >
-          <Ionicons name="remove" size={16} color="#FFF" />
-        </TouchableOpacity>
-        
-        <Text className="text-white font-bold text-sm w-6 text-center font-inter">{cartItem.qty}</Text>
-
-        <TouchableOpacity
-          onPress={() => handleUpdateQty(cartItem.item.id, 1)}
-          className="min-h-[44px] min-w-[44px] rounded-full bg-[#0A0F1D] border border-gray-800 justify-center items-center"
-        >
-          <Ionicons name="add" size={16} color="#FFF" />
-        </TouchableOpacity>
-
+  const renderRightActions = useCallback(
+    () => (
+      <View className="bg-red-600 rounded-2xl justify-center items-center ml-2 px-6">
         <TouchableOpacity
           onPress={() => handleRemoveProduct(cartItem.item.id)}
-          className="min-h-[44px] min-w-[44px] rounded-full bg-red-500/10 justify-center items-center ml-2"
+          className="items-center justify-center"
         >
-          <Ionicons name="trash-outline" size={16} color="#EF4444" />
+          <Ionicons name="trash-outline" size={24} color="#FFF" />
+          <Text className="text-white text-[10px] font-bold mt-1">Delete</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    ),
+    [cartItem.item.id, handleRemoveProduct]
+  );
+
+  return (
+    <Swipeable
+      renderRightActions={renderRightActions}
+      overshootRight={false}
+      rightThreshold={40}
+    >
+      <View
+        className={`bg-[#1A1F2E] flex-row justify-between items-center py-4 px-4 border-gray-800
+        ${isFirst ? 'rounded-t-2xl' : ''}
+        ${isLast ? 'rounded-b-2xl' : 'border-b'}`}
+      >
+        <View className="flex-1 pr-3">
+          <Text className="text-white text-sm font-bold font-lexend" numberOfLines={1}>
+            {cartItem.item.name}
+          </Text>
+          <Text className="text-gray-400 text-[10px] mt-0.5 font-inter">
+            Rate: ₹{cartItem.item.salePrice} | GST: {cartItem.item.gstPercentage}% (₹{gst.toFixed(1)})
+          </Text>
+        </View>
+
+        <View className="flex-row items-center gap-2">
+          <TouchableOpacity
+            onPress={() => handleUpdateQty(cartItem.item.id, -1)}
+            className="min-h-[44px] min-w-[44px] rounded-full bg-[#0A0F1D] border border-gray-800 justify-center items-center"
+          >
+            <Ionicons name="remove" size={16} color="#FFF" />
+          </TouchableOpacity>
+
+          <Text className="text-white font-bold text-sm w-6 text-center font-inter">{cartItem.qty}</Text>
+
+          <TouchableOpacity
+            onPress={() => handleUpdateQty(cartItem.item.id, 1)}
+            className="min-h-[44px] min-w-[44px] rounded-full bg-[#0A0F1D] border border-gray-800 justify-center items-center"
+          >
+            <Ionicons name="add" size={16} color="#FFF" />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Swipeable>
   );
 });

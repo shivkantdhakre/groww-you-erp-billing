@@ -103,7 +103,7 @@ export default function LoginScreen() {
           {/* Header Branding */}
           <Animated.View entering={FadeInUp.duration(400).delay(100)} className="items-center mb-10">
             <Image
-              source={require('@/assets/images/icon.png')}
+              source={require('@/assets/images/groww_you_erp_logo_icon.png')}
               style={{ width: 120, height: 120, marginBottom: 16 }}
               contentFit="contain"
             />
@@ -169,17 +169,50 @@ export default function LoginScreen() {
               activeOpacity={0.7}
               className="flex-row items-center mb-6 mt-2"
             >
-              <View className={`w-5 h-5 border rounded mr-2 items-center justify-center ${
-                biometricsEnabled ? 'bg-action-orange border-action-orange' : 'border-gray-600 bg-[#0E1321]'
-              }`}>
-                {biometricsEnabled && (
-                  <Text className="text-white text-xs font-bold">✓</Text>
-                )}
-              </View>
-              <Text className="text-gray-300 text-xs font-medium">
+              <Animated.View
+                className={`w-11 h-6 rounded-full mr-3 justify-center ${
+                  biometricsEnabled ? 'bg-action-orange' : 'bg-gray-700'
+                }`}
+                style={{
+                  padding: 2,
+                }}
+              >
+                <Animated.View
+                  className="w-5 h-5 rounded-full bg-white"
+                  style={{
+                    alignSelf: biometricsEnabled ? 'flex-end' : 'flex-start',
+                  }}
+                />
+              </Animated.View>
+              <Text className="text-gray-300 text-xs font-medium flex-1">
                 Enable biometric quick-login (FaceID/TouchID)
               </Text>
             </TouchableOpacity>
+
+            {/* Forgot Password */}
+            <TouchableOpacity className="items-end mb-4 -mt-2">
+              <Text className="text-gray-500 text-xs font-medium">
+                Forgot password?
+              </Text>
+            </TouchableOpacity>
+
+            {/* Password Strength Indicator */}
+            {password.length > 0 && !loading && (
+              <View className="flex-row gap-1 mb-4">
+                {[1, 2, 3, 4].map((level) => {
+                  const strength = password.length > 12 ? 4 : password.length > 8 ? 3 : password.length > 4 ? 2 : 1;
+                  const active = level <= strength;
+                  const colors = ['#EF4444', '#F59E0B', '#3B82F6', '#10B981'];
+                  return (
+                    <View
+                      key={level}
+                      className="flex-1 h-1 rounded-full"
+                      style={{ backgroundColor: active ? colors[strength - 1] : '#1F2937' }}
+                    />
+                  );
+                })}
+              </View>
+            )}
 
             {/* Submit Button */}
             <Button

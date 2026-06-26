@@ -1,6 +1,10 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Pressable, Text, ActivityIndicator, GestureResponderEvent } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence } from 'react-native-reanimated';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 interface ButtonProps extends React.ComponentPropsWithoutRef<typeof Pressable> {
   label: string;
@@ -8,6 +12,7 @@ interface ButtonProps extends React.ComponentPropsWithoutRef<typeof Pressable> {
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
   icon?: any;
+  haptic?: boolean;
   onPress?: (event: GestureResponderEvent) => void;
 }
 
@@ -20,43 +25,41 @@ export const Button = React.forwardRef<React.ElementRef<typeof Pressable>, Butto
       loading = false,
       disabled = false,
       icon,
+      haptic = true,
       className = '',
       onPress,
       ...props
     },
     ref
   ) => {
-    // Dynamic variant styles
+    const scale = useSharedValue(1);
+
     const variantStyles = {
-      primary: 'bg-action-orange border border-action-orange active:opacity-90',
-      navy: 'bg-[#1B3A5C] border border-[#1B3A5C] active:opacity-90',
-      outline: 'bg-transparent border border-gray-700 active:bg-gray-800/10',
-      ghost: 'bg-transparent border border-transparent active:bg-gray-800/10',
+      primary: 'bg-action-orange border border-action-orange',
+      navy: 'bg-[#1B3A5C] border border-[#1B3A5C]',
+      outline: 'bg-transparent border border-gray-700',
+      ghost: 'bg-transparent border border-transparent',
     };
 
-    // Dynamic text colors
     const textColors = {
-      primary: 'text-[#0A0F1D]', // dark contrast on brand orange
+      primary: 'text-[#0A0F1D]',
       navy: 'text-white',
       outline: 'text-white',
       ghost: 'text-gray-400',
     };
 
-    // Dynamic button sizing
     const sizeStyles = {
       sm: 'px-4 min-h-[44px] justify-center rounded-xl',
-      md: 'px-6 min-h-[48px] justify-center rounded-2xl',
-      lg: 'px-8 min-h-[56px] justify-center rounded-2xl',
+      md: 'px-6 min-h-[48px] justify-center rounded-xl',
+      lg: 'px-8 min-h-[56px] justify-center rounded-xl',
     };
 
-    // Dynamic text sizing
     const textSizeStyles = {
       sm: 'text-xs font-semibold',
       md: 'text-sm font-bold',
       lg: 'text-base font-black',
     };
 
-    // Activity Indicator colors
     const loaderColors = {
       primary: '#0A0F1D',
       navy: '#FFFFFF',
@@ -64,16 +67,41 @@ export const Button = React.forwardRef<React.ElementRef<typeof Pressable>, Butto
       ghost: '#9CA3AF',
     };
 
+    const animatedStyle = useAnimatedStyle(() => ({
+      transform: [{ scale: scale.value }],
+    }));
+
+    const handlePressIn = () => {
+      scale.value = withSpring(0.97, { damping: 15, stiffness: 300 });
+    };
+
+    const handlePressOut = () => {
+      scale.value = withSpring(1, { damping: 15, stiffness: 300 });
+    };
+
+    const handlePress = useCallback(
+      (event: GestureResponderEvent) => {
+        if (haptic && !disabled && !loading) {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+        }
+        if (onPress) onPress(event);
+      },
+      [haptic, disabled, loading, onPress]
+    );
+
     return (
-      <Pressable
+      <AnimatedPressable
         ref={ref}
-        onPress={onPress}
+        onPress={handlePress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
         disabled={disabled || loading}
         accessibilityRole="button"
         accessibilityState={{ disabled: disabled || loading }}
         className={`flex-row items-center justify-center border ${
           variantStyles[variant]
         } ${sizeStyles[size]} ${disabled ? 'opacity-40' : ''} ${className}`}
+        style={animatedStyle}
         {...props}
       >
         {loading ? (
@@ -87,7 +115,7 @@ export const Button = React.forwardRef<React.ElementRef<typeof Pressable>, Butto
         } ${textSizeStyles[size]}`}>
           {label}
         </Text>
-      </Pressable>
+      </AnimatedPressable>
     );
   }
 );

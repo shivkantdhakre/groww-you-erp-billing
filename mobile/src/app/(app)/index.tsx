@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, ScrollView, RefreshControl, ActivityIndicator, TouchableOpacity, Alert } from "react-native";
+import { View, Text, ScrollView, RefreshControl, StyleSheet, ActivityIndicator, TouchableOpacity, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card } from "../../components/ui/card";
 import { useStore } from "../../store/useStore";
@@ -11,6 +11,7 @@ import Animated, { FadeInUp } from "react-native-reanimated";
 import { Skeleton } from "../../components/ui/skeleton";
 import { LinearGradient } from "expo-linear-gradient";
 import { Button } from "../../components/ui/button";
+import * as Haptics from "expo-haptics";
 
 export default function DashboardScreen() {
   const summary = useStore((state) => state.summary);
@@ -32,6 +33,7 @@ export default function DashboardScreen() {
   };
 
   const handleRefresh = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setRefreshing(true);
     await loadDashboardData();
     setRefreshing(false);
@@ -103,11 +105,6 @@ export default function DashboardScreen() {
         {/* Offline Status Warning Banner */}
         <OfflineBanner />
 
-        {/* Pull to refresh hint */}
-        <Text className="text-gray-500 text-[10px] text-center font-inter mb-4">
-          ↓ Pull down to refresh live stats
-        </Text>
-
         {/* Welcome Greeting */}
         <Animated.View entering={FadeInUp.duration(400).delay(100)} className="mb-6 flex-row justify-between items-center">
           <View className="flex-1 mr-4">
@@ -130,32 +127,94 @@ export default function DashboardScreen() {
           )}
         </Animated.View>
 
+        {/* Quick Actions */}
+        <Animated.View entering={FadeInUp.duration(400).delay(150)} className="flex-row gap-3 mb-6">
+          <TouchableOpacity
+            onPress={() => router.push('/(app)/billing')}
+            activeOpacity={0.8}
+            className="flex-1 bg-[#F7941D]/10 border border-[#F7941D]/20 rounded-2xl p-4 items-center min-h-[80px] justify-center"
+          >
+            <Ionicons name="cart-outline" size={24} color="#F7941D" />
+            <Text className="text-white text-xs font-bold mt-1.5 font-inter">New Sale</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => router.push('/(app)/scanner')}
+            activeOpacity={0.8}
+            className="flex-1 bg-[#1B3A5C]/30 border border-[#1B3A5C]/40 rounded-2xl p-4 items-center min-h-[80px] justify-center"
+          >
+            <Ionicons name="scan-outline" size={24} color="#60A5FA" />
+            <Text className="text-white text-xs font-bold mt-1.5 font-inter">Scan</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => router.push('/(app)/invoices')}
+            activeOpacity={0.8}
+            className="flex-1 bg-[#1B3A5C]/30 border border-[#1B3A5C]/40 rounded-2xl p-4 items-center min-h-[80px] justify-center"
+          >
+            <Ionicons name="receipt-outline" size={24} color="#60A5FA" />
+            <Text className="text-white text-xs font-bold mt-1.5 font-inter">Invoices</Text>
+          </TouchableOpacity>
+        </Animated.View>
+
         {/* Primary KPI Metrics Row */}
         <Animated.View entering={FadeInUp.duration(400).delay(200)} className="flex-row gap-4 mb-6">
           
           {/* Today's Sales Card */}
-          <Card className="flex-1 p-0 overflow-hidden border-0">
-            <LinearGradient colors={['rgba(16, 185, 129, 0.15)', '#1A1F2E']} className="flex-1 p-4">
-              <View className="p-2 bg-emerald-500/10 rounded-xl w-10 h-10 items-center justify-center mb-3">
+          <View className="flex-1 rounded-[28px] overflow-hidden" style={{
+            shadowColor: '#10B981',
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.25,
+            shadowRadius: 16,
+            elevation: 6,
+          }}>
+            <LinearGradient
+              colors={['#132F2D', '#183B38', '#1E4440']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            <View className="p-5">
+              <View className="p-2.5 bg-emerald-500/10 rounded-xl w-11 h-11 items-center justify-center mb-4">
                 <Ionicons name="trending-up" size={20} color="#10B981" />
               </View>
               <Text className="text-gray-400 text-xs font-semibold uppercase tracking-wider font-lexend">Today's Sales</Text>
-              <Text className="text-white text-xl font-black mt-1.5 font-lexend">{formatCurrency(todaySales)}</Text>
-              <Text className="text-emerald-500 text-[10px] font-semibold mt-1 font-inter">Live from register</Text>
-            </LinearGradient>
-          </Card>
+              <Text className="text-white text-2xl font-black mt-1 font-lexend">{formatCurrency(todaySales)}</Text>
+              <View className="flex-row items-end gap-[3px] mt-3 h-6">
+                {[0.4, 0.6, 0.45, 0.7, 0.55, 0.8, 0.65].map((h, i) => (
+                  <View key={i} className="flex-1 rounded-t-sm bg-emerald-400/50" style={{ height: `${h * 100}%` }} />
+                ))}
+              </View>
+              <Text className="text-emerald-400 text-[10px] font-semibold mt-1.5 font-inter">Live from register</Text>
+            </View>
+          </View>
 
-          {/* Total Receivables Card */}
-          <Card className="flex-1 p-0 overflow-hidden border-0">
-            <LinearGradient colors={['rgba(96, 165, 250, 0.15)', '#1A1F2E']} className="flex-1 p-4">
-              <View className="p-2 bg-brand-navy/20 rounded-xl w-10 h-10 items-center justify-center mb-3">
+          {/* Receivables Card */}
+          <View className="flex-1 rounded-[28px] overflow-hidden" style={{
+            shadowColor: '#60A5FA',
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.2,
+            shadowRadius: 16,
+            elevation: 6,
+          }}>
+            <LinearGradient
+              colors={['#253652', '#2E4668', '#35517A']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            <View className="p-5">
+              <View className="p-2.5 bg-blue-400/10 rounded-xl w-11 h-11 items-center justify-center mb-4">
                 <Ionicons name="wallet-outline" size={20} color="#60A5FA" />
               </View>
               <Text className="text-gray-400 text-xs font-semibold uppercase tracking-wider font-lexend">Receivables</Text>
-              <Text className="text-white text-xl font-black mt-1.5 font-lexend">{formatCurrency(totalReceivables)}</Text>
-              <Text className="text-gray-400 text-[10px] mt-1 font-inter">Total outstanding credit</Text>
-            </LinearGradient>
-          </Card>
+              <Text className="text-white text-2xl font-black mt-1 font-lexend">{formatCurrency(totalReceivables)}</Text>
+              <View className="flex-row items-end gap-[3px] mt-3 h-6">
+                {[0.5, 0.55, 0.6, 0.5, 0.65, 0.6, 0.7].map((h, i) => (
+                  <View key={i} className="flex-1 rounded-t-sm bg-blue-400/40" style={{ height: `${h * 100}%` }} />
+                ))}
+              </View>
+              <Text className="text-blue-400 text-[10px] font-semibold mt-1.5 font-inter">Total outstanding credit</Text>
+            </View>
+          </View>
 
         </Animated.View>
 

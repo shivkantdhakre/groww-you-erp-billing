@@ -5,7 +5,9 @@ import { Card } from "../../components/ui/card";
 import { useStore } from "../../store/useStore";
 import { Ionicons } from "@expo/vector-icons";
 import { OfflineBanner } from "../../components/offline-banner";
+import { EmptyState } from "../../components/ui/empty-state";
 import Animated, { FadeInUp, FadeOut, LinearTransition } from "react-native-reanimated";
+import * as Haptics from "expo-haptics";
 import { Skeleton } from "../../components/ui/skeleton";
 
 export default function InventoryScreen() {
@@ -16,9 +18,12 @@ export default function InventoryScreen() {
   const branches = useStore((state) => state.branches);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [expandedItemId, setExpandedItemId] = useState<number | null>(null);
+
+  const categories = Array.from(new Set(items.map((i: any) => i.category).filter(Boolean))) as string[];
 
   const loadInventory = async () => {
     try {
@@ -29,6 +34,7 @@ export default function InventoryScreen() {
   };
 
   const handleRefresh = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setRefreshing(true);
     await loadInventory();
     setRefreshing(false);
@@ -41,12 +47,15 @@ export default function InventoryScreen() {
 
   const filteredItems = items.filter((item: any) => {
     const q = searchQuery.toLowerCase().trim();
-    if (!q) return true;
-    return (
-      item.name.toLowerCase().includes(q) ||
-      (item.sku && item.sku.toLowerCase().includes(q)) ||
-      (item.category && item.category.toLowerCase().includes(q))
-    );
+    if (q) {
+      const match =
+        item.name.toLowerCase().includes(q) ||
+        (item.sku && item.sku.toLowerCase().includes(q)) ||
+        (item.category && item.category.toLowerCase().includes(q));
+      if (!match) return false;
+    }
+    if (selectedCategory && item.category !== selectedCategory) return false;
+    return true;
   });
 
   const toggleExpandItem = (id: number) => {
@@ -91,7 +100,7 @@ export default function InventoryScreen() {
       <OfflineBanner />
       
       {/* Search Header Container */}
-      <View className="flex-row items-center bg-[#1A1F2E] border border-gray-800 rounded-xl px-4 py-1 mb-4">
+      <View className="flex-row items-center bg-[#1A1F2E] border border-gray-800 rounded-xl px-4 py-1 mb-3">
         <Ionicons name="search" size={20} color="#6B7280" />
         <TextInput
           className="flex-1 ml-3 h-12 text-white font-medium"
@@ -110,6 +119,41 @@ export default function InventoryScreen() {
         )}
       </View>
 
+      {/* Category Chips */}
+      {categories.length > 0 && (
+        <View className="flex-row gap-2 mb-4">
+          <TouchableOpacity
+            onPress={() => setSelectedCategory(null)}
+            activeOpacity={0.7}
+            className={`px-4 py-2 rounded-xl border min-h-[36px] justify-center ${
+              !selectedCategory
+                ? 'bg-[#F7941D]/10 border-[#F7941D]/30'
+                : 'bg-[#1A1F2E] border-gray-800'
+            }`}
+          >
+            <Text className={`text-xs font-bold ${!selectedCategory ? 'text-[#F7941D]' : 'text-gray-400'}`}>
+              All
+            </Text>
+          </TouchableOpacity>
+          {categories.map((cat) => (
+            <TouchableOpacity
+              key={cat}
+              onPress={() => setSelectedCategory(cat)}
+              activeOpacity={0.7}
+              className={`px-4 py-2 rounded-xl border min-h-[36px] justify-center ${
+                selectedCategory === cat
+                  ? 'bg-[#F7941D]/10 border-[#F7941D]/30'
+                  : 'bg-[#1A1F2E] border-gray-800'
+              }`}
+            >
+              <Text className={`text-xs font-bold ${selectedCategory === cat ? 'text-[#F7941D]' : 'text-gray-400'}`}>
+                {cat}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
       {/* Product List */}
       <FlatList
         data={filteredItems}
@@ -118,11 +162,11 @@ export default function InventoryScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#F7941D" />
         }
         ListEmptyComponent={
-          <View className="items-center py-20 px-4">
-            <Ionicons name="cube-outline" size={48} color="#4B5563" />
-            <Text className="text-gray-400 text-sm font-semibold mt-4 font-inter text-center">No matching inventory items found.</Text>
-            <Text className="text-gray-500 text-xs mt-2 text-center font-inter">Add products via the Groww You web dashboard to sync them here.</Text>
-          </View>
+          <EmptyState
+            icon="cube-outline"
+            title="No items found"
+            description={searchQuery || selectedCategory ? "Try a different search or filter." : "Add products via the Groww You web dashboard to sync them here."}
+          />
         }
         renderItem={renderItem}
         onEndReached={fetchMoreItems}
@@ -168,7 +212,7 @@ const InventoryItem = React.memo(({ item, isExpanded, toggleExpandItem, branches
           </Text>
         </View>
 
-        <View className="flex-row items-center gap-3">
+        <View className="items-end gap-1.5">
           <View className={`px-3 py-1 rounded-xl border ${
             isLowStock
               ? "bg-red-500/10 border-red-500/20"
@@ -178,9 +222,16 @@ const InventoryItem = React.memo(({ item, isExpanded, toggleExpandItem, branches
               {currentStock} {item.unit || "pcs"}
             </Text>
           </View>
+          {/* Stock level bar */}
+          <View className="w-16 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+            <View
+              className={`h-full rounded-full ${isLowStock ? "bg-red-500" : "bg-emerald-500"}`}
+              style={{ width: `${Math.min((currentStock / Math.max(item.minStockAlert * 3, 100)) * 100, 100)}%` }}
+            />
+          </View>
           <Ionicons
             name={isExpanded ? "chevron-up" : "chevron-down"}
-            size={16}
+            size={14}
             color="#9CA3AF"
           />
         </View>

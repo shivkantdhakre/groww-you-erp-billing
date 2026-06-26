@@ -1,11 +1,15 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Vibration, Alert } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Vibration, Alert, ScrollView, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { useStore } from '../../store/useStore';
 import { Ionicons } from '@expo/vector-icons';
+import { ScanTargetOverlay } from '../../components/scan-target-overlay';
+import { LinearGradient } from 'expo-linear-gradient';
 import api from '../../utils/api';
 import { router } from 'expo-router';
+
+const { width } = Dimensions.get('window');
 
 export default function ScannerScreen() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -27,20 +31,115 @@ export default function ScannerScreen() {
 
   if (!permission.granted) {
     return (
-      <View className="flex-1 bg-[#0A0F1D] justify-center items-center px-6">
-        <View className="bg-[#1A1F2E] border border-gray-800 rounded-2xl p-6 items-center shadow-xl max-w-sm">
-          <Ionicons name="camera-outline" size={48} color="#9CA3AF" style={{ marginBottom: 16 }} />
-          <Text className="text-white text-lg font-bold text-center mb-2">Camera Access Required</Text>
-          <Text className="text-gray-400 text-sm text-center mb-6">
-            We need camera access to scan item barcodes on the warehouse floor.
+      <View className="flex-1 bg-[#0A0F1D]">
+        {/* Subtle scanner background */}
+        <View className="absolute inset-0 opacity-[0.03]">
+          <View className="flex-1 flex-row flex-wrap" style={{ gap: 0 }}>
+            {Array.from({ length: 20 }).map((_, i) => (
+              <View key={i} style={{ width: width / 10, height: width / 10 }} className="border-[0.5px] border-white" />
+            ))}
+          </View>
+        </View>
+        <View className="absolute top-0 left-1/2 -translate-x-1/2 w-[300px] h-[300px] rounded-full bg-[#F7941D] opacity-[0.03]" />
+
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 32, paddingVertical: 40 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Scanner illustration */}
+          <View className="items-center mb-10">
+            <View className="w-32 h-32 rounded-[28px] bg-[#1A1F2E] border border-gray-800 items-center justify-center"
+              style={{
+                shadowColor: '#F7941D',
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: 0.15,
+                shadowRadius: 24,
+                elevation: 8,
+              }}
+            >
+              <LinearGradient
+                colors={['rgba(247, 148, 29, 0.2)', 'rgba(247, 148, 29, 0.05)']}
+                className="absolute inset-0 rounded-[28px]"
+              />
+              <Ionicons name="scan-outline" size={48} color="#F7941D" />
+            </View>
+          </View>
+
+          {/* Title */}
+          <Text className="text-white text-[32px] font-extrabold text-center mb-3 leading-tight">
+            Scan & Add{'\n'}Products Instantly
           </Text>
+
+          {/* Description */}
+          <Text className="text-gray-400 text-base text-center mb-10 leading-relaxed">
+            Scan inventory items instantly using your device camera.
+          </Text>
+
+          {/* Permission card */}
+          <View className="bg-[#1A1F2E] border border-gray-800 rounded-[24px] p-6 mb-8"
+            style={{
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 16,
+              elevation: 4,
+            }}
+          >
+            <View className="flex-row items-start gap-3 mb-4">
+              <View className="w-6 h-6 rounded-full bg-emerald-500/20 items-center justify-center mt-0.5">
+                <Ionicons name="checkmark" size={14} color="#10B981" />
+              </View>
+              <Text className="text-gray-300 text-sm flex-1 leading-relaxed">
+                Camera permission is required to scan product barcodes securely.
+              </Text>
+            </View>
+            <View className="flex-row items-start gap-3 mb-4">
+              <View className="w-6 h-6 rounded-full bg-emerald-500/20 items-center justify-center mt-0.5">
+                <Ionicons name="checkmark" size={14} color="#10B981" />
+              </View>
+              <Text className="text-gray-300 text-sm flex-1 leading-relaxed">
+                Scan item barcodes to instantly add them to your billing cart.
+              </Text>
+            </View>
+            <View className="flex-row items-start gap-3">
+              <View className="w-6 h-6 rounded-full bg-emerald-500/20 items-center justify-center mt-0.5">
+                <Ionicons name="checkmark" size={14} color="#10B981" />
+              </View>
+              <Text className="text-gray-300 text-sm flex-1 leading-relaxed">
+                No photos or videos are stored or uploaded.
+              </Text>
+            </View>
+          </View>
+
+          {/* Primary button */}
           <TouchableOpacity
             onPress={requestPermission}
-            className="w-full bg-brand-navy py-3.5 rounded-xl items-center"
+            className="w-full h-14 rounded-xl items-center justify-center bg-[#F59E0B] mb-4"
+            activeOpacity={0.85}
+            style={{
+              shadowColor: '#F59E0B',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 12,
+              elevation: 6,
+            }}
           >
-            <Text className="text-white font-bold text-sm">Grant Permission</Text>
+            <Text className="text-white font-extrabold text-base tracking-wide">Grant Camera Access</Text>
           </TouchableOpacity>
-        </View>
+
+          {/* Secondary link */}
+          <TouchableOpacity
+            onPress={() => router.back()}
+            className="items-center py-2 mb-6"
+          >
+            <Text className="text-gray-500 text-sm font-medium">Not now</Text>
+          </TouchableOpacity>
+
+          {/* Privacy note */}
+          <Text className="text-gray-600 text-xs text-center leading-relaxed">
+            Your privacy matters. Camera access is used solely for barcode scanning.
+          </Text>
+        </ScrollView>
       </View>
     );
   }
@@ -158,21 +257,7 @@ export default function ScannerScreen() {
         </TouchableOpacity>
       )}
 
-      {/* Target scanning outline overlay */}
-      {!scanned && (
-        <View style={styles.overlayContainer}>
-          <View style={styles.scanTargetBox}>
-            {/* Corners detailing target scanner boundary */}
-            <View className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-action-orange" />
-            <View className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-action-orange" />
-            <View className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-action-orange" />
-            <View className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-action-orange" />
-          </View>
-          <Text className="text-white font-bold text-sm text-center mt-6 bg-[#0A0F1D]/80 px-4 py-2 rounded-full border border-gray-800">
-            Align item barcode inside the target box
-          </Text>
-        </View>
-      )}
+      {!scanned && <ScanTargetOverlay />}
 
       {/* Scanned Result Glassmorphic Sheet Overlay */}
       {scanned && (
@@ -259,24 +344,6 @@ export default function ScannerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  overlayContainer: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
-  scanTargetBox: {
-    width: 250,
-    height: 250,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-    backgroundColor: 'transparent',
-    position: 'relative',
   },
   sheetContainer: {
     position: 'absolute',
