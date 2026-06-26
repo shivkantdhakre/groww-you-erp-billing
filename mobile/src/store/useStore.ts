@@ -19,7 +19,7 @@ export const mmkvZustandStorage: StateStorage = {
     return value ?? null;
   },
   removeItem: (name) => {
-    return storage.delete(name);
+    return storage.remove(name);
   },
 };
 
