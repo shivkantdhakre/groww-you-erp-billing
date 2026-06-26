@@ -1,13 +1,12 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { MMKV } from 'react-native-mmkv';
+import { createMMKV } from 'react-native-mmkv';
 import { StateStorage } from 'zustand/middleware';
 import * as SecureStore from '../utils/secureStoreWrapper';
 import api from '../utils/api';
 import * as Sentry from '@sentry/react-native';
 
-// @ts-ignore
-const storage = new MMKV({
+const storage = createMMKV({
   id: 'groww-you-erp-storage'
 });
 
