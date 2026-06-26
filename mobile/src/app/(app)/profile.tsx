@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, FlatList } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Card } from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
 import { useStore, Branch } from "../../store/useStore";
 import { Ionicons } from "@expo/vector-icons";
 import { OfflineBanner } from "../../components/offline-banner";
@@ -78,69 +80,69 @@ export default function ProfileScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
         {/* User Card */}
-        <View className="bg-[#1A1F2E] border border-gray-800 rounded-3xl p-6 mb-5 items-center shadow-lg">
+        <Card className="mb-5 items-center">
           <View className="w-20 h-20 rounded-full bg-[#F7941D]/10 border border-[#F7941D]/20 justify-center items-center mb-4">
             <Ionicons name="person" size={40} color="#F7941D" />
           </View>
-          <Text className="text-white text-xl font-bold">{user?.name || "Groww You Member"}</Text>
-          <Text className="text-gray-400 text-sm mt-1">{user?.email || ""}</Text>
+          <Text className="text-white text-xl font-bold font-lexend">{user?.name || "Groww You Member"}</Text>
+          <Text className="text-gray-400 text-sm mt-1 font-inter">{user?.email || ""}</Text>
           
           <View className="bg-[#F7941D]/10 border border-[#F7941D]/20 px-3 py-1 rounded-full mt-3">
-            <Text className="text-[#F7941D] text-xs font-semibold">
+            <Text className="text-[#F7941D] text-xs font-semibold font-inter">
               {getRoleLabel(user?.role || "")}
             </Text>
           </View>
-        </View>
+        </Card>
 
         {/* Branch Section */}
-        <View className="bg-[#1A1F2E] border border-gray-800 rounded-3xl p-5 mb-5 shadow-lg">
+        <Card className="mb-5">
           <View className="flex-row items-center justify-between mb-4">
             <View className="flex-row items-center">
               <Ionicons name="git-branch-outline" size={22} color="#F7941D" />
-              <Text className="text-white text-base font-bold ml-3">Active Branch</Text>
+              <Text className="text-white text-base font-bold ml-3 font-lexend">Active Branch</Text>
             </View>
             {isAdmin && (
               <TouchableOpacity 
                 onPress={() => setBranchSelectorVisible(true)}
-                className="bg-[#F7941D] px-3 py-1.5 rounded-xl"
+                className="bg-[#F7941D] px-3 py-1.5 rounded-xl min-h-[44px] justify-center"
               >
-                <Text className="text-white text-xs font-bold">Switch</Text>
+                <Text className="text-white text-xs font-bold font-inter">Switch</Text>
               </TouchableOpacity>
             )}
           </View>
 
           <View className="bg-[#0A0F1D]/50 border border-gray-900 rounded-2xl p-4">
-            <Text className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Branch Name</Text>
-            <Text className="text-white text-lg font-bold mt-1">{activeBranch.name}</Text>
+            <Text className="text-gray-400 text-xs font-semibold uppercase tracking-wider font-inter">Branch Name</Text>
+            <Text className="text-white text-lg font-bold mt-1 font-lexend">{activeBranch.name}</Text>
             {activeBranch.address && (
-              <Text className="text-gray-500 text-xs mt-1">{activeBranch.address}</Text>
+              <Text className="text-gray-400 text-xs mt-1 font-inter">{activeBranch.address}</Text>
             )}
           </View>
           
           {loadingBranches && (
             <ActivityIndicator size="small" color="#F7941D" className="mt-3" />
           )}
-        </View>
+        </Card>
 
         {/* Offline Sync Outbox Status Card */}
-        <View className="bg-[#1A1F2E] border border-gray-800 rounded-3xl p-5 mb-5 shadow-lg">
+        <Card className="mb-5">
           <View className="flex-row items-center justify-between mb-4">
             <View className="flex-row items-center">
               <Ionicons name="cloud-upload-outline" size={22} color="#F7941D" />
-              <Text className="text-white text-base font-bold ml-3">Sync Outbox</Text>
+              <Text className="text-white text-base font-bold ml-3 font-lexend">Sync Outbox</Text>
             </View>
             {offlineOutbox.length > 0 && (
               <TouchableOpacity 
                 disabled={syncing}
                 onPress={handleSync}
-                className="bg-emerald-500 px-3 py-1.5 rounded-xl flex-row items-center"
+                className="bg-emerald-500 px-3 py-1.5 rounded-xl flex-row items-center min-h-[44px] justify-center"
               >
                 {syncing ? (
                   <ActivityIndicator size="small" color="#FFF" />
                 ) : (
                   <>
-                    <Ionicons name="sync" size={14} color="#FFF" className="mr-1" />
-                    <Text className="text-white text-xs font-bold">Sync Now</Text>
+                    <Ionicons name="sync" size={14} color="#FFF" style={{ marginRight: 4 }} />
+                    <Text className="text-white text-xs font-bold font-inter">Sync Now</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -149,12 +151,12 @@ export default function ProfileScreen() {
 
           <View className="flex-row justify-between items-center mb-4 bg-[#0A0F1D]/50 border border-gray-900 rounded-2xl p-4">
             <View>
-              <Text className="text-gray-400 text-xs font-semibold uppercase">Pending Transactions</Text>
-              <Text className="text-white text-2xl font-black mt-1">{offlineOutbox.length}</Text>
+              <Text className="text-gray-400 text-xs font-semibold uppercase font-inter">Pending Transactions</Text>
+              <Text className="text-white text-2xl font-black mt-1 font-lexend">{offlineOutbox.length}</Text>
             </View>
             <View className="items-end">
-              <Text className="text-gray-500 text-xs uppercase">Last Synced</Text>
-              <Text className="text-gray-400 text-xs mt-1">
+              <Text className="text-gray-400 text-xs uppercase font-inter">Last Synced</Text>
+              <Text className="text-gray-400 text-xs mt-1 font-inter">
                 {lastSyncedAt ? new Date(lastSyncedAt).toLocaleTimeString() : "Never"}
               </Text>
             </View>
@@ -162,7 +164,7 @@ export default function ProfileScreen() {
 
           {offlineOutbox.length > 0 ? (
             <View className="max-h-40 border-t border-gray-800 pt-3">
-              <Text className="text-gray-400 text-xs mb-2">Queue details:</Text>
+              <Text className="text-gray-400 text-xs mb-2 font-inter">Queue details:</Text>
               <FlatList
                 data={offlineOutbox}
                 keyExtractor={(item) => item.id}
@@ -171,9 +173,9 @@ export default function ProfileScreen() {
                   <View className="flex-row justify-between items-center py-2 border-b border-gray-800/30">
                     <View className="flex-row items-center">
                       <Ionicons name="receipt-outline" size={14} color="#9CA3AF" />
-                      <Text className="text-gray-300 text-xs ml-2 font-medium">Invoice</Text>
+                      <Text className="text-gray-300 text-xs ml-2 font-medium font-inter">Invoice</Text>
                     </View>
-                    <Text className="text-gray-500 text-[10px]">
+                    <Text className="text-gray-400 text-[10px] font-inter">
                       {new Date(item.createdAt).toLocaleTimeString()}
                     </Text>
                   </View>
@@ -181,46 +183,57 @@ export default function ProfileScreen() {
               />
             </View>
           ) : (
-            <Text className="text-gray-500 text-xs text-center py-2">
+            <Text className="text-gray-400 text-xs text-center py-2 font-inter">
               All transactions have been synchronized to Render backend.
             </Text>
           )}
-        </View>
+        </Card>
 
         {/* Security & System Info */}
-        <View className="bg-[#1A1F2E] border border-gray-800 rounded-3xl p-5 mb-8 shadow-lg">
+        <Card className="mb-8">
           <View className="flex-row items-center mb-4">
             <Ionicons name="shield-checkmark-outline" size={22} color="#F7941D" />
-            <Text className="text-white text-base font-bold ml-3">System Security</Text>
+            <Text className="text-white text-base font-bold ml-3 font-lexend">System Security</Text>
           </View>
-          <View className="space-y-3">
+          <View className="gap-3">
             <View className="flex-row justify-between py-1.5">
-              <Text className="text-gray-400 text-xs">Biometrics Enabled</Text>
-              <Text className="text-emerald-500 text-xs font-bold">Secure</Text>
+              <Text className="text-gray-400 text-xs font-inter">Biometrics Enabled</Text>
+              <Text className="text-emerald-500 text-xs font-bold font-inter">Secure</Text>
             </View>
             <View className="flex-row justify-between py-1.5 border-t border-gray-800/40">
-              <Text className="text-gray-400 text-xs">Jailbreak Guard</Text>
-              <Text className="text-emerald-500 text-xs font-bold">Active</Text>
+              <Text className="text-gray-400 text-xs font-inter">Jailbreak Guard</Text>
+              <Text className="text-emerald-500 text-xs font-bold font-inter">Active</Text>
             </View>
             <View className="flex-row justify-between py-1.5 border-t border-gray-800/40">
-              <Text className="text-gray-400 text-xs">Client Version</Text>
-              <Text className="text-gray-500 text-xs font-semibold">Groww You v1.0.0</Text>
+              <Text className="text-gray-400 text-xs font-inter">Client Version</Text>
+              <Text className="text-gray-400 text-xs font-semibold font-inter">Groww You v1.0.0</Text>
             </View>
-            <TouchableOpacity
-              onPress={() => {
-                throw new Error("Sentry Test Crash");
-              }}
-              className="mt-3 bg-red-500/10 border border-red-500/20 py-2.5 rounded-xl flex-row justify-center items-center"
-            >
-              <Ionicons name="bug-outline" size={16} color="#EF4444" />
-              <Text className="text-red-500 font-bold ml-2 text-xs">Trigger Sentry Test Crash</Text>
-            </TouchableOpacity>
+            {__DEV__ && (
+              <TouchableOpacity
+                onPress={() => {
+                  throw new Error("Sentry Test Crash");
+                }}
+                className="mt-3 bg-red-500/10 border border-red-500/20 py-2.5 min-h-[44px] rounded-xl flex-row justify-center items-center"
+              >
+                <Ionicons name="bug-outline" size={16} color="#EF4444" />
+                <Text className="text-red-500 font-bold ml-2 text-xs font-inter">Trigger Sentry Test Crash</Text>
+              </TouchableOpacity>
+            )}
           </View>
-        </View>
+        </Card>
 
         {/* Logout Button */}
         <TouchableOpacity
-          onPress={logout}
+          onPress={() => {
+            Alert.alert(
+              "Confirm Logout",
+              "Are you sure you want to log out?",
+              [
+                { text: "Cancel", style: "cancel" },
+                { text: "Logout", style: "destructive", onPress: logout }
+              ]
+            );
+          }}
           activeOpacity={0.9}
           className="bg-red-500/10 border border-red-500/20 py-4 rounded-2xl flex-row justify-center items-center mb-10"
         >
@@ -238,6 +251,7 @@ export default function ProfileScreen() {
       >
         <View className="flex-1 bg-black/60 justify-end">
           <View className="bg-[#1A1F2E] border-t border-gray-800 rounded-t-3xl p-6 max-h-[70%]">
+            <View className="w-10 h-1 bg-gray-600 rounded-full mx-auto mb-4" />
             <View className="flex-row justify-between items-center mb-6">
               <Text className="text-white text-lg font-bold">Select Active Branch</Text>
               <TouchableOpacity onPress={() => setBranchSelectorVisible(false)}>
@@ -249,7 +263,7 @@ export default function ProfileScreen() {
               data={branches}
               keyExtractor={(item) => item.id.toString()}
               ListEmptyComponent={
-                <Text className="text-gray-500 text-center py-4">No branches registered.</Text>
+                <Text className="text-gray-400 text-center py-4 font-inter">No branches registered.</Text>
               }
               renderItem={({ item }) => {
                 const isSelected = item.id === selectedBranchId;
@@ -259,18 +273,18 @@ export default function ProfileScreen() {
                       setSelectedBranchId(item.id);
                       setBranchSelectorVisible(false);
                     }}
-                    className={`flex-row justify-between items-center p-4 mb-2 rounded-2xl border ${
+                    className={`flex-row justify-between items-center p-4 mb-2 rounded-2xl border min-h-[44px] ${
                       isSelected
                         ? "bg-[#F7941D]/10 border-[#F7941D]/30"
                         : "bg-[#0A0F1D] border-gray-800"
                     }`}
                   >
                     <View>
-                      <Text className={`font-bold ${isSelected ? "text-[#F7941D]" : "text-white"}`}>
+                      <Text className={`font-bold font-inter ${isSelected ? "text-[#F7941D]" : "text-white"}`}>
                         {item.name}
                       </Text>
                       {item.address && (
-                        <Text className="text-gray-500 text-xs mt-1">{item.address}</Text>
+                        <Text className="text-gray-400 text-xs mt-1 font-inter">{item.address}</Text>
                       )}
                     </View>
                     {isSelected && (

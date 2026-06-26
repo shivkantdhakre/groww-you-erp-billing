@@ -15,6 +15,7 @@ export default function ScannerScreen() {
   const [scannedItem, setScannedItem] = useState<any | null>(null);
   const [scannedCode, setScannedCode] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
+  const [torchEnabled, setTorchEnabled] = useState(false);
 
   if (!permission) {
     return (
@@ -138,10 +139,24 @@ export default function ScannerScreen() {
       <CameraView
         style={StyleSheet.absoluteFill}
         onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+        enableTorch={torchEnabled}
         barcodeScannerSettings={{
           barcodeTypes: ['qr', 'ean13', 'code128', 'code39'],
         }}
       />
+
+      {/* Torch Toggle Button */}
+      {!scanned && (
+        <TouchableOpacity
+          onPress={() => setTorchEnabled(!torchEnabled)}
+          className="absolute top-12 right-6 bg-[#0A0F1D]/80 p-3 rounded-full border border-gray-800 z-10"
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Toggle Flashlight"
+        >
+          <Ionicons name={torchEnabled ? "flash" : "flash-off"} size={24} color={torchEnabled ? "#F7941D" : "#FFF"} />
+        </TouchableOpacity>
+      )}
 
       {/* Target scanning outline overlay */}
       {!scanned && (
@@ -153,7 +168,7 @@ export default function ScannerScreen() {
             <View className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-secondary" />
             <View className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-secondary" />
           </View>
-          <Text className="text-white font-bold text-sm text-center mt-6 bg-[#0A0F1D]/80 px-4 py-2 rounded-full overflow-hidden border border-gray-800">
+          <Text className="text-white font-bold text-sm text-center mt-6 bg-[#0A0F1D]/80 px-4 py-2 rounded-full border border-gray-800">
             Align item barcode inside the target box
           </Text>
         </View>

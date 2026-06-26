@@ -14,6 +14,12 @@ export const checkCompromisedDevice = async (): Promise<boolean> => {
     return false;
   }
 
+  // Safeguard: Check if JailMonkey is loaded and contains the required methods
+  if (!JailMonkey || typeof JailMonkey.isJailBroken !== 'function' || typeof JailMonkey.canMockLocation !== 'function') {
+    console.warn('[Security] JailMonkey module is not loaded or missing required methods, skipping checks');
+    return false;
+  }
+
   try {
     // Check both standard jailbreak/root signatures and active mock location tools
     const isJailbroken = JailMonkey.isJailBroken();

@@ -1,9 +1,27 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MMKV } from 'react-native-mmkv';
+import { StateStorage } from 'zustand/middleware';
 import * as SecureStore from '../utils/secureStoreWrapper';
 import api from '../utils/api';
 import * as Sentry from '@sentry/react-native';
+
+const storage = new MMKV({
+  id: 'groww-you-erp-storage'
+});
+
+export const mmkvZustandStorage: StateStorage = {
+  setItem: (name, value) => {
+    return storage.set(name, value);
+  },
+  getItem: (name) => {
+    const value = storage.getString(name);
+    return value ?? null;
+  },
+  removeItem: (name) => {
+    return storage.delete(name);
+  },
+};
 
 export interface Branch {
   id: number;
@@ -144,7 +162,7 @@ export const useStore = create<StoreState>()(
       clearCart: () => set({ cart: [] }),
       setSelectedBranchId: (branchId) => {
         set({ selectedBranchId: branchId, items: [], summary: null, invoices: [] });
-        if (get().user) {
+        if (get().user && Sentry.getClient()) {
           Sentry.setUser({
             id: get().user.id.toString(),
             email: get().user.email,
@@ -272,11 +290,13 @@ export const useStore = create<StoreState>()(
             selectedBranchId: defaultBranchId
           });
           // Inject Sentry User Context
-          Sentry.setUser({
-            id: user.id.toString(),
-            email: user.email,
-            segment: `branch_${defaultBranchId || 0}`
-          });
+          if (Sentry.getClient()) {
+            Sentry.setUser({
+              id: user.id.toString(),
+              email: user.email,
+              segment: `branch_${defaultBranchId || 0}`
+            });
+          }
         } catch (err: any) {
           throw new Error(err.response?.data?.error || err.response?.data?.message || err.message || "Login failed");
         } finally {
@@ -295,7 +315,9 @@ export const useStore = create<StoreState>()(
           manualLogout: true 
         });
         // Clear Sentry User Context
-        Sentry.setUser(null);
+        if (Sentry.getClient()) {
+          Sentry.setUser(null);
+        }
       },
 
       fetchItems: async () => {
@@ -446,7 +468,7 @@ export const useStore = create<StoreState>()(
     }),
     {
       name: 'groww-you-erp-mobile-storage',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => mmkvZustandStorage),
       partialize: (state) => ({
         user: state.user,
         items: state.items,

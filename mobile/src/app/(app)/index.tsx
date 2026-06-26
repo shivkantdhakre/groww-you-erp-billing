@@ -1,11 +1,17 @@
 import { useEffect, useState } from "react";
 import { View, Text, ScrollView, RefreshControl, ActivityIndicator, TouchableOpacity, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Card } from "../../components/ui/card";
+import { formatCurrency } from "../../utils/format";
 import { useStore } from "../../store/useStore";
 import { Ionicons } from "@expo/vector-icons";
 import { OfflineBanner } from "../../components/offline-banner";
 import { shareInvoicePDF } from "../../utils/pdfShare";
 import { useRouter } from "expo-router";
+import Animated, { FadeInUp } from "react-native-reanimated";
+import { Skeleton } from "../../components/ui/skeleton";
+import { LinearGradient } from "expo-linear-gradient";
+import { Button } from "../../components/ui/button";
 
 export default function DashboardScreen() {
   const summary = useStore((state) => state.summary);
@@ -72,9 +78,11 @@ export default function DashboardScreen() {
 
   if (loading && !summary) {
     return (
-      <View className="flex-1 bg-[#0A0F1D] justify-center items-center">
-        <ActivityIndicator size="large" color="#F7941D" />
-        <Text className="text-gray-400 text-sm mt-4">Loading dashboard statistics...</Text>
+      <View className="flex-1 bg-[#0A0F1D] px-5 pt-4 mt-20">
+        <Skeleton height={100} className="mb-6" />
+        <Skeleton height={140} className="mb-6" />
+        <Skeleton height={200} className="mb-6" />
+        <Skeleton height={200} className="mb-6" />
       </View>
     );
   }
@@ -96,57 +104,69 @@ export default function DashboardScreen() {
         {/* Offline Status Warning Banner */}
         <OfflineBanner />
 
+        {/* Pull to refresh hint */}
+        <Text className="text-gray-500 text-[10px] text-center font-inter mb-4">
+          ↓ Pull down to refresh live stats
+        </Text>
+
         {/* Welcome Greeting */}
-        <View className="mb-6 flex-row justify-between items-center">
+        <Animated.View entering={FadeInUp.duration(400).delay(100)} className="mb-6 flex-row justify-between items-center">
           <View className="flex-1 mr-4">
             <Text className="text-gray-400 text-sm">Welcome back,</Text>
             <Text className="text-white text-2xl font-black mt-1">
               {user?.name || "Wholesale Owner"}
             </Text>
-            <Text className="text-gray-500 text-xs mt-0.5">Groww You ERP - Live Insights</Text>
+            <Text className="text-gray-400 text-xs mt-0.5 font-inter">Groww You ERP - Live Insights</Text>
           </View>
-          <TouchableOpacity
-            onPress={() => router.push("/ui-demo")}
-            activeOpacity={0.7}
-            className="bg-gray-800/40 border border-gray-800/80 p-2.5 rounded-xl"
-            accessibilityRole="button"
-            accessibilityLabel="View UI Component Gallery"
-          >
-            <Ionicons name="color-palette-outline" size={20} color="#F7941D" />
-          </TouchableOpacity>
-        </View>
+          {__DEV__ && (
+            <TouchableOpacity
+              onPress={() => router.push("/ui-demo")}
+              activeOpacity={0.7}
+              className="bg-gray-800/40 border border-gray-800/80 p-2.5 rounded-xl"
+              accessibilityRole="button"
+              accessibilityLabel="View UI Component Gallery"
+            >
+              <Ionicons name="color-palette-outline" size={20} color="#F7941D" />
+            </TouchableOpacity>
+          )}
+        </Animated.View>
 
         {/* Primary KPI Metrics Row */}
-        <View className="flex-row gap-4 mb-6">
+        <Animated.View entering={FadeInUp.duration(400).delay(200)} className="flex-row gap-4 mb-6">
           
           {/* Today's Sales Card */}
-          <View className="flex-1 bg-[#1A1F2E] border border-gray-800 rounded-2xl p-4 shadow-xl">
-            <View className="p-2 bg-emerald-500/10 rounded-xl w-10 h-10 items-center justify-center mb-3">
-              <Ionicons name="trending-up" size={20} color="#10B981" />
-            </View>
-            <Text className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Today's Sales</Text>
-            <Text className="text-white text-xl font-black mt-1.5">{formatCurrency(todaySales)}</Text>
-            <Text className="text-emerald-500 text-[10px] font-semibold mt-1">Live from register</Text>
-          </View>
+          <Card className="flex-1 p-0 overflow-hidden border-0">
+            <LinearGradient colors={['rgba(16, 185, 129, 0.15)', '#1A1F2E']} className="flex-1 p-4">
+              <View className="p-2 bg-emerald-500/10 rounded-xl w-10 h-10 items-center justify-center mb-3">
+                <Ionicons name="trending-up" size={20} color="#10B981" />
+              </View>
+              <Text className="text-gray-400 text-xs font-semibold uppercase tracking-wider font-lexend">Today's Sales</Text>
+              <Text className="text-white text-xl font-black mt-1.5 font-lexend">{formatCurrency(todaySales)}</Text>
+              <Text className="text-emerald-500 text-[10px] font-semibold mt-1 font-inter">Live from register</Text>
+            </LinearGradient>
+          </Card>
 
           {/* Total Receivables Card */}
-          <View className="flex-1 bg-[#1A1F2E] border border-gray-800 rounded-2xl p-4 shadow-xl">
-            <View className="p-2 bg-primary/20 rounded-xl w-10 h-10 items-center justify-center mb-3">
-              <Ionicons name="wallet-outline" size={20} color="#60A5FA" />
-            </View>
-            <Text className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Receivables</Text>
-            <Text className="text-white text-xl font-black mt-1.5">{formatCurrency(totalReceivables)}</Text>
-            <Text className="text-gray-500 text-[10px] mt-1">Total outstanding credit</Text>
-          </View>
+          <Card className="flex-1 p-0 overflow-hidden border-0">
+            <LinearGradient colors={['rgba(96, 165, 250, 0.15)', '#1A1F2E']} className="flex-1 p-4">
+              <View className="p-2 bg-primary/20 rounded-xl w-10 h-10 items-center justify-center mb-3">
+                <Ionicons name="wallet-outline" size={20} color="#60A5FA" />
+              </View>
+              <Text className="text-gray-400 text-xs font-semibold uppercase tracking-wider font-lexend">Receivables</Text>
+              <Text className="text-white text-xl font-black mt-1.5 font-lexend">{formatCurrency(totalReceivables)}</Text>
+              <Text className="text-gray-400 text-[10px] mt-1 font-inter">Total outstanding credit</Text>
+            </LinearGradient>
+          </Card>
 
-        </View>
+        </Animated.View>
 
         {/* Low Stock Alerts Section */}
-        <View className="bg-[#1A1F2E] border border-gray-800 rounded-2xl p-5 mb-6 shadow-xl">
+        <Animated.View entering={FadeInUp.duration(400).delay(300)}>
+          <Card className="mb-6">
           <View className="flex-row justify-between items-center mb-4">
             <View className="flex-row items-center gap-2">
               <Ionicons name="alert-circle-outline" size={20} color="#EF4444" />
-              <Text className="text-white text-base font-bold">Critical Low Stock Alerts</Text>
+              <Text className="text-white text-base font-bold font-lexend">Critical Low Stock Alerts</Text>
             </View>
             <View className="bg-red-500/10 px-2.5 py-0.5 rounded-full">
               <Text className="text-red-500 text-xs font-black">{lowStockItems.length}</Text>
@@ -154,7 +174,7 @@ export default function DashboardScreen() {
           </View>
 
           {lowStockItems.length === 0 ? (
-            <Text className="text-gray-500 text-sm py-2">All warehouse item stock balances are healthy!</Text>
+            <Text className="text-gray-400 text-sm py-2 font-inter">All warehouse item stock balances are healthy!</Text>
           ) : (
             <View className="space-y-3">
               {lowStockItems.slice(0, 5).map((item: any, idx: number) => (
@@ -166,23 +186,28 @@ export default function DashboardScreen() {
                 </View>
               ))}
               {lowStockItems.length > 5 && (
-                <Text className="text-gray-500 text-xs text-center mt-2">
+                <Text className="text-gray-400 text-xs text-center mt-2 font-inter">
                   + {lowStockItems.length - 5} more item alerts. Scan code to audit.
                 </Text>
               )}
             </View>
           )}
-        </View>
+          </Card>
+        </Animated.View>
 
         {/* Recent Activity Logs */}
-        <View className="bg-[#1A1F2E] border border-gray-800 rounded-2xl p-5 mb-12 shadow-xl">
+        <Animated.View entering={FadeInUp.duration(400).delay(400)}>
+          <Card className="mb-12">
           <View className="flex-row items-center gap-2 mb-4">
             <Ionicons name="receipt-outline" size={20} color="#F7941D" />
-            <Text className="text-white text-base font-bold">Recent Store Activity</Text>
+            <Text className="text-white text-base font-bold font-lexend">Recent Store Activity</Text>
           </View>
 
           {recentActivities.length === 0 ? (
-            <Text className="text-gray-500 text-sm py-2">No recent database operations logged.</Text>
+            <View className="py-4 items-center">
+              <Text className="text-gray-400 text-sm mb-4 font-inter text-center">No recent database operations logged.</Text>
+              <Button label="Create a New Sale" onPress={() => router.push('/billing')} variant="primary" />
+            </View>
           ) : (
             <View className="space-y-3">
               {recentActivities.map((act: any) => {
@@ -192,8 +217,8 @@ export default function DashboardScreen() {
                 return (
                   <View key={act.id} className="flex-row justify-between items-center py-3 border-b border-gray-800/40">
                     <View className="flex-1 mr-3">
-                      <Text className="text-gray-200 text-sm font-bold">{act.name}</Text>
-                      <Text className="text-gray-500 text-[10px] mt-0.5">{act.action}</Text>
+                      <Text className="text-gray-200 text-sm font-bold font-inter">{act.name}</Text>
+                      <Text className="text-gray-400 text-[10px] mt-0.5 font-inter">{act.action}</Text>
                     </View>
                     
                     <View className="flex-row items-center gap-3">
@@ -201,12 +226,14 @@ export default function DashboardScreen() {
                         <TouchableOpacity
                           onPress={() => handleShareDashboardInvoice(invoiceId, act.name)}
                           activeOpacity={0.7}
-                          className="bg-[#F7941D]/10 border border-[#F7941D]/20 p-2 rounded-lg"
+                          className="bg-[#F7941D]/10 border border-[#F7941D]/20 p-2.5 rounded-xl min-h-[44px] min-w-[44px] items-center justify-center"
+                          accessibilityRole="button"
+                          accessibilityLabel="Share Invoice"
                         >
-                          <Ionicons name="share-social-outline" size={14} color="#F7941D" />
+                          <Ionicons name="share-social-outline" size={18} color="#F7941D" />
                         </TouchableOpacity>
                       )}
-                      <Text className="text-gray-500 text-xs font-medium">
+                      <Text className="text-gray-400 text-xs font-medium font-inter">
                         {new Date(act.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </Text>
                     </View>
@@ -215,7 +242,8 @@ export default function DashboardScreen() {
               })}
             </View>
           )}
-        </View>
+          </Card>
+        </Animated.View>
 
       </ScrollView>
 

@@ -32,36 +32,36 @@ export default function UIDemoScreen() {
             
             {/* Primary Orange Button */}
             <View className="mb-3">
-              <Text className="text-gray-500 text-[10px] font-bold uppercase mb-1">Primary Variant (Orange Accent)</Text>
+              <Text className="text-gray-400 text-[10px] font-bold uppercase mb-1">Primary Variant (Orange Accent)</Text>
               <Button label="Submit Document" variant="primary" />
             </View>
 
             {/* Navy Button */}
             <View className="mb-3">
-              <Text className="text-gray-500 text-[10px] font-bold uppercase mb-1">Navy Variant (Brand Base)</Text>
+              <Text className="text-gray-400 text-[10px] font-bold uppercase mb-1">Navy Variant (Brand Base)</Text>
               <Button label="Save Draft" variant="navy" />
             </View>
 
             {/* Outline Button */}
             <View className="mb-3">
-              <Text className="text-gray-500 text-[10px] font-bold uppercase mb-1">Outline Variant</Text>
+              <Text className="text-gray-400 text-[10px] font-bold uppercase mb-1">Outline Variant</Text>
               <Button label="Cancel Action" variant="outline" />
             </View>
 
             {/* Ghost Button */}
             <View className="mb-3">
-              <Text className="text-gray-500 text-[10px] font-bold uppercase mb-1">Ghost Variant</Text>
+              <Text className="text-gray-400 text-[10px] font-bold uppercase mb-1">Ghost Variant</Text>
               <Button label="Skip Verification" variant="ghost" />
             </View>
 
             {/* Loading & Disabled States */}
             <View className="flex-row gap-3 mb-2">
               <View className="flex-1">
-                <Text className="text-gray-500 text-[10px] font-bold uppercase mb-1">Loading</Text>
+                <Text className="text-gray-400 text-[10px] font-bold uppercase mb-1">Loading</Text>
                 <Button label="Send" variant="primary" size="sm" loading={true} />
               </View>
               <View className="flex-1">
-                <Text className="text-gray-500 text-[10px] font-bold uppercase mb-1">Disabled</Text>
+                <Text className="text-gray-400 text-[10px] font-bold uppercase mb-1">Disabled</Text>
                 <Button label="Locked" variant="navy" size="sm" disabled={true} />
               </View>
             </View>
@@ -143,7 +143,7 @@ export default function UIDemoScreen() {
             </View>
           </Card.Content>
           <Card.Footer>
-            <Text className="text-gray-500 text-xs">GST Registered Transactions Only</Text>
+            <Text className="text-gray-400 text-xs">GST Registered Transactions Only</Text>
             <Text className="text-[#F7941D] text-base font-black">₹49,990.00</Text>
           </Card.Footer>
         </Card>

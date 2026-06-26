@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { View, Text, FlatList, TextInput, TouchableOpacity, RefreshControl, ActivityIndicator, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Card } from "../../components/ui/card";
 import { useStore } from "../../store/useStore";
 import { Ionicons } from "@expo/vector-icons";
+import React from "react";
+import { Skeleton } from "../../components/ui/skeleton";
 import { OfflineBanner } from "../../components/offline-banner";
 import { shareInvoicePDF } from "../../utils/pdfShare";
 
@@ -90,12 +93,24 @@ export default function InvoicesScreen() {
 
   if (loading && invoices.length === 0) {
     return (
-      <View className="flex-1 bg-[#0A0F1D] justify-center items-center">
-        <ActivityIndicator size="large" color="#F7941D" />
-        <Text className="text-gray-400 text-sm mt-4">Loading invoice journal...</Text>
+      <View className="flex-1 bg-[#0A0F1D] px-5 pt-4 mt-20">
+        <Skeleton height={90} className="mb-3" />
+        <Skeleton height={90} className="mb-3" />
+        <Skeleton height={90} className="mb-3" />
+        <Skeleton height={90} className="mb-3" />
+        <Skeleton height={90} className="mb-3" />
       </View>
     );
   }
+
+  const renderItem = ({ item }: { item: any }) => (
+    <InvoiceItem 
+      item={item} 
+      formatCurrency={formatCurrency} 
+      formatDate={formatDate} 
+      handleShare={handleShare} 
+    />
+  );
 
   return (
     <SafeAreaView edges={["bottom", "left", "right"]} className="flex-1 bg-[#0A0F1D] px-5 pt-4">
@@ -106,11 +121,14 @@ export default function InvoicesScreen() {
       <View className="flex-row items-center bg-[#1A1F2E] border border-gray-800 rounded-xl px-4 py-1 mb-4">
         <Ionicons name="search" size={20} color="#6B7280" />
         <TextInput
-          className="flex-1 ml-3 h-12 text-white font-medium focus:outline-none"
+          className="flex-1 ml-3 h-12 text-white font-medium"
           placeholder="Search by Invoice No or Customer name..."
           placeholderTextColor="#6B7280"
           value={searchQuery}
           onChangeText={setSearchQuery}
+          returnKeyType="search"
+          onSubmitEditing={() => {}}
+          accessibilityLabel="Search invoices"
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity onPress={() => setSearchQuery("")}>
@@ -172,49 +190,17 @@ export default function InvoicesScreen() {
           ) : null
         }
         ListEmptyComponent={
-          <View className="items-center py-20">
+          <View className="items-center py-20 px-4">
             <Ionicons name="receipt-outline" size={48} color="#4B5563" />
-            <Text className="text-gray-500 text-sm font-semibold mt-4">
+            <Text className="text-gray-400 text-sm font-semibold mt-4 font-inter text-center">
               No matching sales invoices found.
+            </Text>
+            <Text className="text-gray-500 text-xs mt-2 text-center font-inter">
+              Navigate to the Billing tab to create your first invoice.
             </Text>
           </View>
         }
-        renderItem={({ item }) => (
-          <View className="bg-[#1A1F2E] border border-gray-800 rounded-2xl p-4 mb-3 flex-row justify-between items-center shadow-md">
-            <View className="flex-1 mr-4">
-              <View className="flex-row items-center gap-2">
-                <Text className="text-white text-base font-bold">
-                  {item.invoiceNo}
-                </Text>
-                {item.pdfUrl && (
-                  <View className="bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                    <Text className="text-emerald-500 text-[9px] font-bold">Cached A4</Text>
-                  </View>
-                )}
-              </View>
-              <Text className="text-gray-400 text-xs mt-1" numberOfLines={1}>
-                {item.customer?.name || "Retail Customer"}
-              </Text>
-              <Text className="text-gray-500 text-[10px] mt-0.5">
-                Issued: {formatDate(item.invoiceDate)}
-              </Text>
-            </View>
-
-            <View className="flex-row items-center gap-4">
-              <Text className="text-white text-base font-black">
-                {formatCurrency(item.grandTotal)}
-              </Text>
-              
-              <TouchableOpacity
-                onPress={() => handleShare(item.id, item.invoiceNo)}
-                activeOpacity={0.7}
-                className="bg-[#F7941D]/10 border border-[#F7941D]/20 p-2.5 rounded-xl"
-              >
-                <Ionicons name="share-social-outline" size={20} color="#F7941D" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
+        renderItem={renderItem}
       />
 
       {/* Full-screen Loading Overlay for generation/download */}
@@ -234,3 +220,42 @@ export default function InvoicesScreen() {
     </SafeAreaView>
   );
 }
+
+const InvoiceItem = React.memo(({ item, formatCurrency, formatDate, handleShare }: any) => {
+  return (
+    <Card className="p-4 mb-3 flex-row justify-between items-center">
+      <View className="flex-1 mr-4">
+        <View className="flex-row items-center gap-2">
+          <Text className="text-white text-base font-bold font-lexend">
+            {item.invoiceNo}
+          </Text>
+          {item.pdfUrl && (
+            <View className="bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+              <Text className="text-emerald-500 text-[9px] font-bold">Cached A4</Text>
+            </View>
+          )}
+        </View>
+        <Text className="text-gray-400 text-xs mt-1 font-inter" numberOfLines={1}>
+          {item.customer?.name || "Retail Customer"}
+        </Text>
+        <Text className="text-gray-400 text-[10px] mt-0.5 font-inter">
+          Issued: {formatDate(item.invoiceDate)}
+        </Text>
+      </View>
+
+      <View className="flex-row items-center gap-4">
+        <Text className="text-white text-base font-black font-lexend">
+          {formatCurrency(item.grandTotal)}
+        </Text>
+        
+        <TouchableOpacity
+          onPress={() => handleShare(item.id, item.invoiceNo)}
+          activeOpacity={0.7}
+          className="bg-[#F7941D]/10 border border-[#F7941D]/20 p-2.5 min-h-[44px] min-w-[44px] rounded-xl items-center justify-center"
+        >
+          <Ionicons name="share-social-outline" size={20} color="#F7941D" />
+        </TouchableOpacity>
+      </View>
+    </Card>
+  );
+});

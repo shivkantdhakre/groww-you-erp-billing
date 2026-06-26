@@ -1,10 +1,12 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { TouchableOpacity, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStore } from '../../store/useStore';
 
 export default function TabLayout() {
-  const logout = useStore((state) => state.logout);
+  const offlineOutbox = useStore((state) => state.offlineOutbox);
+  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
@@ -14,8 +16,9 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: '#1A1F2E',
           borderTopColor: '#1F2937',
-          paddingBottom: Platform.OS === 'ios' ? 20 : 10,
-          height: Platform.OS === 'ios' ? 88 : 65,
+          paddingBottom: Platform.OS === 'ios' ? insets.bottom || 24 : insets.bottom || 12,
+          paddingTop: 8,
+          height: Platform.OS === 'ios' ? 64 + (insets.bottom || 24) : 58 + (insets.bottom || 12),
         },
         headerStyle: {
           backgroundColor: '#1A1F2E',
@@ -25,6 +28,7 @@ export default function TabLayout() {
         headerTitleStyle: {
           color: '#FFFFFF',
           fontWeight: 'bold',
+          fontFamily: 'Lexend_700Bold',
           fontSize: 18,
         },
       }}
@@ -84,6 +88,8 @@ export default function TabLayout() {
         options={{
           title: 'My Profile',
           tabBarLabel: 'Profile',
+          tabBarBadge: offlineOutbox.length > 0 ? offlineOutbox.length : undefined,
+          tabBarBadgeStyle: { backgroundColor: '#F7941D' },
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-outline" size={size} color={color} />
           ),

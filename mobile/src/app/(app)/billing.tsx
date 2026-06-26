@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -9,10 +9,12 @@ import {
   FlatList,
   Alert,
   ActivityIndicator,
-  Vibration,
   StyleSheet
 } from "react-native";
+import * as Haptics from "expo-haptics";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Card } from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
 import { useStore } from "../../store/useStore";
 import { Ionicons } from "@expo/vector-icons";
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from "expo-camera";
@@ -51,6 +53,22 @@ export default function BillingScreen() {
   const [customerModalVisible, setCustomerModalVisible] = useState(false);
   const [itemModalVisible, setItemModalVisible] = useState(false);
   const [scannerVisible, setScannerVisible] = useState(false);
+
+  // Focus refs
+  const customerInputRef = useRef<TextInput>(null);
+  const itemInputRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    if (customerModalVisible) {
+      setTimeout(() => customerInputRef.current?.focus(), 100);
+    }
+  }, [customerModalVisible]);
+
+  useEffect(() => {
+    if (itemModalVisible) {
+      setTimeout(() => itemInputRef.current?.focus(), 100);
+    }
+  }, [itemModalVisible]);
 
   // Search queries
   const [customerSearch, setCustomerSearch] = useState("");
@@ -92,6 +110,8 @@ export default function BillingScreen() {
     } else {
       addToCart(product);
     }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    Alert.alert("Success", `Added ${product.name} to cart.`);
     setItemModalVisible(false);
   };
 
@@ -139,7 +159,7 @@ export default function BillingScreen() {
 
   const handleBarcodeScanned = ({ data }: BarcodeScanningResult) => {
     const code = data.trim();
-    Vibration.vibrate(100);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     setScannerVisible(false);
 
     const product = items.find((i: any) => i.sku === code);
@@ -179,58 +199,71 @@ export default function BillingScreen() {
       return;
     }
 
-    const payload = {
-      customerId: selectedCustomer.id,
-      items: cart.map((c) => ({
-        itemId: c.item.id,
-        qty: c.qty
-      })),
-      invoiceDate: new Date().toISOString()
-    };
+    Alert.alert(
+      "Confirm Submission",
+      "Are you sure you want to submit this invoice?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Submit Invoice",
+          style: "default",
+          onPress: async () => {
+            const payload = {
+              customerId: selectedCustomer.id,
+              items: cart.map((c) => ({
+                itemId: c.item.id,
+                qty: c.qty
+              })),
+              invoiceDate: new Date().toISOString()
+            };
 
-    if (isOffline) {
-      // Offline transaction
-      queueOfflineInvoice(payload);
-      Alert.alert(
-        "Offline Saved",
-        "Invoice saved offline and queued in the outbox. Inventory stocks have been adjusted optimistically.",
-        [
-          {
-            text: "OK",
-            onPress: () => {
-              clearCart();
-              setSelectedCustomer(null);
+            if (isOffline) {
+              // Offline transaction
+              queueOfflineInvoice(payload);
+              Alert.alert(
+                "Offline Saved",
+                "Invoice saved offline and queued in the outbox. Inventory stocks have been adjusted optimistically.",
+                [
+                  {
+                    text: "OK",
+                    onPress: () => {
+                      clearCart();
+                      setSelectedCustomer(null);
+                    }
+                  }
+                ]
+              );
+              return;
+            }
+
+            // Online submission
+            setSubmitting(true);
+            try {
+              await api.post("/transactions/sales-invoices", payload);
+              Alert.alert("Success", "Sales invoice created successfully.", [
+                {
+                  text: "OK",
+                  onPress: () => {
+                    clearCart();
+                    setSelectedCustomer(null);
+                    fetchInvoices().catch(console.error);
+                    fetchSummary().catch(console.error);
+                  }
+                }
+              ]);
+            } catch (err: any) {
+              console.error(err);
+              Alert.alert(
+                "Submission Failed",
+                err.response?.data?.error || err.message || "Failed to create sales invoice."
+              );
+            } finally {
+              setSubmitting(false);
             }
           }
-        ]
-      );
-      return;
-    }
-
-    // Online submission
-    setSubmitting(true);
-    try {
-      await api.post("/transactions/sales-invoices", payload);
-      Alert.alert("Success", "Sales invoice created successfully.", [
-        {
-          text: "OK",
-          onPress: () => {
-            clearCart();
-            setSelectedCustomer(null);
-            fetchInvoices().catch(console.error);
-            fetchSummary().catch(console.error);
-          }
         }
-      ]);
-    } catch (err: any) {
-      console.error(err);
-      Alert.alert(
-        "Submission Failed",
-        err.response?.data?.error || err.message || "Failed to create sales invoice."
-      );
-    } finally {
-      setSubmitting(false);
-    }
+      ]
+    );
   };
 
   // Filtered registers
@@ -245,172 +278,119 @@ export default function BillingScreen() {
   });
 
   return (
-    <SafeAreaView edges={["bottom", "left", "right"]} className="flex-1 bg-[#0A0F1D] px-5 pt-4">
+    <SafeAreaView edges={["bottom", "left", "right"]} className="flex-1 bg-[#0A0F1D]">
       <OfflineBanner />
 
-      <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
-        {/* Customer Section */}
-        <View className="bg-[#1A1F2E] border border-gray-800 rounded-3xl p-5 mb-4 shadow-lg">
-          <Text className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Customer</Text>
-          {selectedCustomer ? (
-            <View className="flex-row items-center justify-between bg-[#0A0F1D]/50 border border-gray-900 rounded-2xl p-4">
-              <View className="flex-1 pr-2">
-                <Text className="text-white text-base font-bold">{selectedCustomer.name}</Text>
-                <Text className="text-gray-500 text-xs mt-1">Mob: {selectedCustomer.mobile}</Text>
-              </View>
-              <TouchableOpacity onPress={() => setSelectedCustomer(null)}>
-                <Ionicons name="close-circle" size={24} color="#EF4444" />
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity
-              onPress={() => setCustomerModalVisible(true)}
-              className="flex-row items-center justify-between bg-[#0A0F1D]/50 border border-gray-900 border-dashed rounded-2xl p-4"
-            >
-              <Text className="text-gray-500 text-sm font-semibold">Select Customer Profile</Text>
-              <Ionicons name="chevron-forward" size={20} color="#6B7280" />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Toolbar Section */}
-        <View className="flex-row gap-3 mb-4">
-          <TouchableOpacity
-            onPress={() => setItemModalVisible(true)}
-            className="flex-1 bg-[#1A1F2E] border border-gray-800 py-3.5 rounded-2xl flex-row justify-center items-center shadow-lg"
-          >
-            <Ionicons name="add-circle-outline" size={20} color="#F7941D" />
-            <Text className="text-white font-bold ml-2 text-sm">Add Item</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleScanBarcode}
-            className="flex-1 bg-[#F7941D] py-3.5 rounded-2xl flex-row justify-center items-center shadow-lg shadow-[#F7941D]/10"
-          >
-            <Ionicons name="scan-outline" size={20} color="#FFF" />
-            <Text className="text-white font-black ml-2 text-sm">Scan Barcode</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Cart Listing */}
-        <View className="bg-[#1A1F2E] border border-gray-800 rounded-3xl p-5 mb-4 min-h-[160px] shadow-lg">
-          <Text className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Cart Items</Text>
-          
-          {cart.length === 0 ? (
-            <View className="flex-1 justify-center items-center py-10">
-              <Ionicons name="cart-outline" size={36} color="#4B5563" />
-              <Text className="text-gray-500 text-xs font-semibold mt-2">Billing cart is empty.</Text>
-            </View>
-          ) : (
-            cart.map((cartItem) => {
-              const subtotal = cartItem.item.salePrice * cartItem.qty;
-              const gst = (subtotal * (cartItem.item.gstPercentage || 0)) / 100;
-              const total = subtotal + gst;
-              
-              return (
-                <View key={cartItem.item.id} className="flex-row justify-between items-center py-3 border-b border-gray-800/40">
-                  <View className="flex-1 pr-3">
-                    <Text className="text-white text-sm font-bold" numberOfLines={1}>
-                      {cartItem.item.name}
-                    </Text>
-                    <Text className="text-gray-500 text-[10px] mt-0.5">
-                      Rate: ₹{cartItem.item.salePrice} | GST: {cartItem.item.gstPercentage}% (₹{gst.toFixed(1)})
-                    </Text>
+      <FlatList
+        data={cart}
+        keyExtractor={(item) => item.item.id.toString()}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ padding: 20, paddingBottom: 260 }}
+        ListHeaderComponent={
+          <>
+            {/* Customer Section */}
+            <Card className="mb-4">
+              <Text className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2 font-lexend">Customer</Text>
+              {selectedCustomer ? (
+                <View className="flex-row items-center justify-between bg-[#0A0F1D]/50 border border-gray-900 rounded-2xl p-4">
+                  <View className="flex-1 pr-2">
+                    <Text className="text-white text-base font-bold font-lexend">{selectedCustomer.name}</Text>
+                    <Text className="text-gray-400 text-xs mt-1 font-inter">Mob: {selectedCustomer.mobile}</Text>
                   </View>
-
-                  {/* Quantity Actions */}
-                  <View className="flex-row items-center gap-2">
-                    <TouchableOpacity
-                      onPress={() => handleUpdateQty(cartItem.item.id, -1)}
-                      className="w-8 h-8 rounded-full bg-[#0A0F1D] border border-gray-800 justify-center items-center"
-                    >
-                      <Ionicons name="remove" size={16} color="#FFF" />
-                    </TouchableOpacity>
-                    
-                    <Text className="text-white font-bold text-sm w-6 text-center">{cartItem.qty}</Text>
-
-                    <TouchableOpacity
-                      onPress={() => handleUpdateQty(cartItem.item.id, 1)}
-                      className="w-8 h-8 rounded-full bg-[#0A0F1D] border border-gray-800 justify-center items-center"
-                    >
-                      <Ionicons name="add" size={16} color="#FFF" />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      onPress={() => handleRemoveProduct(cartItem.item.id)}
-                      className="w-8 h-8 rounded-full bg-red-500/10 justify-center items-center ml-2"
-                    >
-                      <Ionicons name="trash-outline" size={16} color="#EF4444" />
-                    </TouchableOpacity>
-                  </View>
+                  <TouchableOpacity onPress={() => setSelectedCustomer(null)} className="min-h-[44px] min-w-[44px] justify-center items-center">
+                    <Ionicons name="close-circle" size={24} color="#EF4444" />
+                  </TouchableOpacity>
                 </View>
-              );
-            })
-          )}
+              ) : (
+                <Button label="Select Customer Profile" variant="outline" onPress={() => setCustomerModalVisible(true)} />
+              )}
+            </Card>
+
+            {/* Toolbar Section */}
+            <View className="flex-row gap-3 mb-4">
+              <Button
+                label="Add Item"
+                icon="add-circle-outline"
+                onPress={() => setItemModalVisible(true)}
+                variant="navy"
+                className="flex-1"
+              />
+              <Button
+                label="Scan"
+                icon="barcode-outline"
+                onPress={handleScanBarcode}
+                variant="navy"
+                className="flex-1"
+              />
+            </View>
+
+            <Text className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3 font-lexend ml-1">Cart Items</Text>
+          </>
+        }
+        ListEmptyComponent={
+          <View className="flex-1 justify-center items-center py-10 bg-[#1A1F2E] border border-gray-800 rounded-2xl">
+            <Ionicons name="cart-outline" size={36} color="#4B5563" />
+            <Text className="text-gray-400 text-xs font-semibold mt-2 font-inter">Billing cart is empty.</Text>
+          </View>
+        }
+        renderItem={({ item: cartItem, index }) => {
+          const isFirst = index === 0;
+          const isLast = index === cart.length - 1;
+          return (
+            <CartItemRow 
+              cartItem={cartItem} 
+              isFirst={isFirst}
+              isLast={isLast}
+              handleUpdateQty={handleUpdateQty} 
+              handleRemoveProduct={handleRemoveProduct} 
+            />
+          );
+        }}
+      />
+
+      {/* Sticky Bottom Footer (Absolute Positioned) */}
+      <View className="absolute bottom-0 left-0 right-0 bg-[#1A1F2E] p-5 border-t border-gray-800 rounded-t-3xl shadow-2xl">
+        <View className="flex-row gap-2 bg-[#0A0F1D]/50 p-1.5 rounded-2xl border border-gray-900 mb-4">
+          {(["CASH", "BANK", "UPI"] as const).map((mode) => {
+            const active = paymentMode === mode;
+            return (
+              <TouchableOpacity
+                key={mode}
+                onPress={() => setPaymentMode(mode)}
+                className={`flex-1 py-2 rounded-xl justify-center items-center ${
+                  active ? "bg-[#F7941D]" : ""
+                }`}
+              >
+                <Text className={`text-[10px] font-bold font-inter ${active ? "text-white" : "text-gray-400"}`}>
+                  {mode}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
-        {/* Payment Type */}
-        <View className="bg-[#1A1F2E] border border-gray-800 rounded-3xl p-5 mb-4 shadow-lg">
-          <Text className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Payment Mode</Text>
-          <View className="flex-row gap-2 bg-[#0A0F1D]/50 p-1.5 rounded-2xl border border-gray-900">
-            {(["CASH", "BANK", "UPI"] as const).map((mode) => {
-              const active = paymentMode === mode;
-              return (
-                <TouchableOpacity
-                  key={mode}
-                  onPress={() => setPaymentMode(mode)}
-                  className={`flex-1 py-2.5 rounded-xl justify-center items-center ${
-                    active ? "bg-[#F7941D]" : ""
-                  }`}
-                >
-                  <Text className={`text-xs font-bold ${active ? "text-white" : "text-gray-400"}`}>
-                    {mode}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+        <View className="flex-row justify-between items-center mb-4">
+          <View>
+            <Text className="text-gray-400 text-[10px] font-inter">Items: {cart.length}</Text>
+            <Text className="text-gray-400 text-[10px] font-inter">Tax: ₹{calculateGST().toFixed(2)}</Text>
+          </View>
+          <View className="items-end">
+            <Text className="text-gray-400 text-[10px] uppercase font-bold tracking-wider font-lexend">Grand Total</Text>
+            <Text className="text-[#F7941D] text-lg font-black font-lexend">₹{calculateGrandTotal().toFixed(2)}</Text>
           </View>
         </View>
 
-        {/* Calculations Summary */}
-        <View className="bg-[#1A1F2E] border border-gray-800 rounded-3xl p-5 mb-6 shadow-lg">
-          <Text className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Invoice Details</Text>
-          <View className="space-y-3">
-            <View className="flex-row justify-between">
-              <Text className="text-gray-500 text-xs">Total Items</Text>
-              <Text className="text-white text-xs font-bold">{cart.length}</Text>
-            </View>
-            <View className="flex-row justify-between border-t border-gray-800/40 pt-2.5">
-              <Text className="text-gray-500 text-xs">Subtotal (excl. Tax)</Text>
-              <Text className="text-white text-xs font-bold">₹{calculateSubtotal().toFixed(2)}</Text>
-            </View>
-            <View className="flex-row justify-between border-t border-gray-800/40 pt-2.5">
-              <Text className="text-gray-500 text-xs">Tax (GST)</Text>
-              <Text className="text-white text-xs font-bold">₹{calculateGST().toFixed(2)}</Text>
-            </View>
-            <View className="flex-row justify-between border-t border-gray-800/40 pt-2.5">
-              <Text className="text-gray-400 text-sm font-black">Grand Total</Text>
-              <Text className="text-[#F7941D] text-base font-black">₹{calculateGrandTotal().toFixed(2)}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Action button */}
-        <TouchableOpacity
+        <Button
+          label="Submit Invoice"
           onPress={handleSubmit}
-          disabled={submitting}
-          activeOpacity={0.9}
-          className="bg-[#F7941D] py-4.5 rounded-2xl flex-row justify-center items-center shadow-lg shadow-[#F7941D]/20 mb-10"
-        >
-          {submitting ? (
-            <ActivityIndicator size="small" color="#FFF" />
-          ) : (
-            <>
-              <Ionicons name="checkmark-done" size={20} color="#FFF" />
-              <Text className="text-white font-extrabold text-base ml-2">Submit Invoice</Text>
-            </>
-          )}
-        </TouchableOpacity>
-      </ScrollView>
+          loading={submitting}
+          disabled={cart.length === 0 || !selectedCustomer || (isOffline && !user)}
+          variant="primary"
+          className="w-full"
+        />
+      </View>
+
+
 
       {/* Customer Picker Modal */}
       <Modal
@@ -421,6 +401,7 @@ export default function BillingScreen() {
       >
         <View className="flex-1 bg-black/60 justify-end">
           <View className="bg-[#1A1F2E] border-t border-gray-800 rounded-t-3xl p-6 h-[75%]">
+            <View className="w-10 h-1 bg-gray-600 rounded-full mx-auto mb-4" />
             <View className="flex-row justify-between items-center mb-4">
               <Text className="text-white text-lg font-bold">Select Customer</Text>
               <TouchableOpacity onPress={() => setCustomerModalVisible(false)}>
@@ -432,11 +413,15 @@ export default function BillingScreen() {
             <View className="flex-row items-center bg-[#0A0F1D] border border-gray-800 rounded-xl px-3 py-1 mb-4">
               <Ionicons name="search" size={16} color="#6B7280" />
               <TextInput
-                className="flex-1 ml-2 h-10 text-white text-xs font-medium focus:outline-none"
+                ref={customerInputRef}
+                className="flex-1 ml-2 h-10 text-white text-xs font-medium"
                 placeholder="Search by customer name or phone..."
                 placeholderTextColor="#6B7280"
                 value={customerSearch}
                 onChangeText={setCustomerSearch}
+                returnKeyType="search"
+                onSubmitEditing={() => {}}
+                accessibilityLabel="Search customers"
               />
             </View>
 
@@ -444,7 +429,7 @@ export default function BillingScreen() {
               data={filteredCustomers}
               keyExtractor={(item) => item.id.toString()}
               ListEmptyComponent={
-                <Text className="text-gray-500 text-center py-4">No customers found.</Text>
+                <Text className="text-gray-400 text-center py-4">No customers found.</Text>
               }
               renderItem={({ item }) => (
                 <TouchableOpacity
@@ -456,8 +441,8 @@ export default function BillingScreen() {
                   className="bg-[#0A0F1D] border border-gray-800 p-4 rounded-xl mb-2 flex-row justify-between items-center"
                 >
                   <View>
-                    <Text className="text-white font-bold text-sm">{item.name}</Text>
-                    <Text className="text-gray-500 text-xs mt-1">Mob: {item.mobile}</Text>
+                    <Text className="text-white font-bold text-sm font-inter">{item.name}</Text>
+                    <Text className="text-gray-400 text-xs mt-1 font-inter">Mob: {item.mobile}</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={16} color="#F7941D" />
                 </TouchableOpacity>
@@ -476,6 +461,7 @@ export default function BillingScreen() {
       >
         <View className="flex-1 bg-black/60 justify-end">
           <View className="bg-[#1A1F2E] border-t border-gray-800 rounded-t-3xl p-6 h-[75%]">
+            <View className="w-10 h-1 bg-gray-600 rounded-full mx-auto mb-4" />
             <View className="flex-row justify-between items-center mb-4">
               <Text className="text-white text-lg font-bold">Add Product Item</Text>
               <TouchableOpacity onPress={() => setItemModalVisible(false)}>
@@ -487,11 +473,15 @@ export default function BillingScreen() {
             <View className="flex-row items-center bg-[#0A0F1D] border border-gray-800 rounded-xl px-3 py-1 mb-4">
               <Ionicons name="search" size={16} color="#6B7280" />
               <TextInput
-                className="flex-1 ml-2 h-10 text-white text-xs font-medium focus:outline-none"
+                ref={itemInputRef}
+                className="flex-1 ml-2 h-10 text-white text-xs font-medium"
                 placeholder="Search by product name or SKU..."
                 placeholderTextColor="#6B7280"
                 value={itemSearch}
                 onChangeText={setItemSearch}
+                returnKeyType="search"
+                onSubmitEditing={() => {}}
+                accessibilityLabel="Search products"
               />
             </View>
 
@@ -499,7 +489,7 @@ export default function BillingScreen() {
               data={filteredItems}
               keyExtractor={(item) => item.id.toString()}
               ListEmptyComponent={
-                <Text className="text-gray-500 text-center py-4">No products found.</Text>
+                <Text className="text-gray-400 text-center py-4">No products found.</Text>
               }
               renderItem={({ item }) => {
                 const stock = getBranchStock(item);
@@ -516,8 +506,8 @@ export default function BillingScreen() {
                     }`}
                   >
                     <View className="flex-1 pr-2">
-                      <Text className="text-white font-bold text-sm" numberOfLines={1}>{item.name}</Text>
-                      <Text className="text-gray-500 text-[10px] mt-1">
+                      <Text className="text-white font-bold text-sm font-inter" numberOfLines={1}>{item.name}</Text>
+                      <Text className="text-gray-400 text-[10px] mt-1 font-inter">
                         SKU: {item.sku || "N/A"} | Price: ₹{item.salePrice} | Tax: {item.gstPercentage}%
                       </Text>
                     </View>
@@ -592,4 +582,51 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     position: "relative",
   },
+});
+
+const CartItemRow = React.memo(({ cartItem, isFirst, isLast, handleUpdateQty, handleRemoveProduct }: any) => {
+  const subtotal = cartItem.item.salePrice * cartItem.qty;
+  const gst = (subtotal * (cartItem.item.gstPercentage || 0)) / 100;
+
+  return (
+    <View 
+      className={`bg-[#1A1F2E] flex-row justify-between items-center py-4 px-4 border-gray-800 
+      ${isFirst ? 'rounded-t-2xl' : ''} 
+      ${isLast ? 'rounded-b-2xl' : 'border-b'}`}
+    >
+      <View className="flex-1 pr-3">
+        <Text className="text-white text-sm font-bold font-lexend" numberOfLines={1}>
+          {cartItem.item.name}
+        </Text>
+        <Text className="text-gray-400 text-[10px] mt-0.5 font-inter">
+          Rate: ₹{cartItem.item.salePrice} | GST: {cartItem.item.gstPercentage}% (₹{gst.toFixed(1)})
+        </Text>
+      </View>
+
+      <View className="flex-row items-center gap-2">
+        <TouchableOpacity
+          onPress={() => handleUpdateQty(cartItem.item.id, -1)}
+          className="min-h-[44px] min-w-[44px] rounded-full bg-[#0A0F1D] border border-gray-800 justify-center items-center"
+        >
+          <Ionicons name="remove" size={16} color="#FFF" />
+        </TouchableOpacity>
+        
+        <Text className="text-white font-bold text-sm w-6 text-center font-inter">{cartItem.qty}</Text>
+
+        <TouchableOpacity
+          onPress={() => handleUpdateQty(cartItem.item.id, 1)}
+          className="min-h-[44px] min-w-[44px] rounded-full bg-[#0A0F1D] border border-gray-800 justify-center items-center"
+        >
+          <Ionicons name="add" size={16} color="#FFF" />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => handleRemoveProduct(cartItem.item.id)}
+          className="min-h-[44px] min-w-[44px] rounded-full bg-red-500/10 justify-center items-center ml-2"
+        >
+          <Ionicons name="trash-outline" size={16} color="#EF4444" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
 });

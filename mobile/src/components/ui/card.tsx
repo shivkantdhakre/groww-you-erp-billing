@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ViewProps, TextProps } from 'react-native';
+import { View, Text, ViewProps, TextProps, Platform } from 'react-native';
 
 interface CardProps extends ViewProps {
   children: React.ReactNode;
@@ -8,7 +8,16 @@ interface CardProps extends ViewProps {
 export function Card({ children, className = '', ...props }: CardProps) {
   return (
     <View 
-      className={`bg-[#1A1F2E] border border-gray-800 rounded-2xl p-5 shadow-xl ${className}`}
+      className={`bg-[#1A1F2E] border border-gray-800 rounded-2xl p-5 ${className}`}
+      style={[
+        Platform.OS === 'android' ? { elevation: 4 } : { 
+          shadowColor: '#000', 
+          shadowOffset: { width: 0, height: 2 }, 
+          shadowOpacity: 0.25, 
+          shadowRadius: 3.84 
+        },
+        props.style
+      ]}
       {...props}
     >
       {children}
