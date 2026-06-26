@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvo
 import { useStore } from "../../store/useStore";
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from '../../utils/secureStoreWrapper';
+import { Ionicons } from "@expo/vector-icons";
 
 export default function LoginScreen() {
   const login = useStore((state) => state.login);
@@ -10,6 +11,7 @@ export default function LoginScreen() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasBiometrics, setHasBiometrics] = useState(false);
   const [biometricsEnabled, setBiometricsEnabled] = useState(true);
@@ -129,15 +131,29 @@ export default function LoginScreen() {
             {/* Password Input */}
             <View className="mb-4">
               <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Password</Text>
-              <TextInput
-                className="bg-[#0E1321] border border-gray-800 rounded-xl px-4 py-3.5 text-white font-medium focus:border-primary"
-                placeholder="••••••••"
-                placeholderTextColor="#6B7280"
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-                editable={!loading}
-              />
+              <View className="relative justify-center">
+                <TextInput
+                  className="bg-[#0E1321] border border-gray-800 rounded-xl pl-4 pr-12 py-3.5 text-white font-medium focus:border-primary"
+                  placeholder="••••••••"
+                  placeholderTextColor="#6B7280"
+                  secureTextEntry={!showPassword}
+                  value={password}
+                  onChangeText={setPassword}
+                  editable={!loading}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 p-1"
+                  activeOpacity={0.7}
+                  disabled={loading}
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    size={20}
+                    color="#6B7280"
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Remember/Biometric Toggle */}

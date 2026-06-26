@@ -6,19 +6,27 @@ import NetInfo from '@react-native-community/netinfo';
 import { checkCompromisedDevice } from '../utils/security';
 import { Ionicons } from '@expo/vector-icons';
 import * as Sentry from '@sentry/react-native';
+import * as SplashScreen from 'expo-splash-screen';
 import '../global.css';
+
+// Prevent the splash screen from auto-hiding before asset/store hydration
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const navigationIntegration = Sentry.reactNavigationIntegration({
   enableTimeToInitialDisplay: true,
 });
 
-Sentry.init({
-  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN || "https://dummy@o0.ingest.sentry.io/0",
-  integrations: [
-    navigationIntegration,
-  ],
-  tracesSampleRate: 1.0,
-});
+try {
+  Sentry.init({
+    dsn: process.env.EXPO_PUBLIC_SENTRY_DSN || "https://dummy@o0.ingest.sentry.io/0",
+    integrations: [
+      navigationIntegration,
+    ],
+    tracesSampleRate: 1.0,
+  });
+} catch (e) {
+  console.warn('[Sentry] Initialization failed:', e);
+}
 
 function RootLayout() {
   const ref = useNavigationContainerRef();
@@ -38,6 +46,13 @@ function RootLayout() {
   const router = useRouter();
   const [authInitialized, setAuthInitialized] = useState(false);
   const [deviceCompromised, setDeviceCompromised] = useState(false);
+
+  // Hide splash screen once app hydration and checks are ready
+  useEffect(() => {
+    if (hasHydrated && (authInitialized || deviceCompromised)) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [hasHydrated, authInitialized, deviceCompromised]);
 
   // Proactive connection listener (active only after Zustand hydrates)
   useEffect(() => {
