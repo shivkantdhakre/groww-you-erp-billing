@@ -9,6 +9,8 @@ import { shareInvoicePDF } from "../../utils/pdfShare";
 export default function InvoicesScreen() {
   const invoices = useStore((state) => state.invoices);
   const fetchInvoices = useStore((state) => state.fetchInvoices);
+  const fetchMoreInvoices = useStore((state) => state.fetchMoreInvoices);
+  const loadingMoreInvoices = useStore((state) => state.loadingMoreInvoices);
   const isOffline = useStore((state) => state.isOffline);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -157,6 +159,17 @@ export default function InvoicesScreen() {
         keyExtractor={(item) => item.id.toString()}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#F7941D" />
+        }
+        onEndReached={() => {
+          fetchMoreInvoices();
+        }}
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={
+          loadingMoreInvoices ? (
+            <View className="py-4 justify-center items-center">
+              <ActivityIndicator size="small" color="#F7941D" />
+            </View>
+          ) : null
         }
         ListEmptyComponent={
           <View className="items-center py-20">

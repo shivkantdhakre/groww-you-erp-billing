@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from '../utils/secureStoreWrapper';
 import api from '../utils/api';
+import * as Sentry from '@sentry/react-native';
 
 export interface Branch {
   id: number;
@@ -35,6 +36,12 @@ interface StoreState {
   branches: Branch[];
   selectedBranchId: number | null;
   cart: CartItem[];
+  itemsPage: number;
+  itemsTotalPages: number;
+  loadingMoreItems: boolean;
+  invoicesPage: number;
+  invoicesTotalPages: number;
+  loadingMoreInvoices: boolean;
   addToCart: (item: any) => void;
   removeFromCart: (itemId: number) => void;
   updateCartQty: (itemId: number, qty: number) => void;
@@ -56,7 +63,9 @@ interface StoreState {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   fetchItems: () => Promise<void>;
+  fetchMoreItems: () => Promise<void>;
   fetchInvoices: () => Promise<void>;
+  fetchMoreInvoices: () => Promise<void>;
   fetchCustomers: () => Promise<void>;
   fetchSummary: () => Promise<void>;
   upsertCachedItem: (item: any) => void;
@@ -82,6 +91,12 @@ export const useStore = create<StoreState>()(
       branches: [],
       selectedBranchId: null,
       cart: [],
+      itemsPage: 1,
+      itemsTotalPages: 1,
+      loadingMoreItems: false,
+      invoicesPage: 1,
+      invoicesTotalPages: 1,
+      loadingMoreInvoices: false,
 
       setToken: async (token) => {
         if (token) {
@@ -129,6 +144,13 @@ export const useStore = create<StoreState>()(
       clearCart: () => set({ cart: [] }),
       setSelectedBranchId: (branchId) => {
         set({ selectedBranchId: branchId, items: [], summary: null, invoices: [] });
+        if (get().user) {
+          Sentry.setUser({
+            id: get().user.id.toString(),
+            email: get().user.email,
+            segment: `branch_${branchId || 0}`
+          });
+        }
         // Immediately trigger fresh fetches for the new branch context
         const { fetchItems, fetchSummary, fetchInvoices } = get();
         fetchItems().catch(console.error);
@@ -249,6 +271,12 @@ export const useStore = create<StoreState>()(
             manualLogout: false,
             selectedBranchId: defaultBranchId
           });
+          // Inject Sentry User Context
+          Sentry.setUser({
+            id: user.id.toString(),
+            email: user.email,
+            segment: `branch_${defaultBranchId || 0}`
+          });
         } catch (err: any) {
           throw new Error(err.response?.data?.error || err.response?.data?.message || err.message || "Login failed");
         } finally {
@@ -266,14 +294,20 @@ export const useStore = create<StoreState>()(
           selectedBranchId: null,
           manualLogout: true 
         });
+        // Clear Sentry User Context
+        Sentry.setUser(null);
       },
 
       fetchItems: async () => {
+        if (get().loadingMoreItems) return;
+        set({ loading: true });
         try {
-          const res = await api.get('/masters/items?limit=1000');
+          const res = await api.get('/masters/items?limit=50&page=1');
           const itemsData = res.data.data || res.data;
           set({ 
             items: itemsData, 
+            itemsPage: 1,
+            itemsTotalPages: res.data.pagination?.totalPages || 1,
             isOffline: false, 
             lastSyncedAt: new Date().toISOString() 
           });
@@ -283,15 +317,53 @@ export const useStore = create<StoreState>()(
             set({ isOffline: true });
           }
           throw err;
+        } finally {
+          set({ loading: false });
+        }
+      },
+
+      fetchMoreItems: async () => {
+        const { itemsPage, itemsTotalPages, loadingMoreItems, isOffline, loading } = get();
+        if (isOffline || loadingMoreItems || loading || itemsPage >= itemsTotalPages) return;
+        
+        set({ loadingMoreItems: true });
+        try {
+          const nextPage = itemsPage + 1;
+          const res = await api.get(`/masters/items?limit=50&page=${nextPage}`);
+          const resData = res.data.data || res.data;
+          
+          set((state) => {
+            const combined = [...state.items, ...resData];
+            // Deduplicate by ID to prevent FlatList crash
+            const uniqueItems = Array.from(new Map(combined.map(item => [item.id, item])).values());
+            
+            return {
+              items: uniqueItems,
+              itemsPage: nextPage,
+              itemsTotalPages: res.data.pagination?.totalPages || 1,
+              isOffline: false
+            };
+          });
+        } catch (err: any) {
+          console.error("Failed to fetch more items:", err);
+          if (!err.response || err.code === 'ERR_NETWORK') {
+            set({ isOffline: true });
+          }
+        } finally {
+          set({ loadingMoreItems: false });
         }
       },
 
       fetchInvoices: async () => {
+        if (get().loadingMoreInvoices) return;
+        set({ loading: true });
         try {
-          const res = await api.get('/transactions/sales-invoices?limit=50');
+          const res = await api.get('/transactions/sales-invoices?limit=50&page=1');
           const invoicesData = res.data.data || res.data;
           set({ 
             invoices: invoicesData, 
+            invoicesPage: 1,
+            invoicesTotalPages: res.data.pagination?.totalPages || 1,
             isOffline: false, 
             lastSyncedAt: new Date().toISOString() 
           });
@@ -301,6 +373,39 @@ export const useStore = create<StoreState>()(
             set({ isOffline: true });
           }
           throw err;
+        } finally {
+          set({ loading: false });
+        }
+      },
+
+      fetchMoreInvoices: async () => {
+        const { invoicesPage, invoicesTotalPages, loadingMoreInvoices, isOffline, loading } = get();
+        if (isOffline || loadingMoreInvoices || loading || invoicesPage >= invoicesTotalPages) return;
+        
+        set({ loadingMoreInvoices: true });
+        try {
+          const nextPage = invoicesPage + 1;
+          const res = await api.get(`/transactions/sales-invoices?limit=50&page=${nextPage}`);
+          const resData = res.data.data || res.data;
+          
+          set((state) => {
+            const combined = [...state.invoices, ...resData];
+            const uniqueInvoices = Array.from(new Map(combined.map(inv => [inv.id, inv])).values());
+            
+            return {
+              invoices: uniqueInvoices,
+              invoicesPage: nextPage,
+              invoicesTotalPages: res.data.pagination?.totalPages || 1,
+              isOffline: false
+            };
+          });
+        } catch (err: any) {
+          console.error("Failed to fetch more invoices:", err);
+          if (!err.response || err.code === 'ERR_NETWORK') {
+            set({ isOffline: true });
+          }
+        } finally {
+          set({ loadingMoreInvoices: false });
         }
       },
 

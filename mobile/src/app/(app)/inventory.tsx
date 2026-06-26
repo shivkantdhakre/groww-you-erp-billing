@@ -8,6 +8,8 @@ import { OfflineBanner } from "../../components/offline-banner";
 export default function InventoryScreen() {
   const items = useStore((state) => state.items);
   const fetchItems = useStore((state) => state.fetchItems);
+  const fetchMoreItems = useStore((state) => state.fetchMoreItems);
+  const loadingMoreItems = useStore((state) => state.loadingMoreItems);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [refreshing, setRefreshing] = useState(false);
@@ -195,6 +197,15 @@ export default function InventoryScreen() {
             </View>
           );
         }}
+        onEndReached={fetchMoreItems}
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={
+          loadingMoreItems ? (
+            <View className="py-4 justify-center items-center">
+              <ActivityIndicator size="small" color="#F7941D" />
+            </View>
+          ) : null
+        }
       />
     </SafeAreaView>
   );

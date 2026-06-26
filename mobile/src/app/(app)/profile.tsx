@@ -206,6 +206,15 @@ export default function ProfileScreen() {
               <Text className="text-gray-400 text-xs">Client Version</Text>
               <Text className="text-gray-500 text-xs font-semibold">Groww You v1.0.0</Text>
             </View>
+            <TouchableOpacity
+              onPress={() => {
+                throw new Error("Sentry Test Crash");
+              }}
+              className="mt-3 bg-red-500/10 border border-red-500/20 py-2.5 rounded-xl flex-row justify-center items-center"
+            >
+              <Ionicons name="bug-outline" size={16} color="#EF4444" />
+              <Text className="text-red-500 font-bold ml-2 text-xs">Trigger Sentry Test Crash</Text>
+            </TouchableOpacity>
           </View>
         </View>
 

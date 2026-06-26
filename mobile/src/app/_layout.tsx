@@ -1,18 +1,39 @@
 import { useEffect, useState } from 'react';
 import { useColorScheme, View, ActivityIndicator, Text } from 'react-native';
-import { DarkTheme, DefaultTheme, ThemeProvider, Slot, useRouter, useSegments } from 'expo-router';
+import { DarkTheme, DefaultTheme, ThemeProvider, Slot, useRouter, useSegments, useNavigationContainerRef } from 'expo-router';
 import { useStore } from '../store/useStore';
 import NetInfo from '@react-native-community/netinfo';
 import { checkCompromisedDevice } from '../utils/security';
 import { Ionicons } from '@expo/vector-icons';
+import * as Sentry from '@sentry/react-native';
 import '../global.css';
 
-export default function RootLayout() {
+const navigationIntegration = Sentry.reactNavigationIntegration({
+  enableTimeToInitialDisplay: true,
+});
+
+Sentry.init({
+  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN || "https://dummy@o0.ingest.sentry.io/0",
+  integrations: [
+    navigationIntegration,
+  ],
+  tracesSampleRate: 1.0,
+});
+
+function RootLayout() {
+  const ref = useNavigationContainerRef();
+
+  useEffect(() => {
+    if (ref) {
+      navigationIntegration.registerNavigationContainer(ref);
+    }
+  }, [ref]);
   const colorScheme = useColorScheme();
   const token = useStore((state) => state.token);
   const initializeAuth = useStore((state) => state.initializeAuth);
   const hasHydrated = useStore((state) => state.hasHydrated);
   const setOffline = useStore((state) => state.setOffline);
+  const syncOfflineOutbox = useStore((state) => state.syncOfflineOutbox);
   const segments = useSegments();
   const router = useRouter();
   const [authInitialized, setAuthInitialized] = useState(false);
@@ -23,10 +44,18 @@ export default function RootLayout() {
     if (!hasHydrated) return;
 
     const unsubscribe = NetInfo.addEventListener((state) => {
-      setOffline(!state.isConnected);
+      const wasOffline = useStore.getState().isOffline;
+      const isNowConnected = state.isConnected ?? false;
+      setOffline(!isNowConnected);
+      
+      // Auto-flush the outbox immediately when returning online
+      if (wasOffline && isNowConnected) {
+        console.log('[Sync] Network connection restored. Initializing outbox sync.');
+        syncOfflineOutbox();
+      }
     });
     return () => unsubscribe();
-  }, [hasHydrated, setOffline]);
+  }, [hasHydrated, setOffline, syncOfflineOutbox]);
 
   // Run security checks and load JWT token on app launch
   useEffect(() => {
@@ -41,12 +70,17 @@ export default function RootLayout() {
       } else {
         initializeAuth().then(() => {
           setAuthInitialized(true);
+          // Try flushing outbox immediately on startup if online
+          const isConnected = !useStore.getState().isOffline;
+          if (isConnected) {
+            syncOfflineOutbox();
+          }
         });
       }
     };
 
     runSecurityChecks();
-  }, [initializeAuth, hasHydrated]);
+  }, [initializeAuth, hasHydrated, syncOfflineOutbox]);
 
   // Handle route guards (redirect unauthorized to login and authorized to app tabs)
   useEffect(() => {
@@ -95,3 +129,5 @@ export default function RootLayout() {
     </ThemeProvider>
   );
 }
+
+export default Sentry.wrap(RootLayout);

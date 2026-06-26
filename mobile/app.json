@@ -43,7 +43,14 @@
         }
       ],
       "expo-secure-store",
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "groww-you",
+          "project": "groww-you-erp-mobile"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
