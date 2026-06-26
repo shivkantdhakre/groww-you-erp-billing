@@ -7,18 +7,21 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://localhost:5000/api"
+        "EXPO_PUBLIC_API_URL": "http://localhost:5000/api",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://groww-you-erp-billing.onrender.com/api"
+        "EXPO_PUBLIC_API_URL": "https://groww-you-erp-billing.onrender.com/api",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
     "production": {
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://groww-you-erp-billing.onrender.com/api"
+        "EXPO_PUBLIC_API_URL": "https://groww-you-erp-billing.onrender.com/api",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     }
   },
