@@ -1,0 +1,279 @@
+import React, { useEffect, useState } from "react";
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, FlatList } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useStore, Branch } from "../../store/useStore";
+import { Ionicons } from "@expo/vector-icons";
+import { OfflineBanner } from "../../components/offline-banner";
+
+export default function ProfileScreen() {
+  const user = useStore((state) => state.user);
+  const branches = useStore((state) => state.branches);
+  const selectedBranchId = useStore((state) => state.selectedBranchId);
+  const offlineOutbox = useStore((state) => state.offlineOutbox);
+  const isOffline = useStore((state) => state.isOffline);
+  const lastSyncedAt = useStore((state) => state.lastSyncedAt);
+
+  const fetchBranches = useStore((state) => state.fetchBranches);
+  const setSelectedBranchId = useStore((state) => state.setSelectedBranchId);
+  const syncOfflineOutbox = useStore((state) => state.syncOfflineOutbox);
+  const logout = useStore((state) => state.logout);
+
+  const [syncing, setSyncing] = useState(false);
+  const [loadingBranches, setLoadingBranches] = useState(false);
+  const [branchSelectorVisible, setBranchSelectorVisible] = useState(false);
+
+  useEffect(() => {
+    if (user && (user.role === "SUPER_ADMIN" || user.role === "COMPANY_ADMIN")) {
+      setLoadingBranches(true);
+      fetchBranches()
+        .catch((err) => console.error("Failed to load branches:", err))
+        .finally(() => setLoadingBranches(false));
+    }
+  }, [user]);
+
+  const activeBranch = branches.find((b) => b.id === selectedBranchId) || {
+    id: selectedBranchId || 0,
+    name: user?.branchId ? `Branch #${user.branchId}` : "HQ - Main Branch",
+    companyId: user?.companyId || 0,
+    isActive: true,
+    address: null,
+    mobileNumber: null,
+    pincode: null
+  } as Branch;
+
+  const handleSync = async () => {
+    if (isOffline) {
+      Alert.alert("Offline Mode", "Cannot sync while device is offline.");
+      return;
+    }
+    setSyncing(true);
+    try {
+      await syncOfflineOutbox();
+      Alert.alert("Sync Complete", "Offline outbox synced successfully.");
+    } catch (err: any) {
+      Alert.alert("Sync Warning", "Some items failed to sync. Check network connectivity.");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const isAdmin = user?.role === "SUPER_ADMIN" || user?.role === "COMPANY_ADMIN";
+
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case "SUPER_ADMIN":
+        return "Super Admin";
+      case "COMPANY_ADMIN":
+        return "Company Admin";
+      case "STAFF":
+        return "Staff Member";
+      default:
+        return role;
+    }
+  };
+
+  return (
+    <SafeAreaView edges={["bottom", "left", "right"]} className="flex-1 bg-[#0A0F1D] px-5 pt-4">
+      <OfflineBanner />
+
+      <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+        {/* User Card */}
+        <View className="bg-[#1A1F2E] border border-gray-800 rounded-3xl p-6 mb-5 items-center shadow-lg">
+          <View className="w-20 h-20 rounded-full bg-[#F7941D]/10 border border-[#F7941D]/20 justify-center items-center mb-4">
+            <Ionicons name="person" size={40} color="#F7941D" />
+          </View>
+          <Text className="text-white text-xl font-bold">{user?.name || "Groww You Member"}</Text>
+          <Text className="text-gray-400 text-sm mt-1">{user?.email || ""}</Text>
+          
+          <View className="bg-[#F7941D]/10 border border-[#F7941D]/20 px-3 py-1 rounded-full mt-3">
+            <Text className="text-[#F7941D] text-xs font-semibold">
+              {getRoleLabel(user?.role || "")}
+            </Text>
+          </View>
+        </View>
+
+        {/* Branch Section */}
+        <View className="bg-[#1A1F2E] border border-gray-800 rounded-3xl p-5 mb-5 shadow-lg">
+          <View className="flex-row items-center justify-between mb-4">
+            <View className="flex-row items-center">
+              <Ionicons name="git-branch-outline" size={22} color="#F7941D" />
+              <Text className="text-white text-base font-bold ml-3">Active Branch</Text>
+            </View>
+            {isAdmin && (
+              <TouchableOpacity 
+                onPress={() => setBranchSelectorVisible(true)}
+                className="bg-[#F7941D] px-3 py-1.5 rounded-xl"
+              >
+                <Text className="text-white text-xs font-bold">Switch</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View className="bg-[#0A0F1D]/50 border border-gray-900 rounded-2xl p-4">
+            <Text className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Branch Name</Text>
+            <Text className="text-white text-lg font-bold mt-1">{activeBranch.name}</Text>
+            {activeBranch.address && (
+              <Text className="text-gray-500 text-xs mt-1">{activeBranch.address}</Text>
+            )}
+          </View>
+          
+          {loadingBranches && (
+            <ActivityIndicator size="small" color="#F7941D" className="mt-3" />
+          )}
+        </View>
+
+        {/* Offline Sync Outbox Status Card */}
+        <View className="bg-[#1A1F2E] border border-gray-800 rounded-3xl p-5 mb-5 shadow-lg">
+          <View className="flex-row items-center justify-between mb-4">
+            <View className="flex-row items-center">
+              <Ionicons name="cloud-upload-outline" size={22} color="#F7941D" />
+              <Text className="text-white text-base font-bold ml-3">Sync Outbox</Text>
+            </View>
+            {offlineOutbox.length > 0 && (
+              <TouchableOpacity 
+                disabled={syncing}
+                onPress={handleSync}
+                className="bg-emerald-500 px-3 py-1.5 rounded-xl flex-row items-center"
+              >
+                {syncing ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <>
+                    <Ionicons name="sync" size={14} color="#FFF" className="mr-1" />
+                    <Text className="text-white text-xs font-bold">Sync Now</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View className="flex-row justify-between items-center mb-4 bg-[#0A0F1D]/50 border border-gray-900 rounded-2xl p-4">
+            <View>
+              <Text className="text-gray-400 text-xs font-semibold uppercase">Pending Transactions</Text>
+              <Text className="text-white text-2xl font-black mt-1">{offlineOutbox.length}</Text>
+            </View>
+            <View className="items-end">
+              <Text className="text-gray-500 text-xs uppercase">Last Synced</Text>
+              <Text className="text-gray-400 text-xs mt-1">
+                {lastSyncedAt ? new Date(lastSyncedAt).toLocaleTimeString() : "Never"}
+              </Text>
+            </View>
+          </View>
+
+          {offlineOutbox.length > 0 ? (
+            <View className="max-h-40 border-t border-gray-800 pt-3">
+              <Text className="text-gray-400 text-xs mb-2">Queue details:</Text>
+              <FlatList
+                data={offlineOutbox}
+                keyExtractor={(item) => item.id}
+                scrollEnabled={false}
+                renderItem={({ item }) => (
+                  <View className="flex-row justify-between items-center py-2 border-b border-gray-800/30">
+                    <View className="flex-row items-center">
+                      <Ionicons name="receipt-outline" size={14} color="#9CA3AF" />
+                      <Text className="text-gray-300 text-xs ml-2 font-medium">Invoice</Text>
+                    </View>
+                    <Text className="text-gray-500 text-[10px]">
+                      {new Date(item.createdAt).toLocaleTimeString()}
+                    </Text>
+                  </View>
+                )}
+              />
+            </View>
+          ) : (
+            <Text className="text-gray-500 text-xs text-center py-2">
+              All transactions have been synchronized to Render backend.
+            </Text>
+          )}
+        </View>
+
+        {/* Security & System Info */}
+        <View className="bg-[#1A1F2E] border border-gray-800 rounded-3xl p-5 mb-8 shadow-lg">
+          <View className="flex-row items-center mb-4">
+            <Ionicons name="shield-checkmark-outline" size={22} color="#F7941D" />
+            <Text className="text-white text-base font-bold ml-3">System Security</Text>
+          </View>
+          <View className="space-y-3">
+            <View className="flex-row justify-between py-1.5">
+              <Text className="text-gray-400 text-xs">Biometrics Enabled</Text>
+              <Text className="text-emerald-500 text-xs font-bold">Secure</Text>
+            </View>
+            <View className="flex-row justify-between py-1.5 border-t border-gray-800/40">
+              <Text className="text-gray-400 text-xs">Jailbreak Guard</Text>
+              <Text className="text-emerald-500 text-xs font-bold">Active</Text>
+            </View>
+            <View className="flex-row justify-between py-1.5 border-t border-gray-800/40">
+              <Text className="text-gray-400 text-xs">Client Version</Text>
+              <Text className="text-gray-500 text-xs font-semibold">Groww You v1.0.0</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Logout Button */}
+        <TouchableOpacity
+          onPress={logout}
+          activeOpacity={0.9}
+          className="bg-red-500/10 border border-red-500/20 py-4 rounded-2xl flex-row justify-center items-center mb-10"
+        >
+          <Ionicons name="log-out" size={20} color="#EF4444" />
+          <Text className="text-red-500 font-bold ml-2 text-base">Logout Account</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      {/* Branch Selector Modal */}
+      <Modal
+        visible={branchSelectorVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setBranchSelectorVisible(false)}
+      >
+        <View className="flex-1 bg-black/60 justify-end">
+          <View className="bg-[#1A1F2E] border-t border-gray-800 rounded-t-3xl p-6 max-h-[70%]">
+            <View className="flex-row justify-between items-center mb-6">
+              <Text className="text-white text-lg font-bold">Select Active Branch</Text>
+              <TouchableOpacity onPress={() => setBranchSelectorVisible(false)}>
+                <Ionicons name="close" size={24} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
+
+            <FlatList
+              data={branches}
+              keyExtractor={(item) => item.id.toString()}
+              ListEmptyComponent={
+                <Text className="text-gray-500 text-center py-4">No branches registered.</Text>
+              }
+              renderItem={({ item }) => {
+                const isSelected = item.id === selectedBranchId;
+                return (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSelectedBranchId(item.id);
+                      setBranchSelectorVisible(false);
+                    }}
+                    className={`flex-row justify-between items-center p-4 mb-2 rounded-2xl border ${
+                      isSelected
+                        ? "bg-[#F7941D]/10 border-[#F7941D]/30"
+                        : "bg-[#0A0F1D] border-gray-800"
+                    }`}
+                  >
+                    <View>
+                      <Text className={`font-bold ${isSelected ? "text-[#F7941D]" : "text-white"}`}>
+                        {item.name}
+                      </Text>
+                      {item.address && (
+                        <Text className="text-gray-500 text-xs mt-1">{item.address}</Text>
+                      )}
+                    </View>
+                    {isSelected && (
+                      <Ionicons name="checkmark-circle" size={20} color="#F7941D" />
+                    )}
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+}

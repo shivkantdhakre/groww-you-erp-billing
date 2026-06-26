@@ -20,7 +20,7 @@ const api = axios.create({
   },
 });
 
-// Request Interceptor: Retrieve JWT from SecureStore and inject into headers
+// Request Interceptor: Retrieve JWT from SecureStore and inject into headers, alongside x-branch-id
 api.interceptors.request.use(
   async (config) => {
     try {
@@ -28,8 +28,12 @@ api.interceptors.request.use(
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
+      const selectedBranchId = useStore.getState().selectedBranchId;
+      if (selectedBranchId) {
+        config.headers['x-branch-id'] = selectedBranchId.toString();
+      }
     } catch (e) {
-      console.error('Failed to read auth token from SecureStore:', e);
+      console.error('Failed to read auth token or branch info:', e);
     }
     return config;
   },

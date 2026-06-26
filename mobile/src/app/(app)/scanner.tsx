@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Vibration } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Vibration, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { useStore } from '../../store/useStore';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../utils/api';
+import { router } from 'expo-router';
 
 export default function ScannerScreen() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -85,6 +86,42 @@ export default function ScannerScreen() {
     setScanned(false);
     setScannedItem(null);
     setScannedCode(null);
+  };
+
+  const handleAddToBilling = () => {
+    if (scannedItem) {
+      // Check branch stock first
+      const selectedBranchId = useStore.getState().selectedBranchId;
+      const getBranchStock = (item: any) => {
+        if (!item.branchStocks || item.branchStocks.length === 0) {
+          return item.openingStock || 0;
+        }
+        const bs = item.branchStocks.find((s: any) => s.branchId === selectedBranchId);
+        return bs ? bs.stock : 0;
+      };
+      const stock = getBranchStock(scannedItem);
+      
+      if (stock <= 0) {
+        Alert.alert("Out of Stock", `"${scannedItem.name}" has no stock available in this branch.`);
+        return;
+      }
+
+      // Add to store cart
+      useStore.getState().addToCart(scannedItem);
+      Alert.alert("Added to Cart", `"${scannedItem.name}" has been added to your billing cart.`, [
+        {
+          text: "Go to Billing",
+          onPress: () => {
+            handleReset();
+            router.push('/billing' as any);
+          }
+        },
+        {
+          text: "Scan More",
+          onPress: handleReset
+        }
+      ]);
+    }
   };
 
   const formatCurrency = (val: number) => {
@@ -178,13 +215,24 @@ export default function ScannerScreen() {
             </View>
           )}
 
-          {/* Dismiss Action Button */}
-          <TouchableOpacity
-            onPress={handleReset}
-            className="w-full bg-secondary py-4 rounded-xl items-center shadow-lg shadow-secondary/10"
-          >
-            <Text className="text-white font-extrabold text-sm uppercase tracking-wider">Scan Next Item</Text>
-          </TouchableOpacity>
+          {/* Dismiss & Add to Cart Actions */}
+          <View className="gap-3">
+            {scannedItem && (
+              <TouchableOpacity
+                onPress={handleAddToBilling}
+                className="w-full bg-[#F7941D] py-4 rounded-xl items-center shadow-lg shadow-[#F7941D]/10"
+              >
+                <Text className="text-white font-extrabold text-sm uppercase tracking-wider">Add to Billing Cart</Text>
+              </TouchableOpacity>
+            )}
+            
+            <TouchableOpacity
+              onPress={handleReset}
+              className="w-full bg-secondary py-4 rounded-xl items-center shadow-lg shadow-secondary/10"
+            >
+              <Text className="text-white font-extrabold text-sm uppercase tracking-wider">Scan Next Item</Text>
+            </TouchableOpacity>
+          </View>
 
         </View>
       )}
