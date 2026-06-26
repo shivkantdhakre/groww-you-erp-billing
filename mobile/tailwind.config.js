@@ -19,12 +19,12 @@ module.exports = {
         '2xl': '24px',
       },
       colors: {
-        primary: {
-          DEFAULT: "#1B3A5C", // Deep Navy brand color
+        'brand-navy': {
+          DEFAULT: "#1B3A5C",
           foreground: "#FFFFFF",
         },
-        secondary: {
-          DEFAULT: "#F7941D", // Orange accent brand color
+        'action-orange': {
+          DEFAULT: "#F7941D",
           foreground: "#FFFFFF",
         },
       },

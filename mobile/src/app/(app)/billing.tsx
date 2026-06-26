@@ -8,9 +8,9 @@ import {
   Modal,
   FlatList,
   Alert,
-  ActivityIndicator,
   StyleSheet
 } from "react-native";
+import BottomSheet, { BottomSheetBackdrop, BottomSheetTextInput, BottomSheetFlatList } from "@gorhom/bottom-sheet";
 import * as Haptics from "expo-haptics";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card } from "../../components/ui/card";
@@ -31,6 +31,7 @@ export default function BillingScreen() {
   const customers = useStore((state) => state.customers);
   const selectedBranchId = useStore((state) => state.selectedBranchId);
   const isOffline = useStore((state) => state.isOffline);
+  const user = useStore((state) => state.user);
   
   const fetchItems = useStore((state) => state.fetchItems);
   const fetchCustomers = useStore((state) => state.fetchCustomers);
@@ -49,26 +50,9 @@ export default function BillingScreen() {
   const [paymentMode, setPaymentMode] = useState<"CASH" | "BANK" | "UPI">("CASH");
   const [submitting, setSubmitting] = useState(false);
 
-  // Modals visibility
-  const [customerModalVisible, setCustomerModalVisible] = useState(false);
-  const [itemModalVisible, setItemModalVisible] = useState(false);
+  const customerSheetRef = useRef<BottomSheet>(null);
+  const itemSheetRef = useRef<BottomSheet>(null);
   const [scannerVisible, setScannerVisible] = useState(false);
-
-  // Focus refs
-  const customerInputRef = useRef<TextInput>(null);
-  const itemInputRef = useRef<TextInput>(null);
-
-  useEffect(() => {
-    if (customerModalVisible) {
-      setTimeout(() => customerInputRef.current?.focus(), 100);
-    }
-  }, [customerModalVisible]);
-
-  useEffect(() => {
-    if (itemModalVisible) {
-      setTimeout(() => itemInputRef.current?.focus(), 100);
-    }
-  }, [itemModalVisible]);
 
   // Search queries
   const [customerSearch, setCustomerSearch] = useState("");
@@ -112,7 +96,7 @@ export default function BillingScreen() {
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     Alert.alert("Success", `Added ${product.name} to cart.`);
-    setItemModalVisible(false);
+    itemSheetRef.current?.close();
   };
 
   const handleUpdateQty = (productId: number, change: number) => {
@@ -302,7 +286,7 @@ export default function BillingScreen() {
                   </TouchableOpacity>
                 </View>
               ) : (
-                <Button label="Select Customer Profile" variant="outline" onPress={() => setCustomerModalVisible(true)} />
+                <Button label="Select Customer Profile" variant="outline" onPress={() => customerSheetRef.current?.expand()} />
               )}
             </Card>
 
@@ -311,7 +295,7 @@ export default function BillingScreen() {
               <Button
                 label="Add Item"
                 icon="add-circle-outline"
-                onPress={() => setItemModalVisible(true)}
+                onPress={() => itemSheetRef.current?.expand()}
                 variant="navy"
                 className="flex-1"
               />
@@ -356,6 +340,8 @@ export default function BillingScreen() {
             return (
               <TouchableOpacity
                 key={mode}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
                 onPress={() => setPaymentMode(mode)}
                 className={`flex-1 py-2 rounded-xl justify-center items-center ${
                   active ? "bg-[#F7941D]" : ""
@@ -392,137 +378,133 @@ export default function BillingScreen() {
 
 
 
-      {/* Customer Picker Modal */}
-      <Modal
-        visible={customerModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setCustomerModalVisible(false)}
+      {/* Customer Picker Bottom Sheet */}
+      <BottomSheet
+        ref={customerSheetRef}
+        index={-1}
+        snapPoints={['75%']}
+        enablePanDownToClose
+        backdropComponent={(props) => <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.6} />}
+        backgroundStyle={{ backgroundColor: '#1A1F2E' }}
+        handleIndicatorStyle={{ backgroundColor: '#4B5563', width: 40 }}
       >
-        <View className="flex-1 bg-black/60 justify-end">
-          <View className="bg-[#1A1F2E] border-t border-gray-800 rounded-t-3xl p-6 h-[75%]">
-            <View className="w-10 h-1 bg-gray-600 rounded-full mx-auto mb-4" />
-            <View className="flex-row justify-between items-center mb-4">
-              <Text className="text-white text-lg font-bold">Select Customer</Text>
-              <TouchableOpacity onPress={() => setCustomerModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#9CA3AF" />
+        <View className="flex-1 p-6 pt-2">
+          <View className="flex-row justify-between items-center mb-4">
+            <Text className="text-white text-lg font-bold">Select Customer</Text>
+            <TouchableOpacity onPress={() => customerSheetRef.current?.close()}>
+              <Ionicons name="close" size={24} color="#9CA3AF" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Customer Search Bar */}
+          <View className="flex-row items-center bg-[#0A0F1D] border border-gray-800 rounded-xl px-3 py-1 mb-4">
+            <Ionicons name="search" size={16} color="#6B7280" />
+            <BottomSheetTextInput
+              className="flex-1 ml-2 h-10 text-white text-xs font-medium"
+              placeholder="Search by customer name or phone..."
+              placeholderTextColor="#6B7280"
+              value={customerSearch}
+              onChangeText={setCustomerSearch}
+              returnKeyType="search"
+              accessibilityLabel="Search customers"
+            />
+          </View>
+
+          <BottomSheetFlatList
+            data={filteredCustomers}
+            keyExtractor={(item) => item.id.toString()}
+            ListEmptyComponent={
+              <Text className="text-gray-400 text-center py-4">No customers found.</Text>
+            }
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                onPress={() => {
+                  setSelectedCustomer(item);
+                  customerSheetRef.current?.close();
+                  setCustomerSearch("");
+                }}
+                className="bg-[#0A0F1D] border border-gray-800 p-4 rounded-xl mb-2 flex-row justify-between items-center"
+              >
+                <View>
+                  <Text className="text-white font-bold text-sm font-inter">{item.name}</Text>
+                  <Text className="text-gray-400 text-xs mt-1 font-inter">Mob: {item.mobile}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#F7941D" />
               </TouchableOpacity>
-            </View>
+            )}
+          />
+        </View>
+      </BottomSheet>
 
-            {/* Customer Search Bar */}
-            <View className="flex-row items-center bg-[#0A0F1D] border border-gray-800 rounded-xl px-3 py-1 mb-4">
-              <Ionicons name="search" size={16} color="#6B7280" />
-              <TextInput
-                ref={customerInputRef}
-                className="flex-1 ml-2 h-10 text-white text-xs font-medium"
-                placeholder="Search by customer name or phone..."
-                placeholderTextColor="#6B7280"
-                value={customerSearch}
-                onChangeText={setCustomerSearch}
-                returnKeyType="search"
-                onSubmitEditing={() => {}}
-                accessibilityLabel="Search customers"
-              />
-            </View>
+      {/* Item Picker Bottom Sheet */}
+      <BottomSheet
+        ref={itemSheetRef}
+        index={-1}
+        snapPoints={['75%']}
+        enablePanDownToClose
+        backdropComponent={(props) => <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.6} />}
+        backgroundStyle={{ backgroundColor: '#1A1F2E' }}
+        handleIndicatorStyle={{ backgroundColor: '#4B5563', width: 40 }}
+      >
+        <View className="flex-1 p-6 pt-2">
+          <View className="flex-row justify-between items-center mb-4">
+            <Text className="text-white text-lg font-bold">Add Product Item</Text>
+            <TouchableOpacity onPress={() => itemSheetRef.current?.close()}>
+              <Ionicons name="close" size={24} color="#9CA3AF" />
+            </TouchableOpacity>
+          </View>
 
-            <FlatList
-              data={filteredCustomers}
-              keyExtractor={(item) => item.id.toString()}
-              ListEmptyComponent={
-                <Text className="text-gray-400 text-center py-4">No customers found.</Text>
-              }
-              renderItem={({ item }) => (
+          {/* Item Search Bar */}
+          <View className="flex-row items-center bg-[#0A0F1D] border border-gray-800 rounded-xl px-3 py-1 mb-4">
+            <Ionicons name="search" size={16} color="#6B7280" />
+            <BottomSheetTextInput
+              className="flex-1 ml-2 h-10 text-white text-xs font-medium"
+              placeholder="Search by product name or SKU..."
+              placeholderTextColor="#6B7280"
+              value={itemSearch}
+              onChangeText={setItemSearch}
+              returnKeyType="search"
+              accessibilityLabel="Search products"
+            />
+          </View>
+
+          <BottomSheetFlatList
+            data={filteredItems}
+            keyExtractor={(item) => item.id.toString()}
+            ListEmptyComponent={
+              <Text className="text-gray-400 text-center py-4">No products found.</Text>
+            }
+            renderItem={({ item }) => {
+              const stock = getBranchStock(item);
+              const isOutOfStock = stock <= 0;
+              return (
                 <TouchableOpacity
+                  disabled={isOutOfStock}
                   onPress={() => {
-                    setSelectedCustomer(item);
-                    setCustomerModalVisible(false);
-                    setCustomerSearch("");
+                    handleAddProduct(item);
+                    setItemSearch("");
                   }}
-                  className="bg-[#0A0F1D] border border-gray-800 p-4 rounded-xl mb-2 flex-row justify-between items-center"
+                  className={`bg-[#0A0F1D] border border-gray-800 p-4 rounded-xl mb-2 flex-row justify-between items-center ${
+                    isOutOfStock ? "opacity-40" : ""
+                  }`}
                 >
-                  <View>
-                    <Text className="text-white font-bold text-sm font-inter">{item.name}</Text>
-                    <Text className="text-gray-400 text-xs mt-1 font-inter">Mob: {item.mobile}</Text>
+                  <View className="flex-1 pr-2">
+                    <Text className="text-white font-bold text-sm font-inter" numberOfLines={1}>{item.name}</Text>
+                    <Text className="text-gray-400 text-[10px] mt-1 font-inter">
+                      SKU: {item.sku || "N/A"} | Price: ₹{item.salePrice} | Tax: {item.gstPercentage}%
+                    </Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color="#F7941D" />
+                  <View className="items-end">
+                    <Text className={`text-xs font-bold ${isOutOfStock ? "text-red-500" : "text-emerald-500"}`}>
+                      {isOutOfStock ? "Out of Stock" : `${stock} ${item.unit || "pcs"}`}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
-              )}
-            />
-          </View>
+              );
+            }}
+          />
         </View>
-      </Modal>
-
-      {/* Item Picker Modal */}
-      <Modal
-        visible={itemModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setItemModalVisible(false)}
-      >
-        <View className="flex-1 bg-black/60 justify-end">
-          <View className="bg-[#1A1F2E] border-t border-gray-800 rounded-t-3xl p-6 h-[75%]">
-            <View className="w-10 h-1 bg-gray-600 rounded-full mx-auto mb-4" />
-            <View className="flex-row justify-between items-center mb-4">
-              <Text className="text-white text-lg font-bold">Add Product Item</Text>
-              <TouchableOpacity onPress={() => setItemModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#9CA3AF" />
-              </TouchableOpacity>
-            </View>
-
-            {/* Item Search Bar */}
-            <View className="flex-row items-center bg-[#0A0F1D] border border-gray-800 rounded-xl px-3 py-1 mb-4">
-              <Ionicons name="search" size={16} color="#6B7280" />
-              <TextInput
-                ref={itemInputRef}
-                className="flex-1 ml-2 h-10 text-white text-xs font-medium"
-                placeholder="Search by product name or SKU..."
-                placeholderTextColor="#6B7280"
-                value={itemSearch}
-                onChangeText={setItemSearch}
-                returnKeyType="search"
-                onSubmitEditing={() => {}}
-                accessibilityLabel="Search products"
-              />
-            </View>
-
-            <FlatList
-              data={filteredItems}
-              keyExtractor={(item) => item.id.toString()}
-              ListEmptyComponent={
-                <Text className="text-gray-400 text-center py-4">No products found.</Text>
-              }
-              renderItem={({ item }) => {
-                const stock = getBranchStock(item);
-                const isOutOfStock = stock <= 0;
-                return (
-                  <TouchableOpacity
-                    disabled={isOutOfStock}
-                    onPress={() => {
-                      handleAddProduct(item);
-                      setItemSearch("");
-                    }}
-                    className={`bg-[#0A0F1D] border border-gray-800 p-4 rounded-xl mb-2 flex-row justify-between items-center ${
-                      isOutOfStock ? "opacity-40" : ""
-                    }`}
-                  >
-                    <View className="flex-1 pr-2">
-                      <Text className="text-white font-bold text-sm font-inter" numberOfLines={1}>{item.name}</Text>
-                      <Text className="text-gray-400 text-[10px] mt-1 font-inter">
-                        SKU: {item.sku || "N/A"} | Price: ₹{item.salePrice} | Tax: {item.gstPercentage}%
-                      </Text>
-                    </View>
-                    <View className="items-end">
-                      <Text className={`text-xs font-bold ${isOutOfStock ? "text-red-500" : "text-emerald-500"}`}>
-                        {isOutOfStock ? "Out of Stock" : `${stock} ${item.unit || "pcs"}`}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              }}
-            />
-          </View>
-        </View>
-      </Modal>
+      </BottomSheet>
 
       {/* Barcode Scanner Modal */}
       <Modal
@@ -541,10 +523,10 @@ export default function BillingScreen() {
           />
           <View style={styles.overlayContainer}>
             <View style={styles.scanTargetBox}>
-              <View className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-secondary" />
-              <View className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-secondary" />
-              <View className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-secondary" />
-              <View className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-secondary" />
+              <View className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-action-orange" />
+              <View className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-action-orange" />
+              <View className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-action-orange" />
+              <View className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-action-orange" />
             </View>
             <Text className="text-white font-bold text-sm text-center mt-6 bg-[#0A0F1D]/80 px-4 py-2 rounded-full overflow-hidden border border-gray-800">
               Align item barcode inside target box

@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, FlatList } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, FlatList } from "react-native";
+import BottomSheet, { BottomSheetBackdrop, BottomSheetFlatList } from "@gorhom/bottom-sheet";
+import { useRef } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
@@ -22,7 +24,7 @@ export default function ProfileScreen() {
 
   const [syncing, setSyncing] = useState(false);
   const [loadingBranches, setLoadingBranches] = useState(false);
-  const [branchSelectorVisible, setBranchSelectorVisible] = useState(false);
+  const branchSheetRef = useRef<BottomSheet>(null);
 
   useEffect(() => {
     if (user && (user.role === "SUPER_ADMIN" || user.role === "COMPANY_ADMIN")) {
@@ -103,7 +105,7 @@ export default function ProfileScreen() {
             </View>
             {isAdmin && (
               <TouchableOpacity 
-                onPress={() => setBranchSelectorVisible(true)}
+                onPress={() => branchSheetRef.current?.expand()}
                 className="bg-[#F7941D] px-3 py-1.5 rounded-xl min-h-[44px] justify-center"
               >
                 <Text className="text-white text-xs font-bold font-inter">Switch</Text>
@@ -242,61 +244,61 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Branch Selector Modal */}
-      <Modal
-        visible={branchSelectorVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setBranchSelectorVisible(false)}
+      {/* Branch Selector Bottom Sheet */}
+      <BottomSheet
+        ref={branchSheetRef}
+        index={-1}
+        snapPoints={['70%']}
+        enablePanDownToClose
+        backdropComponent={(props) => <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.6} />}
+        backgroundStyle={{ backgroundColor: '#1A1F2E' }}
+        handleIndicatorStyle={{ backgroundColor: '#4B5563', width: 40 }}
       >
-        <View className="flex-1 bg-black/60 justify-end">
-          <View className="bg-[#1A1F2E] border-t border-gray-800 rounded-t-3xl p-6 max-h-[70%]">
-            <View className="w-10 h-1 bg-gray-600 rounded-full mx-auto mb-4" />
-            <View className="flex-row justify-between items-center mb-6">
-              <Text className="text-white text-lg font-bold">Select Active Branch</Text>
-              <TouchableOpacity onPress={() => setBranchSelectorVisible(false)}>
-                <Ionicons name="close" size={24} color="#9CA3AF" />
-              </TouchableOpacity>
-            </View>
-
-            <FlatList
-              data={branches}
-              keyExtractor={(item) => item.id.toString()}
-              ListEmptyComponent={
-                <Text className="text-gray-400 text-center py-4 font-inter">No branches registered.</Text>
-              }
-              renderItem={({ item }) => {
-                const isSelected = item.id === selectedBranchId;
-                return (
-                  <TouchableOpacity
-                    onPress={() => {
-                      setSelectedBranchId(item.id);
-                      setBranchSelectorVisible(false);
-                    }}
-                    className={`flex-row justify-between items-center p-4 mb-2 rounded-2xl border min-h-[44px] ${
-                      isSelected
-                        ? "bg-[#F7941D]/10 border-[#F7941D]/30"
-                        : "bg-[#0A0F1D] border-gray-800"
-                    }`}
-                  >
-                    <View>
-                      <Text className={`font-bold font-inter ${isSelected ? "text-[#F7941D]" : "text-white"}`}>
-                        {item.name}
-                      </Text>
-                      {item.address && (
-                        <Text className="text-gray-400 text-xs mt-1 font-inter">{item.address}</Text>
-                      )}
-                    </View>
-                    {isSelected && (
-                      <Ionicons name="checkmark-circle" size={20} color="#F7941D" />
-                    )}
-                  </TouchableOpacity>
-                );
-              }}
-            />
+        <View className="flex-1 p-6 pt-2">
+          <View className="flex-row justify-between items-center mb-6">
+            <Text className="text-white text-lg font-bold">Select Active Branch</Text>
+            <TouchableOpacity onPress={() => branchSheetRef.current?.close()}>
+              <Ionicons name="close" size={24} color="#9CA3AF" />
+            </TouchableOpacity>
           </View>
+
+          <BottomSheetFlatList
+            data={branches}
+            keyExtractor={(item) => item.id.toString()}
+            ListEmptyComponent={
+              <Text className="text-gray-400 text-center py-4 font-inter">No branches registered.</Text>
+            }
+            renderItem={({ item }) => {
+              const isSelected = item.id === selectedBranchId;
+              return (
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedBranchId(item.id);
+                    branchSheetRef.current?.close();
+                  }}
+                  className={`flex-row justify-between items-center p-4 mb-2 rounded-2xl border min-h-[44px] ${
+                    isSelected
+                      ? "bg-[#F7941D]/10 border-[#F7941D]/30"
+                      : "bg-[#0A0F1D] border-gray-800"
+                  }`}
+                >
+                  <View>
+                    <Text className={`font-bold font-inter ${isSelected ? "text-[#F7941D]" : "text-white"}`}>
+                      {item.name}
+                    </Text>
+                    {item.address && (
+                      <Text className="text-gray-400 text-xs mt-1 font-inter">{item.address}</Text>
+                    )}
+                  </View>
+                  {isSelected && (
+                    <Ionicons name="checkmark-circle" size={20} color="#F7941D" />
+                  )}
+                </TouchableOpacity>
+              );
+            }}
+          />
         </View>
-      </Modal>
+      </BottomSheet>
     </SafeAreaView>
   );
 }

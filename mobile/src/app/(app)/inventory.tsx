@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { View, Text, FlatList, TextInput, TouchableOpacity, RefreshControl, ActivityIndicator } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, FlatList, TextInput, TouchableOpacity, RefreshControl, ActivityIndicator, Modal } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card } from "../../components/ui/card";
 import { useStore } from "../../store/useStore";

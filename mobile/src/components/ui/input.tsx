@@ -36,7 +36,7 @@ export const Input = React.forwardRef<TextInput, InputProps>(
             error
               ? 'border-red-500'
               : isFocused
-              ? 'border-secondary' // brand orange
+              ? 'border-action-orange' // brand orange
               : 'border-gray-800'
           }`}
         >
@@ -153,7 +153,7 @@ export const NumericInput = React.forwardRef<TextInput, NumericInputProps>(
               error
                 ? 'border-red-500'
                 : isFocused
-                ? 'border-secondary'
+                ? 'border-action-orange'
                 : 'border-gray-800'
             }`}
           >

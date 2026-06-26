@@ -3,11 +3,11 @@
  * Kept in sync with tailwind.config.js
  */
 export const colors = {
-  primary: {
+  'brand-navy': {
     DEFAULT: "#1B3A5C",
     foreground: "#FFFFFF",
   },
-  secondary: {
+  'action-orange': {
     DEFAULT: "#F7941D",
     foreground: "#FFFFFF",
   },

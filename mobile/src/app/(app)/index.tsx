@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { View, Text, ScrollView, RefreshControl, ActivityIndicator, TouchableOpacity, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card } from "../../components/ui/card";
-import { formatCurrency } from "../../utils/format";
 import { useStore } from "../../store/useStore";
 import { Ionicons } from "@expo/vector-icons";
 import { OfflineBanner } from "../../components/offline-banner";
@@ -149,7 +148,7 @@ export default function DashboardScreen() {
           {/* Total Receivables Card */}
           <Card className="flex-1 p-0 overflow-hidden border-0">
             <LinearGradient colors={['rgba(96, 165, 250, 0.15)', '#1A1F2E']} className="flex-1 p-4">
-              <View className="p-2 bg-primary/20 rounded-xl w-10 h-10 items-center justify-center mb-3">
+              <View className="p-2 bg-brand-navy/20 rounded-xl w-10 h-10 items-center justify-center mb-3">
                 <Ionicons name="wallet-outline" size={20} color="#60A5FA" />
               </View>
               <Text className="text-gray-400 text-xs font-semibold uppercase tracking-wider font-lexend">Receivables</Text>
@@ -206,7 +205,7 @@ export default function DashboardScreen() {
           {recentActivities.length === 0 ? (
             <View className="py-4 items-center">
               <Text className="text-gray-400 text-sm mb-4 font-inter text-center">No recent database operations logged.</Text>
-              <Button label="Create a New Sale" onPress={() => router.push('/billing')} variant="primary" />
+              <Button label="Create a New Sale" onPress={() => router.push('/(app)/billing' as any)} variant="primary" />
             </View>
           ) : (
             <View className="space-y-3">

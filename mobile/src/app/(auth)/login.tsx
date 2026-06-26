@@ -108,7 +108,7 @@ export default function LoginScreen() {
               contentFit="contain"
             />
             <Text className="text-3xl font-extrabold text-white tracking-wider">
-              GROWW <Text className="text-secondary">YOU</Text>
+              GROWW <Text className="text-action-orange">YOU</Text>
             </Text>
             <Text className="text-sm text-gray-400 mt-2">Mobile Wholesale ERP Shell</Text>
           </Animated.View>
@@ -170,7 +170,7 @@ export default function LoginScreen() {
               className="flex-row items-center mb-6 mt-2"
             >
               <View className={`w-5 h-5 border rounded mr-2 items-center justify-center ${
-                biometricsEnabled ? 'bg-secondary border-secondary' : 'border-gray-600 bg-[#0E1321]'
+                biometricsEnabled ? 'bg-action-orange border-action-orange' : 'border-gray-600 bg-[#0E1321]'
               }`}>
                 {biometricsEnabled && (
                   <Text className="text-white text-xs font-bold">✓</Text>

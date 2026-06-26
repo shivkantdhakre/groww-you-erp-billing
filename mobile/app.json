@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "mobile",
+    "scheme": "growwyou",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/images/icon.png",
@@ -13,7 +13,10 @@
       "buildNumber": "1",
       "infoPlist": {
         "NSFaceIDUsageDescription": "This app requires FaceID to secure login credentials."
-      }
+      },
+      "associatedDomains": [
+        "applinks:groww-you-erp-billing.onrender.com"
+      ]
     },
     "android": {
       "adaptiveIcon": {
@@ -24,7 +27,24 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.growwyou.erp",
-      "versionCode": 1
+      "versionCode": 1,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "groww-you-erp-billing.onrender.com",
+              "pathPrefix": "/"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "output": "static",

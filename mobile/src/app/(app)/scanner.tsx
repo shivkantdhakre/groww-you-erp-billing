@@ -36,7 +36,7 @@ export default function ScannerScreen() {
           </Text>
           <TouchableOpacity
             onPress={requestPermission}
-            className="w-full bg-primary py-3.5 rounded-xl items-center"
+            className="w-full bg-brand-navy py-3.5 rounded-xl items-center"
           >
             <Text className="text-white font-bold text-sm">Grant Permission</Text>
           </TouchableOpacity>
@@ -163,10 +163,10 @@ export default function ScannerScreen() {
         <View style={styles.overlayContainer}>
           <View style={styles.scanTargetBox}>
             {/* Corners detailing target scanner boundary */}
-            <View className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-secondary" />
-            <View className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-secondary" />
-            <View className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-secondary" />
-            <View className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-secondary" />
+            <View className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-action-orange" />
+            <View className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-action-orange" />
+            <View className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-action-orange" />
+            <View className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-action-orange" />
           </View>
           <Text className="text-white font-bold text-sm text-center mt-6 bg-[#0A0F1D]/80 px-4 py-2 rounded-full border border-gray-800">
             Align item barcode inside the target box
@@ -243,7 +243,7 @@ export default function ScannerScreen() {
             
             <TouchableOpacity
               onPress={handleReset}
-              className="w-full bg-secondary py-4 rounded-xl items-center shadow-lg shadow-secondary/10"
+              className="w-full bg-action-orange py-4 rounded-xl items-center shadow-lg shadow-action-orange/10"
             >
               <Text className="text-white font-extrabold text-sm uppercase tracking-wider">Scan Next Item</Text>
             </TouchableOpacity>

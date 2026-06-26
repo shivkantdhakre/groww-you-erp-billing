@@ -28,7 +28,7 @@ export const Button = React.forwardRef<React.ElementRef<typeof Pressable>, Butto
   ) => {
     // Dynamic variant styles
     const variantStyles = {
-      primary: 'bg-secondary border border-secondary active:opacity-90',
+      primary: 'bg-action-orange border border-action-orange active:opacity-90',
       navy: 'bg-[#1B3A5C] border border-[#1B3A5C] active:opacity-90',
       outline: 'bg-transparent border border-gray-700 active:bg-gray-800/10',
       ghost: 'bg-transparent border border-transparent active:bg-gray-800/10',

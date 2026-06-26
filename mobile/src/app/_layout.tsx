@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useColorScheme, View, ActivityIndicator, Text } from 'react-native';
+import { useColorScheme, View, ActivityIndicator, Text, TextInput } from 'react-native';
 import { DarkTheme, DefaultTheme, ThemeProvider, Slot, useRouter, useSegments, useNavigationContainerRef } from 'expo-router';
 import { useStore } from '../store/useStore';
 import NetInfo from '@react-native-community/netinfo';
@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Sentry from '@sentry/react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { CustomSplashScreen } from '../components/CustomSplashScreen';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   useFonts,
   Inter_400Regular,
@@ -20,6 +21,12 @@ import '../global.css';
 
 // Prevent the splash screen from auto-hiding before asset/store hydration
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// Global accessibility configuration to prevent UI breakage from massive font scaling
+(Text as any).defaultProps = (Text as any).defaultProps || {};
+(Text as any).defaultProps.maxFontSizeMultiplier = 1.2;
+(TextInput as any).defaultProps = (TextInput as any).defaultProps || {};
+(TextInput as any).defaultProps.maxFontSizeMultiplier = 1.2;
 
 const integrations: any[] = [];
 let navigationIntegration: any = null;
@@ -65,6 +72,7 @@ function RootLayout() {
   const token = useStore((state) => state.token);
   const initializeAuth = useStore((state) => state.initializeAuth);
   const hasHydrated = useStore((state) => state.hasHydrated);
+  const hasSeenOnboarding = useStore((state) => state.hasSeenOnboarding);
   const setOffline = useStore((state) => state.setOffline);
   const syncOfflineOutbox = useStore((state) => state.syncOfflineOutbox);
   const segments = useSegments();
@@ -121,18 +129,26 @@ function RootLayout() {
     if (!authInitialized || !hasHydrated || deviceCompromised) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const isOnboarding = (segments as string[])[1] === 'onboarding';
 
-    if (!token && !inAuthGroup) {
+    if (!hasSeenOnboarding && !isOnboarding) {
+      router.replace('/(auth)/onboarding' as any);
+      return;
+    }
+
+    // Only redirect to login if they have seen onboarding, don't have token, and aren't in auth group
+    if (hasSeenOnboarding && !token && !inAuthGroup) {
       router.replace('/(auth)/login');
-    } else if (token && inAuthGroup) {
+    } else if (hasSeenOnboarding && token && inAuthGroup) {
       router.replace('/(app)');
     }
-  }, [token, segments, authInitialized, hasHydrated, deviceCompromised]);
+  }, [token, segments, authInitialized, hasHydrated, deviceCompromised, hasSeenOnboarding]);
 
   const appReady = hasHydrated && (authInitialized || deviceCompromised) && fontsLoaded;
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <View className="flex-1">
         {/* Render underlying views once Zustand hydrates */}
         {hasHydrated && (
@@ -163,7 +179,8 @@ function RootLayout() {
           />
         )}
       </View>
-    </ThemeProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
 

@@ -6,6 +6,7 @@ import * as SecureStore from '../utils/secureStoreWrapper';
 import api from '../utils/api';
 import * as Sentry from '@sentry/react-native';
 
+// @ts-ignore
 const storage = new MMKV({
   id: 'groww-you-erp-storage'
 });
@@ -51,6 +52,7 @@ interface StoreState {
   isOffline: boolean;
   lastSyncedAt: string | null;
   hasHydrated: boolean;
+  hasSeenOnboarding: boolean;
   branches: Branch[];
   selectedBranchId: number | null;
   cart: CartItem[];
@@ -74,6 +76,7 @@ interface StoreState {
   setOffline: (val: boolean) => void;
   setLastSyncedAt: (val: string | null) => void;
   setHasHydrated: (val: boolean) => void;
+  setHasSeenOnboarding: (val: boolean) => void;
   setBranches: (branches: Branch[]) => void;
   setSelectedBranchId: (branchId: number | null) => void;
   fetchBranches: () => Promise<void>;
@@ -106,6 +109,7 @@ export const useStore = create<StoreState>()(
       isOffline: false,
       lastSyncedAt: null,
       hasHydrated: false,
+      hasSeenOnboarding: false,
       branches: [],
       selectedBranchId: null,
       cart: [],
@@ -134,6 +138,7 @@ export const useStore = create<StoreState>()(
       setOffline: (isOffline) => set({ isOffline }),
       setLastSyncedAt: (lastSyncedAt) => set({ lastSyncedAt }),
       setHasHydrated: (hasHydrated) => set({ hasHydrated }),
+      setHasSeenOnboarding: (hasSeenOnboarding) => set({ hasSeenOnboarding }),
       setBranches: (branches) => set({ branches }),
       addToCart: (item) => {
         set((state) => {
@@ -479,6 +484,7 @@ export const useStore = create<StoreState>()(
         manualLogout: state.manualLogout,
         isOffline: state.isOffline,
         lastSyncedAt: state.lastSyncedAt,
+        hasSeenOnboarding: state.hasSeenOnboarding,
         branches: state.branches,
         selectedBranchId: state.selectedBranchId,
         cart: state.cart,

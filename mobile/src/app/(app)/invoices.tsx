@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { View, Text, FlatList, TextInput, TouchableOpacity, RefreshControl, ActivityIndicator, Alert } from "react-native";
+import BottomSheet, { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
+import { useRef } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card } from "../../components/ui/card";
 import { useStore } from "../../store/useStore";
@@ -21,6 +23,8 @@ export default function InvoicesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sharingId, setSharingId] = useState<number | null>(null);
+  const [sharingInvoice, setSharingInvoice] = useState<{id: number, no: string} | null>(null);
+  const shareSheetRef = useRef<BottomSheet>(null);
 
   const loadInvoices = async () => {
     try {
@@ -41,7 +45,13 @@ export default function InvoicesScreen() {
     loadInvoices().finally(() => setLoading(false));
   }, []);
 
-  const handleShare = async (invoiceId: number, invoiceNo: string) => {
+  const handleOpenShare = (invoiceId: number, invoiceNo: string) => {
+    setSharingInvoice({ id: invoiceId, no: invoiceNo });
+    shareSheetRef.current?.expand();
+  };
+
+  const handleConfirmShare = async () => {
+    if (!sharingInvoice) return;
     if (isOffline) {
       Alert.alert(
         "Connection Offline",
@@ -51,9 +61,10 @@ export default function InvoicesScreen() {
       return;
     }
 
-    setSharingId(invoiceId);
+    shareSheetRef.current?.close();
+    setSharingId(sharingInvoice.id);
     try {
-      await shareInvoicePDF({ invoiceId, invoiceNo, layout: selectedLayout });
+      await shareInvoicePDF({ invoiceId: sharingInvoice.id, invoiceNo: sharingInvoice.no, layout: selectedLayout });
     } catch (err: any) {
       Alert.alert(
         "Sharing Failed",
@@ -108,7 +119,7 @@ export default function InvoicesScreen() {
       item={item} 
       formatCurrency={formatCurrency} 
       formatDate={formatDate} 
-      handleShare={handleShare} 
+      handleOpenShare={handleOpenShare} 
     />
   );
 
@@ -137,39 +148,7 @@ export default function InvoicesScreen() {
         )}
       </View>
 
-      {/* Layout Selection Control */}
-      <View className="flex-row bg-[#1A1F2E] border border-gray-800 rounded-xl p-1 mb-4">
-        <TouchableOpacity
-          onPress={() => setSelectedLayout("A4")}
-          activeOpacity={0.8}
-          className={`flex-1 py-2.5 rounded-lg items-center justify-center ${
-            selectedLayout === "A4" ? "bg-[#F7941D]" : ""
-          }`}
-        >
-          <Text
-            className={`text-sm font-black ${
-              selectedLayout === "A4" ? "text-[#0A0F1D]" : "text-gray-400"
-            }`}
-          >
-            A4 Standard Invoice
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setSelectedLayout("Thermal")}
-          activeOpacity={0.8}
-          className={`flex-1 py-2.5 rounded-lg items-center justify-center ${
-            selectedLayout === "Thermal" ? "bg-[#F7941D]" : ""
-          }`}
-        >
-          <Text
-            className={`text-sm font-black ${
-              selectedLayout === "Thermal" ? "text-[#0A0F1D]" : "text-gray-400"
-            }`}
-          >
-            80mm Thermal Receipt
-          </Text>
-        </TouchableOpacity>
-      </View>
+
 
       {/* Invoices List */}
       <FlatList
@@ -217,11 +196,73 @@ export default function InvoicesScreen() {
           </View>
         </View>
       )}
+
+      {/* Share Bottom Sheet */}
+      <BottomSheet
+        ref={shareSheetRef}
+        index={-1}
+        snapPoints={['35%']}
+        enablePanDownToClose
+        backdropComponent={(props) => <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.6} />}
+        backgroundStyle={{ backgroundColor: '#1A1F2E' }}
+        handleIndicatorStyle={{ backgroundColor: '#4B5563', width: 40 }}
+      >
+        <View className="flex-1 p-6 pt-2">
+          <View className="flex-row justify-between items-center mb-6">
+            <Text className="text-white text-lg font-bold">Share Invoice {sharingInvoice?.no}</Text>
+            <TouchableOpacity onPress={() => shareSheetRef.current?.close()}>
+              <Ionicons name="close" size={24} color="#9CA3AF" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Layout Selection Control */}
+          <View className="flex-row bg-[#0A0F1D] border border-gray-800 rounded-xl p-1 mb-6">
+            <TouchableOpacity
+              onPress={() => setSelectedLayout("A4")}
+              activeOpacity={0.8}
+              className={`flex-1 py-3 rounded-lg items-center justify-center ${
+                selectedLayout === "A4" ? "bg-[#F7941D]" : ""
+              }`}
+            >
+              <Text
+                className={`text-sm font-black font-inter ${
+                  selectedLayout === "A4" ? "text-white" : "text-gray-400"
+                }`}
+              >
+                A4 Standard
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setSelectedLayout("Thermal")}
+              activeOpacity={0.8}
+              className={`flex-1 py-3 rounded-lg items-center justify-center ${
+                selectedLayout === "Thermal" ? "bg-[#F7941D]" : ""
+              }`}
+            >
+              <Text
+                className={`text-sm font-black font-inter ${
+                  selectedLayout === "Thermal" ? "text-white" : "text-gray-400"
+                }`}
+              >
+                80mm Thermal
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            onPress={handleConfirmShare}
+            className="w-full bg-[#1B3A5C] py-3.5 rounded-xl items-center flex-row justify-center"
+          >
+            <Ionicons name="share-social" size={18} color="#FFF" style={{ marginRight: 8 }} />
+            <Text className="text-white font-bold text-sm">Generate & Share PDF</Text>
+          </TouchableOpacity>
+        </View>
+      </BottomSheet>
     </SafeAreaView>
   );
 }
 
-const InvoiceItem = React.memo(({ item, formatCurrency, formatDate, handleShare }: any) => {
+const InvoiceItem = React.memo(({ item, formatCurrency, formatDate, handleOpenShare }: any) => {
   return (
     <Card className="p-4 mb-3 flex-row justify-between items-center">
       <View className="flex-1 mr-4">
@@ -249,7 +290,7 @@ const InvoiceItem = React.memo(({ item, formatCurrency, formatDate, handleShare 
         </Text>
         
         <TouchableOpacity
-          onPress={() => handleShare(item.id, item.invoiceNo)}
+          onPress={() => handleOpenShare(item.id, item.invoiceNo)}
           activeOpacity={0.7}
           className="bg-[#F7941D]/10 border border-[#F7941D]/20 p-2.5 min-h-[44px] min-w-[44px] rounded-xl items-center justify-center"
         >
