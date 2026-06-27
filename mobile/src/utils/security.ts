@@ -11,10 +11,13 @@ export const checkCompromisedDevice = async (): Promise<boolean> => {
 
   // Bypass checks for emulators / simulators during local development
   if (!Device.isDevice) {
+    console.warn('[Security] Emulator detected, bypassing root/jailbreak checks.');
+    console.warn('[Security/Deprecation] `jail-monkey` is unmaintained and deprecated. Consider migrating to Expo modules or native checks in the future.');
     return false;
   }
 
   // Safeguard: Check if JailMonkey is loaded and contains the required methods
+  // DEPRECATION FLAG: jail-monkey is deprecated.
   if (!JailMonkey || typeof JailMonkey.isJailBroken !== 'function' || typeof JailMonkey.canMockLocation !== 'function') {
     console.warn('[Security] JailMonkey module is not loaded or missing required methods, skipping checks');
     return false;

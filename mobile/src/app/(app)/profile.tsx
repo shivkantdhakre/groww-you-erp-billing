@@ -90,9 +90,7 @@ export default function ProfileScreen() {
               <Ionicons name="person" size={40} color="#F7941D" />
             )}
           </View>
-          <TouchableOpacity className="absolute top-0 right-0 bg-[#1A1F2E] border border-gray-800 rounded-full p-2">
-            <Ionicons name="camera-outline" size={16} color="#F7941D" />
-          </TouchableOpacity>
+
           <Text className="text-white text-xl font-bold font-lexend">{user?.name || "Groww You Member"}</Text>
           <Text className="text-gray-400 text-sm mt-1 font-inter">{user?.email || ""}</Text>
           

@@ -3,11 +3,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Platform, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStore } from '../../store/useStore';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, withSpring, useSharedValue, withTiming } from 'react-native-reanimated';
+import { colors, animations, typography, spacing, radius } from '../../constants';
 import { useEffect } from 'react';
 
 const TAB_ICONS: Record<string, { focused: any; default: any }> = {
@@ -19,10 +16,37 @@ const TAB_ICONS: Record<string, { focused: any; default: any }> = {
   profile: { focused: 'person', default: 'person-outline' },
 };
 
-function TabIcon({ routeName, color, size }: { routeName: string; color: any; size: number }) {
+function TabIcon({ routeName, color, size, focused }: { routeName: string; color: any; size: number; focused: boolean }) {
   const icons = TAB_ICONS[routeName] || { focused: 'ellipse', default: 'ellipse-outline' };
-  const isActive = String(color) === '#F7941D';
-  return <Ionicons name={isActive ? icons.focused : icons.default} size={size} color={color} />;
+  
+  const scale = useSharedValue(focused ? 1 : 1);
+  const translateY = useSharedValue(focused ? -2 : 0);
+  
+  useReanimatedEffect(() => {
+    scale.value = animations.spring.standard(focused ? animations.motion.bottomTab.activeScale : 1);
+    translateY.value = animations.timing.easeOut(focused ? -4 : 0, 200);
+  }, [focused]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: scale.value },
+      { translateY: translateY.value }
+    ],
+  }));
+
+  return (
+    <Animated.View style={[
+      animatedStyle, 
+      focused && {
+        backgroundColor: colors.accentSubtle,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.xs,
+        borderRadius: radius.full,
+      }
+    ]}>
+      <Ionicons name={focused ? icons.focused : icons.default} size={focused ? size - 2 : size} color={color} />
+    </Animated.View>
+  );
 }
 
 export default function TabLayout() {
@@ -32,31 +56,32 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#F7941D',
-        tabBarInactiveTintColor: '#9CA3AF',
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.textSecondary,
+        tabBarItemStyle: { padding: 0 },
         tabBarStyle: {
-          backgroundColor: '#1A1F2E',
-          borderTopColor: '#1F2937',
+          backgroundColor: colors.surfacePrimary,
+          borderTopColor: colors.borderSubtle,
           paddingBottom: Platform.OS === 'ios' ? insets.bottom || 24 : insets.bottom || 12,
-          paddingTop: 8,
-          height: Platform.OS === 'ios' ? 64 + (insets.bottom || 24) : 58 + (insets.bottom || 12),
+          paddingTop: spacing.xs,
+          height: Platform.OS === 'ios' ? 64 + (insets.bottom || 24) : 60 + (insets.bottom || 12),
         },
         tabBarShowLabel: true,
         tabBarLabelStyle: {
-          fontSize: 10,
+          fontSize: 9,
           fontWeight: '700',
-          fontFamily: 'Inter_600SemiBold',
+          fontFamily: typography.captionStrong.fontFamily,
           marginTop: 2,
         },
         headerStyle: {
-          backgroundColor: '#1A1F2E',
+          backgroundColor: colors.surfacePrimary,
           borderBottomWidth: 1,
-          borderBottomColor: '#1F2937',
+          borderBottomColor: colors.borderSubtle,
         },
         headerTitleStyle: {
-          color: '#FFFFFF',
+          color: colors.textPrimary,
           fontWeight: 'bold',
-          fontFamily: 'Lexend_700Bold',
+          fontFamily: typography.title.fontFamily,
           fontSize: 18,
         },
       }}
@@ -66,7 +91,7 @@ export default function TabLayout() {
         options={{
           title: 'Executive Dashboard',
           tabBarLabel: 'Dashboard',
-          tabBarIcon: ({ color, size }) => <TabIcon routeName="index" color={color} size={size} />,
+          tabBarIcon: ({ color, size, focused }) => <TabIcon routeName="index" color={color} size={size} focused={focused} />,
         }}
       />
       <Tabs.Screen
@@ -74,7 +99,7 @@ export default function TabLayout() {
         options={{
           title: 'Sales Billing',
           tabBarLabel: 'Billing',
-          tabBarIcon: ({ color, size }) => <TabIcon routeName="billing" color={color} size={size} />,
+          tabBarIcon: ({ color, size, focused }) => <TabIcon routeName="billing" color={color} size={size} focused={focused} />,
         }}
       />
       <Tabs.Screen
@@ -82,7 +107,7 @@ export default function TabLayout() {
         options={{
           title: 'Sales Invoices',
           tabBarLabel: 'Invoices',
-          tabBarIcon: ({ color, size }) => <TabIcon routeName="invoices" color={color} size={size} />,
+          tabBarIcon: ({ color, size, focused }) => <TabIcon routeName="invoices" color={color} size={size} focused={focused} />,
         }}
       />
       <Tabs.Screen
@@ -90,7 +115,7 @@ export default function TabLayout() {
         options={{
           title: 'Live Inventory',
           tabBarLabel: 'Inventory',
-          tabBarIcon: ({ color, size }) => <TabIcon routeName="inventory" color={color} size={size} />,
+          tabBarIcon: ({ color, size, focused }) => <TabIcon routeName="inventory" color={color} size={size} focused={focused} />,
         }}
       />
       <Tabs.Screen
@@ -98,7 +123,7 @@ export default function TabLayout() {
         options={{
           title: 'Stock Scanner',
           tabBarLabel: 'Scanner',
-          tabBarIcon: ({ color, size }) => <TabIcon routeName="scanner" color={color} size={size} />,
+          tabBarIcon: ({ color, size, focused }) => <TabIcon routeName="scanner" color={color} size={size} focused={focused} />,
         }}
       />
       <Tabs.Screen
@@ -108,7 +133,7 @@ export default function TabLayout() {
           tabBarLabel: 'Profile',
           tabBarBadge: offlineOutbox.length > 0 ? offlineOutbox.length : undefined,
           tabBarBadgeStyle: { backgroundColor: '#F7941D', fontSize: 10, fontWeight: '700' },
-          tabBarIcon: ({ color, size }) => <TabIcon routeName="profile" color={color} size={size} />,
+          tabBarIcon: ({ color, size, focused }) => <TabIcon routeName="profile" color={color} size={size} focused={focused} />,
         }}
       />
       <Tabs.Screen

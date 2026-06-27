@@ -8,6 +8,7 @@ import Animated, {
 import * as Haptics from 'expo-haptics';
 
 const AnimatedView = Animated.createAnimatedComponent(View);
+import { colors, radius, shadows, animations } from '../../constants';
 
 interface CardProps extends ViewProps {
   children: React.ReactNode;
@@ -22,33 +23,44 @@ export function Card({ children, className = '', onPress, ...props }: CardProps)
   }));
 
   const handlePressIn = useCallback(() => {
-    scale.value = withSpring(0.985, { damping: 20, stiffness: 300 });
-    if (onPress) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    scale.value = animations.spring.standard(animations.motion.press.scaleDown);
+  }, []);
+
+  const handlePress = useCallback(() => {
+    if (onPress) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      onPress();
+    }
   }, [onPress]);
 
   const handlePressOut = useCallback(() => {
-    scale.value = withSpring(1, { damping: 20, stiffness: 300 });
+    scale.value = animations.spring.standard(animations.motion.press.scaleUp);
   }, []);
 
   const Wrapper = onPress ? Pressable : View;
 
   return (
     <Wrapper
-      onPress={onPress ? onPress : undefined}
+      onPress={onPress ? handlePress : undefined}
       onPressIn={onPress ? handlePressIn : undefined}
       onPressOut={onPress ? handlePressOut : undefined}
       style={[
-        Platform.OS === 'android' ? { elevation: 2 } : {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.12,
-          shadowRadius: 4,
-        },
+        Platform.OS === 'android' ? { elevation: shadows.card.elevation } : shadows.card,
       ]}
     >
       <AnimatedView
-        className={`bg-[#1A1F2E] border border-gray-800 rounded-2xl p-5 ${className}`}
-        style={[animatedStyle, props.style]}
+        style={[
+          animatedStyle, 
+          { 
+            backgroundColor: colors.surfacePrimary,
+            borderColor: colors.borderSubtle,
+            borderWidth: 1,
+            borderRadius: radius.card,
+            padding: 20, // using hardcoded 20 for now or spacing.xl
+          },
+          props.style
+        ]}
+        className={`${className}`}
         {...props}
       >
         {children}
@@ -60,7 +72,13 @@ export function Card({ children, className = '', onPress, ...props }: CardProps)
 Card.Header = function CardHeader({ children, className = '', ...props }: CardProps) {
   return (
     <View
-      className={`pb-3 mb-2 border-b border-gray-800/40 flex-row justify-between items-center ${className}`}
+      style={{
+        paddingBottom: 12,
+        marginBottom: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.borderSubtle,
+      }}
+      className={`flex-row justify-between items-center ${className}`}
       {...props}
     >
       {children}
@@ -72,7 +90,10 @@ Card.Title = function CardTitle({ children, className = '', ...props }: TextProp
   return (
     <Text
       maxFontSizeMultiplier={1.2}
-      className={`text-white font-lexend font-bold text-base md:text-lg ${className}`}
+      style={{
+        color: colors.textPrimary,
+      }}
+      className={`font-lexend font-bold text-base md:text-lg ${className}`}
       {...props}
     >
       {children}
@@ -91,7 +112,13 @@ Card.Content = function CardContent({ children, className = '', ...props }: Card
 Card.Footer = function CardFooter({ children, className = '', ...props }: CardProps) {
   return (
     <View
-      className={`pt-3 mt-2 border-t border-gray-800/40 flex-row justify-between items-center ${className}`}
+      style={{
+        paddingTop: 12,
+        marginTop: 8,
+        borderTopWidth: 1,
+        borderTopColor: colors.borderSubtle,
+      }}
+      className={`flex-row justify-between items-center ${className}`}
       {...props}
     >
       {children}

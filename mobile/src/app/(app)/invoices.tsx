@@ -3,7 +3,7 @@ import { View, Text, FlatList, TextInput, TouchableOpacity, Pressable, RefreshCo
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useStore } from "../../store/useStore";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, Href } from "expo-router";
 import React from "react";
 import { Skeleton } from "../../components/ui/skeleton";
 import { OfflineBanner } from "../../components/offline-banner";
@@ -88,15 +88,20 @@ export default function InvoicesScreen() {
     }
     if (filter !== "all") {
       const now = new Date();
-      const invDate = new Date(inv.invoiceDate);
-      if (filter === "today") {
-        if (invDate.toDateString() !== now.toDateString()) return false;
-      } else if (filter === "this week") {
-        const weekAgo = new Date(now);
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        if (invDate < weekAgo) return false;
-      } else if (filter === "this month") {
-        if (invDate.getMonth() !== now.getMonth() || invDate.getFullYear() !== now.getFullYear()) return false;
+      try {
+        const invDate = new Date(inv.invoiceDate);
+        if (isNaN(invDate.getTime())) return false;
+        if (filter === "today") {
+          if (invDate.toDateString() !== now.toDateString()) return false;
+        } else if (filter === "this week") {
+          const weekAgo = new Date(now);
+          weekAgo.setDate(weekAgo.getDate() - 7);
+          if (invDate < weekAgo) return false;
+        } else if (filter === "this month") {
+          if (invDate.getMonth() !== now.getMonth() || invDate.getFullYear() !== now.getFullYear()) return false;
+        }
+      } catch (e) {
+        return false;
       }
     }
     return true;
@@ -112,12 +117,17 @@ export default function InvoicesScreen() {
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "N/A";
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric"
-    });
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return "Invalid Date";
+      return date.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+      });
+    } catch (e) {
+      return "Invalid Date";
+    }
   };
 
   if (loading && invoices.length === 0) {
@@ -138,6 +148,7 @@ export default function InvoicesScreen() {
       formatCurrency={formatCurrency} 
       formatDate={formatDate} 
       handleOpenShare={handleOpenShare} 
+      isOffline={isOffline}
     />
   );
 
@@ -231,7 +242,7 @@ export default function InvoicesScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#F7941D" />
         }
         onEndReached={() => {
-          fetchMoreInvoices();
+          if (!loadingMoreInvoices) fetchMoreInvoices();
         }}
         onEndReachedThreshold={0.3}
         ListFooterComponent={
@@ -247,7 +258,7 @@ export default function InvoicesScreen() {
             title="No invoices found"
             description={searchQuery ? "Try a different search term." : "Navigate to the Billing tab to create your first invoice."}
             actionLabel={searchQuery ? undefined : "Go to Billing"}
-            onAction={searchQuery ? undefined : () => router.push('/(app)/billing')}
+            onAction={searchQuery ? undefined : () => router.push('/(app)/billing' as Href)}
           />
         }
         renderItem={renderItem}
@@ -328,7 +339,7 @@ export default function InvoicesScreen() {
   );
 }
 
-const InvoiceItem = React.memo(({ item, formatCurrency, formatDate, handleOpenShare }: any) => {
+const InvoiceItem = React.memo(({ item, formatCurrency, formatDate, handleOpenShare, isOffline }: any) => {
   return (
     <View className="bg-[#1A1F2E] border border-gray-800 rounded-2xl p-4 mb-3 flex-row justify-between items-center"
       style={{
@@ -365,9 +376,12 @@ const InvoiceItem = React.memo(({ item, formatCurrency, formatDate, handleOpenSh
         
         <Pressable
           onPress={() => handleOpenShare(item.id, item.invoiceNo)}
-          className="bg-[#F7941D]/10 border border-[#F7941D]/20 p-2.5 min-h-[44px] min-w-[44px] rounded-xl items-center justify-center"
+          disabled={isOffline}
+          className={`p-2.5 min-h-[44px] min-w-[44px] rounded-xl items-center justify-center border ${
+            isOffline ? 'bg-gray-800/30 border-gray-800 opacity-60' : 'bg-[#F7941D]/10 border-[#F7941D]/20'
+          }`}
         >
-          <Ionicons name="share-social-outline" size={20} color="#F7941D" />
+          <Ionicons name="share-social-outline" size={20} color={isOffline ? "#6B7280" : "#F7941D"} />
         </Pressable>
       </View>
     </View>

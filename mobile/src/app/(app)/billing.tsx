@@ -72,15 +72,15 @@ export default function BillingScreen() {
   }, []);
 
   // Helper: Get item stock for selected branch
-  const getBranchStock = (item: any) => {
+  const getBranchStock = useCallback((item: any) => {
     if (!item.branchStocks || item.branchStocks.length === 0) {
       return item.openingStock || 0;
     }
     const bs = item.branchStocks.find((s: any) => s.branchId === selectedBranchId);
     return bs ? bs.stock : 0;
-  };
+  }, [selectedBranchId]);
 
-  const handleAddProduct = (product: any) => {
+  const handleAddProduct = useCallback((product: any) => {
     const stock = getBranchStock(product);
     if (stock <= 0) {
       Alert.alert("Out of Stock", `"${product.name}" has no stock available in this branch.`);
@@ -101,9 +101,9 @@ export default function BillingScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     showToast({ message: `Added ${product.name} to cart.`, type: 'success', duration: 2000 });
     setItemSheetVisible(false);
-  };
+  }, [cart, getBranchStock, updateCartQty, addToCart]);
 
-  const handleUpdateQty = (productId: number, change: number) => {
+  const handleUpdateQty = useCallback((productId: number, change: number) => {
     const cartItem = cart.find((c) => c.item.id === productId);
     if (!cartItem) return;
 
@@ -121,11 +121,11 @@ export default function BillingScreen() {
     }
 
     updateCartQty(productId, newQty);
-  };
+  }, [cart, getBranchStock, removeFromCart, updateCartQty]);
 
-  const handleRemoveProduct = (productId: number) => {
+  const handleRemoveProduct = useCallback((productId: number) => {
     removeFromCart(productId);
-  };
+  }, [removeFromCart]);
 
   // Barcode Scanning
   const handleScanBarcode = async () => {
@@ -224,15 +224,19 @@ export default function BillingScreen() {
   };
 
   // Filtered registers
-  const filteredCustomers = customers.filter((c) => {
-    const q = customerSearch.toLowerCase();
-    return c.name.toLowerCase().includes(q) || c.mobile.includes(q);
-  });
+  const filteredCustomers = React.useMemo(() => {
+    return customers.filter((c) => {
+      const q = customerSearch.toLowerCase();
+      return c.name.toLowerCase().includes(q) || c.mobile.includes(q);
+    });
+  }, [customers, customerSearch]);
 
-  const filteredItems = items.filter((i) => {
-    const q = itemSearch.toLowerCase();
-    return i.name.toLowerCase().includes(q) || (i.sku && i.sku.toLowerCase().includes(q));
-  });
+  const filteredItems = React.useMemo(() => {
+    return items.filter((i) => {
+      const q = itemSearch.toLowerCase();
+      return i.name.toLowerCase().includes(q) || (i.sku && i.sku.toLowerCase().includes(q));
+    });
+  }, [items, itemSearch]);
 
   return (
     <SafeAreaView edges={["bottom", "left", "right"]} className="flex-1 bg-[#0A0F1D]">
@@ -565,7 +569,7 @@ export default function BillingScreen() {
   );
 }
 
-const styles = StyleSheet.create({});
+
 
 const CartItemRow = React.memo(({ cartItem, isFirst, isLast, handleUpdateQty, handleRemoveProduct }: any) => {
   const subtotal = cartItem.item.salePrice * cartItem.qty;

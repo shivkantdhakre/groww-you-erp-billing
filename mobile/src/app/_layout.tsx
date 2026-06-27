@@ -1,3 +1,4 @@
+import '@/global.css';
 import 'react-native-gesture-handler';
 import { useEffect, useState } from 'react';
 import { useColorScheme, View, ActivityIndicator, Text, TextInput } from 'react-native';
@@ -97,7 +98,7 @@ function RootLayout() {
       // Auto-flush the outbox immediately when returning online
       if (wasOffline && isNowConnected) {
         console.log('[Sync] Network connection restored. Initializing outbox sync.');
-        syncOfflineOutbox();
+        syncOfflineOutbox().catch(console.error);
       }
     });
     return () => unsubscribe();
@@ -119,8 +120,11 @@ function RootLayout() {
           // Try flushing outbox immediately on startup if online
           const isConnected = !useStore.getState().isOffline;
           if (isConnected) {
-            syncOfflineOutbox();
+            syncOfflineOutbox().catch(console.error);
           }
+        }).catch((err) => {
+          console.error('[Auth] Failed to initialize:', err);
+          setAuthInitialized(true); // Ensure app unblocks even if auth fails
         });
       }
     };

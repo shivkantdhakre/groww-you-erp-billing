@@ -22,7 +22,7 @@ export const shareInvoicePDF = async ({ invoiceId, invoiceNo, layout }: ShareInv
   if (isWeb) {
     let absolutePdfUrl = pdfUrl;
     if (pdfUrl.startsWith('/')) {
-      const hostUrl = baseURL.replace('/api', '');
+      const hostUrl = baseURL ? baseURL.replace('/api', '') : '';
       absolutePdfUrl = `${hostUrl}${pdfUrl}`;
     }
     if (typeof window !== 'undefined') {
@@ -46,7 +46,7 @@ export const shareInvoicePDF = async ({ invoiceId, invoiceNo, layout }: ShareInv
   // Handle relative URLs from the server (dev mode or Render local fallback)
   let absoluteUrl = pdfUrl;
   if (typeof pdfUrl === 'string' && pdfUrl.startsWith('/')) {
-    absoluteUrl = `${baseURL.replace('/api', '')}${pdfUrl}`;
+    absoluteUrl = `${baseURL ? baseURL.replace('/api', '') : ''}${pdfUrl}`;
   }
 
   try {

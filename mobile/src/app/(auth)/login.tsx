@@ -18,56 +18,6 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasBiometrics, setHasBiometrics] = useState(false);
-  const [biometricsEnabled, setBiometricsEnabled] = useState(true);
-
-  const handleBiometricLogin = async () => {
-    setError(null);
-    try {
-      const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Sign in to Groww You ERP',
-        fallbackLabel: 'Enter Password'
-      });
-
-      if (result.success) {
-        const savedEmail = await SecureStore.getItemAsync('saved_email');
-        const savedPassword = await SecureStore.getItemAsync('saved_password');
-        
-        if (savedEmail && savedPassword) {
-          await login(savedEmail, savedPassword);
-        } else {
-          setError("Saved credentials not found. Please log in with password once.");
-        }
-      }
-    } catch (err: any) {
-      setError(err.message || "Biometric authentication failed.");
-    }
-  };
-
-  // Check if biometrics and saved credentials exist on mount
-  useEffect(() => {
-    const checkBiometrics = async () => {
-      const hasHardware = await LocalAuthentication.hasHardwareAsync();
-      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-      const savedEmail = await SecureStore.getItemAsync('saved_email');
-      const savedOptIn = await SecureStore.getItemAsync('biometric_opt_in');
-      
-      const enrolled = hasHardware && isEnrolled && savedEmail && savedOptIn === 'true';
-      if (enrolled) {
-        setHasBiometrics(true);
-        
-        // Auto-prompt if not manually logged out
-        const manualLogout = useStore.getState().manualLogout;
-        if (!manualLogout) {
-          setTimeout(() => {
-            handleBiometricLogin();
-          }, 300);
-        }
-      }
-    };
-    checkBiometrics();
-  }, []);
-
   const handleLogin = async () => {
     setError(null);
     if (!email.trim() || !password.trim()) {
@@ -77,20 +27,12 @@ export default function LoginScreen() {
 
     try {
       await login(email.trim(), password);
-      // Save credentials securely for biometric unlock if enabled
-      if (biometricsEnabled) {
-        await SecureStore.setItemAsync('saved_email', email.trim());
-        await SecureStore.setItemAsync('saved_password', password);
-        await SecureStore.setItemAsync('biometric_opt_in', 'true');
-      } else {
-        await SecureStore.deleteItemAsync('saved_email');
-        await SecureStore.deleteItemAsync('saved_password');
-        await SecureStore.setItemAsync('biometric_opt_in', 'false');
-      }
     } catch (err: any) {
       setError(err.message || "Invalid credentials.");
     }
   };
+
+
 
   return (
     <KeyboardAvoidingView
@@ -163,31 +105,7 @@ export default function LoginScreen() {
               }
             />
 
-            {/* Remember/Biometric Toggle */}
-            <TouchableOpacity
-              onPress={() => setBiometricsEnabled(!biometricsEnabled)}
-              activeOpacity={0.7}
-              className="flex-row items-center mb-6 mt-2"
-            >
-              <Animated.View
-                className={`w-11 h-6 rounded-full mr-3 justify-center ${
-                  biometricsEnabled ? 'bg-action-orange' : 'bg-gray-700'
-                }`}
-                style={{
-                  padding: 2,
-                }}
-              >
-                <Animated.View
-                  className="w-5 h-5 rounded-full bg-white"
-                  style={{
-                    alignSelf: biometricsEnabled ? 'flex-end' : 'flex-start',
-                  }}
-                />
-              </Animated.View>
-              <Text className="text-gray-300 text-xs font-medium flex-1">
-                Enable biometric quick-login (FaceID/TouchID)
-              </Text>
-            </TouchableOpacity>
+
 
             {/* Forgot Password */}
             <TouchableOpacity className="items-end mb-4 -mt-2">
@@ -222,15 +140,7 @@ export default function LoginScreen() {
               variant="primary"
             />
 
-            {/* Biometric Login Option */}
-            {hasBiometrics && !loading && (
-              <Button
-                label="Unlock with Biometrics"
-                onPress={handleBiometricLogin}
-                variant="outline"
-                className="mt-4"
-              />
-            )}
+
 
             </Card>
           </Animated.View>

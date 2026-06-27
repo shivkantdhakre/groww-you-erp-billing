@@ -6,11 +6,13 @@ import { useStore } from "../../store/useStore";
 import { Ionicons } from "@expo/vector-icons";
 import { OfflineBanner } from "../../components/offline-banner";
 import { shareInvoicePDF } from "../../utils/pdfShare";
-import { useRouter } from "expo-router";
+import { useRouter, Href } from "expo-router";
 import Animated, { FadeInUp } from "react-native-reanimated";
 import { Skeleton } from "../../components/ui/skeleton";
 import { LinearGradient } from "expo-linear-gradient";
 import { Button } from "../../components/ui/button";
+import { ScreenLayout } from "../../components/ui/ScreenLayout";
+import { colors, radius, shadows, typography, spacing } from "../../constants";
 import * as Haptics from "expo-haptics";
 
 export default function DashboardScreen() {
@@ -79,12 +81,12 @@ export default function DashboardScreen() {
 
   if (loading && !summary) {
     return (
-      <View className="flex-1 bg-[#0A0F1D] px-5 pt-4 mt-20">
+      <ScreenLayout hideOfflineBanner>
         <Skeleton height={100} className="mb-6" />
         <Skeleton height={140} className="mb-6" />
         <Skeleton height={200} className="mb-6" />
         <Skeleton height={200} className="mb-6" />
-      </View>
+      </ScreenLayout>
     );
   }
 
@@ -95,28 +97,26 @@ export default function DashboardScreen() {
   const recentActivities = summary?.recentActivities || [];
 
   return (
-    <SafeAreaView edges={["bottom", "left", "right"]} className="flex-1 bg-[#0A0F1D]">
-      <ScrollView
-        className="flex-1 px-5 pt-4"
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#F7941D" />
-        }
-      >
-        {/* Offline Status Warning Banner */}
-        <OfflineBanner />
+    <ScreenLayout
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accent} />
+      }
+    >
+      <View style={{ flex: 1 }}>
+
 
         {/* Welcome Greeting */}
-        <Animated.View entering={FadeInUp.duration(400).delay(100)} className="mb-6 flex-row justify-between items-center">
+        <Animated.View entering={FadeInUp.duration(400).delay(100)} className="mb-6 flex-row justify-between items-center" style={{ marginTop: -4 }}>
           <View className="flex-1 mr-4">
-            <Text className="text-gray-400 text-sm">Welcome back,</Text>
-            <Text className="text-white text-2xl font-black mt-1">
+            <Text style={{ color: colors.textSecondary, ...typography.body }}>Welcome back,</Text>
+            <Text style={{ color: colors.textPrimary, ...typography.title }} className="mt-1">
               {user?.name || "Wholesale Owner"}
             </Text>
-            <Text className="text-gray-400 text-xs mt-0.5 font-inter">Groww You ERP - Live Insights</Text>
+            <Text style={{ color: colors.textSecondary, ...typography.caption }} className="mt-0.5">Groww You ERP - Live Insights</Text>
           </View>
           {__DEV__ && (
             <TouchableOpacity
-              onPress={() => router.push("/ui-demo")}
+              onPress={() => router.push("/ui-demo" as Href)}
               activeOpacity={0.7}
               className="bg-gray-800/40 border border-gray-800/80 p-2.5 rounded-xl"
               accessibilityRole="button"
@@ -130,7 +130,7 @@ export default function DashboardScreen() {
         {/* Quick Actions */}
         <Animated.View entering={FadeInUp.duration(400).delay(150)} className="flex-row gap-3 mb-6">
           <TouchableOpacity
-            onPress={() => router.push('/(app)/billing')}
+            onPress={() => router.push('/(app)/billing' as Href)}
             activeOpacity={0.8}
             className="flex-1 bg-[#F7941D]/10 border border-[#F7941D]/20 rounded-2xl p-4 items-center min-h-[80px] justify-center"
           >
@@ -138,7 +138,7 @@ export default function DashboardScreen() {
             <Text className="text-white text-xs font-bold mt-1.5 font-inter">New Sale</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => router.push('/(app)/scanner')}
+            onPress={() => router.push('/(app)/scanner' as Href)}
             activeOpacity={0.8}
             className="flex-1 bg-[#1B3A5C]/30 border border-[#1B3A5C]/40 rounded-2xl p-4 items-center min-h-[80px] justify-center"
           >
@@ -146,7 +146,7 @@ export default function DashboardScreen() {
             <Text className="text-white text-xs font-bold mt-1.5 font-inter">Scan</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => router.push('/(app)/invoices')}
+            onPress={() => router.push('/(app)/invoices' as Href)}
             activeOpacity={0.8}
             className="flex-1 bg-[#1B3A5C]/30 border border-[#1B3A5C]/40 rounded-2xl p-4 items-center min-h-[80px] justify-center"
           >
@@ -159,12 +159,11 @@ export default function DashboardScreen() {
         <Animated.View entering={FadeInUp.duration(400).delay(200)} className="flex-row gap-4 mb-6">
           
           {/* Today's Sales Card */}
-          <View className="flex-1 rounded-[28px] overflow-hidden" style={{
-            shadowColor: '#10B981',
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.25,
-            shadowRadius: 16,
-            elevation: 6,
+          <View className="flex-1 overflow-hidden" style={{
+            borderRadius: radius.card,
+            borderWidth: 1,
+            borderColor: colors.borderSubtle,
+            ...shadows.cardElevated
           }}>
             <LinearGradient
               colors={['#132F2D', '#183B38', '#1E4440']}
@@ -188,12 +187,11 @@ export default function DashboardScreen() {
           </View>
 
           {/* Receivables Card */}
-          <View className="flex-1 rounded-[28px] overflow-hidden" style={{
-            shadowColor: '#60A5FA',
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.2,
-            shadowRadius: 16,
-            elevation: 6,
+          <View className="flex-1 overflow-hidden" style={{
+            borderRadius: radius.card,
+            borderWidth: 1,
+            borderColor: colors.borderSubtle,
+            ...shadows.cardElevated
           }}>
             <LinearGradient
               colors={['#253652', '#2E4668', '#35517A']}
@@ -264,36 +262,45 @@ export default function DashboardScreen() {
           {recentActivities.length === 0 ? (
             <View className="py-4 items-center">
               <Text className="text-gray-400 text-sm mb-4 font-inter text-center">No recent database operations logged.</Text>
-              <Button label="Create a New Sale" onPress={() => router.push('/(app)/billing' as any)} variant="primary" />
+              <Button label="Create a New Sale" onPress={() => router.push('/(app)/billing' as Href)} variant="primary" />
             </View>
           ) : (
             <View className="space-y-3">
               {recentActivities.map((act: any) => {
-                const isSalesInvoice = act.action === "Sales Invoice" && act.id.startsWith("i_");
-                const invoiceId = isSalesInvoice ? parseInt(act.id.replace("i_", "")) : null;
+                const isSalesInvoice = act.action === "Sales Invoice" && String(act.id).startsWith("i_");
+                const invoiceId = isSalesInvoice ? parseInt(String(act.id).replace("i_", "")) : null;
 
                 return (
-                  <View key={act.id} className="flex-row justify-between items-center py-3 border-b border-gray-800/40">
+                  <View key={act.id} className="flex-row justify-between items-center border-b" style={{ minHeight: 64, borderColor: colors.borderSubtle, paddingVertical: spacing.md }}>
                     <View className="flex-1 mr-3">
-                      <Text className="text-gray-200 text-sm font-bold font-inter">{act.name}</Text>
-                      <Text className="text-gray-400 text-[10px] mt-0.5 font-inter">{act.action}</Text>
+                      <Text style={{ color: colors.textPrimary, ...typography.bodyStrong }}>{act.name}</Text>
+                      <Text style={{ color: colors.textSecondary, ...typography.label, marginTop: 2 }}>{act.action}</Text>
                     </View>
                     
                     <View className="flex-row items-center gap-3">
-                      {isSalesInvoice && invoiceId !== null && (
+                      {isSalesInvoice && invoiceId !== null ? (
                         <TouchableOpacity
                           onPress={() => handleShareDashboardInvoice(invoiceId, act.name)}
                           activeOpacity={0.7}
-                          className="bg-[#F7941D]/10 border border-[#F7941D]/20 p-2.5 rounded-xl min-h-[44px] min-w-[44px] items-center justify-center"
+                          className="items-center justify-center rounded-xl"
+                          style={{
+                            minHeight: 48,
+                            minWidth: 48,
+                            backgroundColor: 'transparent',
+                          }}
                           accessibilityRole="button"
                           accessibilityLabel="Share Invoice"
                         >
-                          <Ionicons name="share-social-outline" size={18} color="#F7941D" />
+                          <View style={{ width: 32, height: 32, borderRadius: radius.md, backgroundColor: colors.accentSubtle, alignItems: 'center', justifyContent: 'center', borderColor: colors.borderFocus, borderWidth: 1 }}>
+                            <Ionicons name="share-social-outline" size={16} color={colors.accent} />
+                          </View>
                         </TouchableOpacity>
-                      )}
-                      <Text className="text-gray-400 text-xs font-medium font-inter">
-                        {new Date(act.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </Text>
+                      ) : null}
+                      <View style={{ width: 60, alignItems: 'flex-end' }}>
+                        <Text style={{ color: colors.textMuted, ...typography.captionStrong, fontVariant: ['tabular-nums'] }}>
+                          {new Date(act.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </Text>
+                      </View>
                     </View>
                   </View>
                 );
@@ -303,7 +310,7 @@ export default function DashboardScreen() {
           </Card>
         </Animated.View>
 
-      </ScrollView>
+      </View>
 
       {/* Full-screen Loading Overlay for generation/download */}
       {sharingId !== null && (
@@ -319,6 +326,6 @@ export default function DashboardScreen() {
           </View>
         </View>
       )}
-    </SafeAreaView>
+    </ScreenLayout>
   );
 }

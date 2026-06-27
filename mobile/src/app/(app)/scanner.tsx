@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ScanTargetOverlay } from '../../components/scan-target-overlay';
 import { LinearGradient } from 'expo-linear-gradient';
 import api from '../../utils/api';
-import { router } from 'expo-router';
+import { router, Href } from "expo-router";
 
 const { width } = Dimensions.get('window');
 
@@ -163,7 +163,7 @@ export default function ScannerScreen() {
     if (!isOffline) {
       try {
         // Query the live backend for fresh stock allocations
-        const res = await api.get(`/masters/items?search=${sanitizedCode}`);
+        const res = await api.get(`/masters/items?search=${encodeURIComponent(sanitizedCode)}`);
         const fetchedData = res.data.data || res.data;
         if (Array.isArray(fetchedData)) {
           const remoteItem = fetchedData.find((i: any) => i.sku === sanitizedCode);
@@ -213,7 +213,7 @@ export default function ScannerScreen() {
           text: "Go to Billing",
           onPress: () => {
             handleReset();
-            router.push('/billing' as any);
+            router.push('/(app)/billing' as Href);
           }
         },
         {

@@ -6,10 +6,55 @@ import * as SecureStore from '../utils/secureStoreWrapper';
 import api from '../utils/api';
 import * as Sentry from '@sentry/react-native';
 
+import { createMMKV, MMKV } from 'react-native-mmkv';
+import { Platform } from 'react-native';
+
+let mmkvInstance: MMKV | null = null;
+let initPromise: Promise<MMKV> | null = null;
+
+async function getMMKV(): Promise<MMKV> {
+  if (Platform.OS === 'web') {
+    // Fallback for Web since MMKV is native only
+    if (!mmkvInstance) mmkvInstance = createMMKV({ id: 'web-fallback' });
+    return mmkvInstance;
+  }
+  
+  if (mmkvInstance) return mmkvInstance;
+  if (initPromise) return initPromise;
+  
+  initPromise = (async () => {
+    let key = await SecureStore.getItemAsync('mmkv_encryption_key');
+    if (!key) {
+      key = Date.now().toString(36) + Math.random().toString(36).substring(2);
+      await SecureStore.setItemAsync('mmkv_encryption_key', key);
+    }
+    mmkvInstance = createMMKV({
+      id: 'zustand-encrypted',
+      encryptionKey: key
+    });
+    return mmkvInstance;
+  })();
+  
+  return initPromise;
+}
+
 export const zustandStorage: StateStorage = {
-  setItem: (name, value) => AsyncStorage.setItem(name, value),
-  getItem: (name) => AsyncStorage.getItem(name),
-  removeItem: (name) => AsyncStorage.removeItem(name),
+  setItem: async (name, value) => {
+    if (Platform.OS === 'web') return AsyncStorage.setItem(name, value);
+    const storage = await getMMKV();
+    storage.set(name, value);
+  },
+  getItem: async (name) => {
+    if (Platform.OS === 'web') return AsyncStorage.getItem(name);
+    const storage = await getMMKV();
+    const value = storage.getString(name);
+    return value ?? null;
+  },
+  removeItem: async (name) => {
+    if (Platform.OS === 'web') return AsyncStorage.removeItem(name);
+    const storage = await getMMKV();
+    storage.remove(name);
+  },
 };
 
 export interface Branch {
@@ -22,17 +67,52 @@ export interface Branch {
   isActive: boolean;
 }
 
+export interface User {
+  id: number;
+  email: string;
+  name?: string;
+  role: string;
+  companyId: number;
+  branchId?: number | null;
+}
+
+export interface Item {
+  id: number;
+  name: string;
+  sku?: string;
+  salePrice: number;
+  gstPercentage?: number;
+  unit?: string;
+  openingStock?: number;
+  branchStocks?: { branchId: number; stock: number }[];
+}
+
+export interface Customer {
+  id: number;
+  name: string;
+  mobile: string;
+}
+
+export interface Invoice {
+  id: number;
+  invoiceNo: string;
+  invoiceDate: string;
+  customer?: Customer;
+  grandTotal: number;
+  pdfUrl?: string | null;
+}
+
 export interface CartItem {
-  item: any;
+  item: Item;
   qty: number;
 }
 
 interface StoreState {
   token: string | null;
-  user: any | null;
-  items: any[];
-  invoices: any[];
-  customers: any[];
+  user: User | null;
+  items: Item[];
+  invoices: Invoice[];
+  customers: Customer[];
   offlineOutbox: any[];
   summary: any | null;
   loading: boolean;
@@ -55,10 +135,10 @@ interface StoreState {
   updateCartQty: (itemId: number, qty: number) => void;
   clearCart: () => void;
   setToken: (token: string | null) => Promise<void>;
-  setUser: (user: any | null) => void;
-  setItems: (items: any[]) => void;
-  setInvoices: (invoices: any[]) => void;
-  setCustomers: (customers: any[]) => void;
+  setUser: (user: User | null) => void;
+  setItems: (items: Item[]) => void;
+  setInvoices: (invoices: Invoice[]) => void;
+  setCustomers: (customers: Customer[]) => void;
   setSummary: (summary: any | null) => void;
   setManualLogout: (val: boolean) => void;
   setOffline: (val: boolean) => void;
@@ -155,10 +235,11 @@ export const useStore = create<StoreState>()(
       clearCart: () => set({ cart: [] }),
       setSelectedBranchId: (branchId) => {
         set({ selectedBranchId: branchId, items: [], summary: null, invoices: [] });
-        if (get().user && Sentry.getClient()) {
+        const user = get().user;
+        if (user && Sentry.getClient()) {
           Sentry.setUser({
-            id: get().user.id.toString(),
-            email: get().user.email,
+            id: user.id.toString(),
+            email: user.email,
             segment: `branch_${branchId || 0}`
           });
         }
@@ -299,6 +380,9 @@ export const useStore = create<StoreState>()(
 
       logout: async () => {
         await get().setToken(null);
+        await SecureStore.deleteItemAsync('saved_email');
+        await SecureStore.deleteItemAsync('saved_password');
+        await SecureStore.deleteItemAsync('biometric_opt_in');
         set({ 
           user: null, 
           summary: null, 
@@ -463,6 +547,7 @@ export const useStore = create<StoreState>()(
       name: 'groww-you-erp-mobile-storage',
       storage: createJSONStorage(() => zustandStorage),
       partialize: (state) => ({
+        token: state.token,
         user: state.user,
         items: state.items,
         invoices: state.invoices,

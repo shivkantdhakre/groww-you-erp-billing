@@ -1,9 +1,10 @@
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './button';
+import { colors, radius, typography, spacing } from '../../constants';
 
 interface EmptyStateProps {
-  icon?: any;
+  icon?: keyof typeof Ionicons.glyphMap;
   title: string;
   description?: string;
   actionLabel?: string;
@@ -18,20 +19,20 @@ export function EmptyState({
   onAction,
 }: EmptyStateProps) {
   return (
-    <View className="items-center py-16 px-8">
-      <View className="w-20 h-20 rounded-full bg-[#1A1F2E] border border-gray-800 items-center justify-center mb-5">
-        <Ionicons name={icon} size={36} color="#4B5563" />
+    <View style={{ alignItems: 'center', paddingVertical: spacing.massive, paddingHorizontal: spacing.xxl }}>
+      <View style={{ width: 80, height: 80, borderRadius: radius.full, backgroundColor: colors.surfacePrimary, borderWidth: 1, borderColor: colors.borderSubtle, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xl }}>
+        <Ionicons name={icon} size={36} color={colors.textSecondary} />
       </View>
-      <Text className="text-gray-400 text-base font-bold text-center font-lexend">
+      <Text style={{ color: colors.textSecondary, ...typography.title, textAlign: 'center' }}>
         {title}
       </Text>
       {description && (
-        <Text className="text-gray-500 text-sm text-center mt-2 font-inter leading-relaxed">
+        <Text style={{ color: colors.textMuted, ...typography.body, textAlign: 'center', marginTop: spacing.xs }}>
           {description}
         </Text>
       )}
       {actionLabel && onAction && (
-        <View className="mt-6">
+        <View style={{ marginTop: spacing.xxl }}>
           <Button label={actionLabel} onPress={onAction} variant="primary" />
         </View>
       )}

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, FlatList, TextInput, TouchableOpacity, RefreshControl, ActivityIndicator, Modal } from "react-native";
+import { View, Text, FlatList, TextInput, TouchableOpacity, RefreshControl, ActivityIndicator, Modal, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card } from "../../components/ui/card";
 import { useStore } from "../../store/useStore";
@@ -9,6 +9,8 @@ import { EmptyState } from "../../components/ui/empty-state";
 import Animated, { FadeInUp, FadeOut, LinearTransition } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { Skeleton } from "../../components/ui/skeleton";
+import { ScreenLayout } from "../../components/ui/ScreenLayout";
+import { colors, radius, shadows, typography, spacing } from "../../constants";
 
 export default function InventoryScreen() {
   const items = useStore((state) => state.items);
@@ -71,13 +73,13 @@ export default function InventoryScreen() {
 
   if (loading && items.length === 0) {
     return (
-      <View className="flex-1 bg-[#0A0F1D] px-5 pt-4 mt-20">
+      <ScreenLayout hideOfflineBanner>
         <Skeleton height={100} className="mb-3" />
         <Skeleton height={100} className="mb-3" />
         <Skeleton height={100} className="mb-3" />
         <Skeleton height={100} className="mb-3" />
         <Skeleton height={100} className="mb-3" />
-      </View>
+      </ScreenLayout>
     );
   }
 
@@ -94,17 +96,14 @@ export default function InventoryScreen() {
   };
 
   return (
-    <SafeAreaView edges={["bottom", "left", "right"]} className="flex-1 bg-[#0A0F1D] px-5 pt-4">
-      
-      {/* Offline Status Warning Banner */}
-      <OfflineBanner />
+    <ScreenLayout scrollable={false}>
       
       {/* Search Header Container */}
-      <View className="flex-row items-center bg-[#1A1F2E] border border-gray-800 rounded-xl px-4 py-1 mb-3">
+      <View style={{ backgroundColor: colors.surfaceElevated, borderColor: colors.borderSubtle, borderWidth: 1, borderRadius: radius.lg, paddingHorizontal: spacing.lg, paddingVertical: spacing.xxs, marginBottom: spacing.md }} className="flex-row items-center">
         <Ionicons name="search" size={20} color="#6B7280" />
         <TextInput
           className="flex-1 ml-3 h-12 text-white font-medium"
-          placeholder="Search by product name, SKU, or category..."
+          placeholder="Search inventory..."
           placeholderTextColor="#6B7280"
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -121,36 +120,50 @@ export default function InventoryScreen() {
 
       {/* Category Chips */}
       {categories.length > 0 && (
-        <View className="flex-row gap-2 mb-4">
-          <TouchableOpacity
-            onPress={() => setSelectedCategory(null)}
-            activeOpacity={0.7}
-            className={`px-4 py-2 rounded-xl border min-h-[36px] justify-center ${
-              !selectedCategory
-                ? 'bg-[#F7941D]/10 border-[#F7941D]/30'
-                : 'bg-[#1A1F2E] border-gray-800'
-            }`}
-          >
-            <Text className={`text-xs font-bold ${!selectedCategory ? 'text-[#F7941D]' : 'text-gray-400'}`}>
-              All
-            </Text>
-          </TouchableOpacity>
-          {categories.map((cat) => (
+        <View style={{ marginBottom: spacing.md, marginHorizontal: -spacing.xl }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: spacing.xl, gap: spacing.sm }}>
             <TouchableOpacity
-              key={cat}
-              onPress={() => setSelectedCategory(cat)}
+              onPress={() => setSelectedCategory(null)}
               activeOpacity={0.7}
-              className={`px-4 py-2 rounded-xl border min-h-[36px] justify-center ${
-                selectedCategory === cat
-                  ? 'bg-[#F7941D]/10 border-[#F7941D]/30'
-                  : 'bg-[#1A1F2E] border-gray-800'
-              }`}
+              style={{
+                height: 40,
+                minWidth: 80,
+                borderRadius: radius.chip,
+                borderWidth: 1,
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingHorizontal: spacing.lg,
+                backgroundColor: !selectedCategory ? colors.backgroundSelected : colors.surfacePrimary,
+                borderColor: !selectedCategory ? colors.borderFocus : colors.borderSubtle
+              }}
             >
-              <Text className={`text-xs font-bold ${selectedCategory === cat ? 'text-[#F7941D]' : 'text-gray-400'}`}>
-                {cat}
+              <Text style={{ color: !selectedCategory ? colors.accent : colors.textSecondary, ...typography.captionStrong }}>
+                All
               </Text>
             </TouchableOpacity>
-          ))}
+            {categories.map((cat) => (
+              <TouchableOpacity
+                key={cat}
+                onPress={() => setSelectedCategory(cat)}
+                activeOpacity={0.7}
+                style={{
+                  height: 40,
+                  minWidth: 80,
+                  borderRadius: radius.chip,
+                  borderWidth: 1,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingHorizontal: spacing.lg,
+                  backgroundColor: selectedCategory === cat ? colors.backgroundSelected : colors.surfacePrimary,
+                  borderColor: selectedCategory === cat ? colors.borderFocus : colors.borderSubtle
+                }}
+              >
+                <Text style={{ color: selectedCategory === cat ? colors.accent : colors.textSecondary, ...typography.captionStrong }}>
+                  {cat}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
       )}
 
@@ -179,7 +192,7 @@ export default function InventoryScreen() {
           ) : null
         }
       />
-    </SafeAreaView>
+      </ScreenLayout>
   );
 }
 
@@ -196,44 +209,61 @@ const InventoryItem = React.memo(({ item, isExpanded, toggleExpandItem, branches
   return (
     <Animated.View 
       layout={LinearTransition.duration(200)} 
-      className="bg-[#1A1F2E] border border-gray-800 rounded-2xl mb-3 overflow-hidden shadow-lg"
+      style={{
+        backgroundColor: colors.surfacePrimary,
+        borderColor: colors.borderSubtle,
+        borderWidth: 1,
+        borderRadius: radius.card,
+        marginBottom: spacing.md,
+        overflow: 'hidden',
+        ...shadows.card
+      }}
     >
       <TouchableOpacity
         onPress={() => toggleExpandItem(item.id)}
         activeOpacity={0.9}
-        className="p-4 flex-row justify-between items-center"
+        style={{ padding: spacing.xl }}
       >
-        <View className="flex-1 mr-4">
-          <Text className="text-white text-base font-bold font-lexend" numberOfLines={1}>
+        <View style={{ marginBottom: spacing.sm }}>
+          <Text style={{ color: colors.textPrimary, ...typography.subheading }} numberOfLines={1}>
             {item.name}
           </Text>
-          <Text className="text-gray-400 text-xs mt-1 font-inter">
+          <Text style={{ color: colors.textMuted, ...typography.caption, marginTop: spacing.xxs }}>
             SKU: {item.sku || "N/A"} | Cat: {item.category || "General"}
           </Text>
         </View>
 
-        <View className="items-end gap-1.5">
-          <View className={`px-3 py-1 rounded-xl border ${
-            isLowStock
-              ? "bg-red-500/10 border-red-500/20"
-              : "bg-emerald-500/10 border-emerald-500/20"
-          }`}>
-            <Text className={`text-xs font-black ${isLowStock ? "text-red-500" : "text-emerald-500"}`}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View style={{
+            paddingHorizontal: spacing.md,
+            paddingVertical: spacing.xs,
+            borderRadius: radius.badge,
+            borderWidth: 1,
+            backgroundColor: isLowStock ? colors.errorSubtle : colors.successSubtle,
+            borderColor: isLowStock ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+          }}>
+            <Text style={{ color: isLowStock ? colors.error : colors.success, ...typography.captionStrong, fontVariant: ['tabular-nums'] }}>
               {currentStock} {item.unit || "pcs"}
             </Text>
           </View>
-          {/* Stock level bar */}
-          <View className="w-16 h-1.5 bg-gray-800 rounded-full overflow-hidden">
-            <View
-              className={`h-full rounded-full ${isLowStock ? "bg-red-500" : "bg-emerald-500"}`}
-              style={{ width: `${Math.min((currentStock / Math.max(item.minStockAlert * 3, 100)) * 100, 100)}%` }}
+          
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <View style={{ width: 64, height: 6, backgroundColor: colors.backgroundSecondary, borderRadius: radius.full, overflow: 'hidden' }}>
+              <View
+                style={{
+                  height: '100%',
+                  borderRadius: radius.full,
+                  backgroundColor: isLowStock ? colors.error : colors.success,
+                  width: `${Math.min((currentStock / Math.max(item.minStockAlert * 3, 100)) * 100, 100)}%`
+                }}
+              />
+            </View>
+            <Ionicons
+              name={isExpanded ? "chevron-up" : "chevron-down"}
+              size={16}
+              color={colors.textSecondary}
             />
           </View>
-          <Ionicons
-            name={isExpanded ? "chevron-up" : "chevron-down"}
-            size={14}
-            color="#9CA3AF"
-          />
         </View>
       </TouchableOpacity>
 

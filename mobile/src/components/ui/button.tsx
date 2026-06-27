@@ -2,7 +2,8 @@ import React, { useCallback } from 'react';
 import { Pressable, Text, ActivityIndicator, GestureResponderEvent } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import { colors, typography, spacing, radius, animations } from '../../constants';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -11,7 +12,7 @@ interface ButtonProps extends React.ComponentPropsWithoutRef<typeof Pressable> {
   variant?: 'primary' | 'navy' | 'outline' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
-  icon?: any;
+  icon?: keyof typeof Ionicons.glyphMap;
   haptic?: boolean;
   onPress?: (event: GestureResponderEvent) => void;
 }
@@ -35,36 +36,36 @@ export const Button = React.forwardRef<React.ElementRef<typeof Pressable>, Butto
     const scale = useSharedValue(1);
 
     const variantStyles = {
-      primary: 'bg-action-orange border border-action-orange',
-      navy: 'bg-[#1B3A5C] border border-[#1B3A5C]',
-      outline: 'bg-transparent border border-gray-700',
-      ghost: 'bg-transparent border border-transparent',
+      primary: { backgroundColor: colors.accent, borderColor: colors.accent },
+      navy: { backgroundColor: colors.surfaceElevated, borderColor: colors.borderSubtle },
+      outline: { backgroundColor: 'transparent', borderColor: colors.borderStrong },
+      ghost: { backgroundColor: 'transparent', borderColor: 'transparent' },
     };
 
     const textColors = {
-      primary: 'text-[#0A0F1D]',
-      navy: 'text-white',
-      outline: 'text-white',
-      ghost: 'text-gray-400',
+      primary: colors.textInverse,
+      navy: colors.textPrimary,
+      outline: colors.textPrimary,
+      ghost: colors.textSecondary,
     };
 
     const sizeStyles = {
-      sm: 'px-4 min-h-[44px] justify-center rounded-xl',
-      md: 'px-6 min-h-[48px] justify-center rounded-xl',
-      lg: 'px-8 min-h-[56px] justify-center rounded-xl',
+      sm: { paddingHorizontal: spacing.lg, minHeight: 44, borderRadius: radius.lg },
+      md: { paddingHorizontal: spacing.xl, minHeight: 48, borderRadius: radius.lg },
+      lg: { paddingHorizontal: spacing.xxl, minHeight: 56, borderRadius: radius.xl },
     };
 
     const textSizeStyles = {
-      sm: 'text-xs font-semibold',
-      md: 'text-sm font-bold',
-      lg: 'text-base font-black',
+      sm: typography.captionStrong,
+      md: typography.bodyStrong,
+      lg: typography.subheading,
     };
 
     const loaderColors = {
-      primary: '#0A0F1D',
-      navy: '#FFFFFF',
-      outline: '#FFFFFF',
-      ghost: '#9CA3AF',
+      primary: colors.textInverse,
+      navy: colors.textPrimary,
+      outline: colors.textPrimary,
+      ghost: colors.textSecondary,
     };
 
     const animatedStyle = useAnimatedStyle(() => ({
@@ -72,11 +73,11 @@ export const Button = React.forwardRef<React.ElementRef<typeof Pressable>, Butto
     }));
 
     const handlePressIn = () => {
-      scale.value = withSpring(0.97, { damping: 15, stiffness: 300 });
+      scale.value = animations.spring.standard(animations.motion.press.scaleDown);
     };
 
     const handlePressOut = () => {
-      scale.value = withSpring(1, { damping: 15, stiffness: 300 });
+      scale.value = animations.spring.standard(animations.motion.press.scaleUp);
     };
 
     const handlePress = useCallback(
@@ -98,21 +99,35 @@ export const Button = React.forwardRef<React.ElementRef<typeof Pressable>, Butto
         disabled={disabled || loading}
         accessibilityRole="button"
         accessibilityState={{ disabled: disabled || loading }}
-        className={`flex-row items-center justify-center border ${
-          variantStyles[variant]
-        } ${sizeStyles[size]} ${disabled ? 'opacity-40' : ''} ${className}`}
-        style={animatedStyle}
+        style={[
+          {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderWidth: 1,
+            opacity: disabled ? 0.4 : 1,
+          },
+          variantStyles[variant],
+          sizeStyles[size],
+          animatedStyle,
+          props.style
+        ]}
+        className={className}
         {...props}
       >
         {loading ? (
           <ActivityIndicator color={loaderColors[variant]} className="mr-2" size="small" />
         ) : icon ? (
-          <Ionicons name={icon as any} size={20} color={loaderColors[variant]} style={{ marginRight: 8 }} />
+          <Ionicons name={icon} size={20} color={loaderColors[variant]} style={{ marginRight: 8 }} />
         ) : null}
         
-        <Text maxFontSizeMultiplier={1.2} className={`font-lexend tracking-wide text-center ${
-          textColors[variant]
-        } ${textSizeStyles[size]}`}>
+        <Text 
+          maxFontSizeMultiplier={1.2} 
+          style={[
+            textSizeStyles[size],
+            { color: textColors[variant], textAlign: 'center' }
+          ]}
+        >
           {label}
         </Text>
       </AnimatedPressable>

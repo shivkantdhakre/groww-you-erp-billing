@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TextInputProps, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { colors, radius, typography, spacing } from '../../constants';
 
 interface InputProps extends TextInputProps {
   label?: string;
   error?: string;
-  icon?: any; // Ionicons name or custom icon node
+  icon?: keyof typeof Ionicons.glyphMap; // Ionicons name or custom icon node
   trailingIcon?: React.ReactNode;
 }
 
@@ -24,27 +25,30 @@ export const Input = React.forwardRef<TextInput, InputProps>(
     };
 
     return (
-      <View className={`mb-4 ${className}`}>
+      <View style={{ marginBottom: spacing.md }} className={className}>
         {label ? (
-          <Text maxFontSizeMultiplier={1.2} className="text-gray-400 font-lexend font-semibold text-xs mb-1.5 uppercase tracking-wider">
+          <Text maxFontSizeMultiplier={1.2} style={{ color: colors.textSecondary, ...typography.label, marginBottom: spacing.xxs }}>
             {label}
           </Text>
         ) : null}
 
         <View
-          className={`flex-row items-center bg-[#1A1F2E] border rounded-xl px-4 h-14 ${
-            error
-              ? 'border-red-500'
-              : isFocused
-              ? 'border-action-orange'
-              : 'border-gray-800'
-          }`}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: colors.surfacePrimary,
+            borderWidth: 1,
+            borderRadius: radius.lg,
+            paddingHorizontal: spacing.lg,
+            height: 56,
+            borderColor: error ? colors.error : isFocused ? colors.borderFocus : colors.borderSubtle
+          }}
         >
           {icon ? (
             <Ionicons
               name={icon}
               size={20}
-              color={error ? '#EF4444' : isFocused ? '#F7941D' : '#6B7280'}
+              color={error ? colors.error : isFocused ? colors.accent : colors.textMuted}
               style={{ marginRight: 10 }}
             />
           ) : null}
@@ -54,8 +58,8 @@ export const Input = React.forwardRef<TextInput, InputProps>(
             maxFontSizeMultiplier={1.2}
             onFocus={handleFocus}
             onBlur={handleBlur}
-            placeholderTextColor="#6B7280"
-            className="flex-1 text-white font-inter text-sm"
+            placeholderTextColor={colors.textMuted}
+            style={{ flex: 1, color: colors.textPrimary, ...typography.body }}
             accessibilityLabel={label}
             {...props}
           />
@@ -64,7 +68,7 @@ export const Input = React.forwardRef<TextInput, InputProps>(
         </View>
 
         {error ? (
-          <Text maxFontSizeMultiplier={1.2} className="text-red-500 font-inter text-xs mt-1">
+          <Text maxFontSizeMultiplier={1.2} style={{ color: colors.error, ...typography.caption, marginTop: spacing.xxs }}>
             {error}
           </Text>
         ) : null}
@@ -131,9 +135,9 @@ export const NumericInput = React.forwardRef<TextInput, NumericInputProps>(
     };
 
     return (
-      <View className={`mb-4 ${className}`}>
+      <View style={{ marginBottom: spacing.md }} className={className}>
         {label ? (
-          <Text maxFontSizeMultiplier={1.2} className="text-gray-400 font-lexend font-semibold text-xs mb-1.5 uppercase tracking-wider">
+          <Text maxFontSizeMultiplier={1.2} style={{ color: colors.textSecondary, ...typography.label, marginBottom: spacing.xxs }}>
             {label}
           </Text>
         ) : null}
@@ -143,20 +147,33 @@ export const NumericInput = React.forwardRef<TextInput, NumericInputProps>(
           <TouchableOpacity
             onPress={decrement}
             activeOpacity={0.7}
-            className="bg-[#1A1F2E] border border-gray-800 rounded-xl w-12 h-14 items-center justify-center"
+            style={{
+              backgroundColor: colors.surfacePrimary,
+              borderWidth: 1,
+              borderColor: colors.borderSubtle,
+              borderRadius: radius.lg,
+              width: 48,
+              height: 56,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
           >
-            <Ionicons name="remove" size={20} color="#FFFFFF" />
+            <Ionicons name="remove" size={20} color={colors.textPrimary} />
           </TouchableOpacity>
 
           {/* Core Input Wrapper */}
           <View
-            className={`flex-row items-center flex-1 bg-[#1A1F2E] border rounded-xl px-4 h-14 ${
-              error
-                ? 'border-red-500'
-                : isFocused
-                ? 'border-action-orange'
-                : 'border-gray-800'
-            }`}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              flex: 1,
+              backgroundColor: colors.surfacePrimary,
+              borderWidth: 1,
+              borderRadius: radius.lg,
+              paddingHorizontal: spacing.lg,
+              height: 56,
+              borderColor: error ? colors.error : isFocused ? colors.borderFocus : colors.borderSubtle
+            }}
           >
             <TextInput
               ref={ref}
@@ -166,8 +183,8 @@ export const NumericInput = React.forwardRef<TextInput, NumericInputProps>(
               onFocus={handleFocus}
               onBlur={handleBlur}
               keyboardType="decimal-pad"
-              placeholderTextColor="#6B7280"
-              className="flex-1 text-white font-inter text-center font-bold text-base"
+              placeholderTextColor={colors.textMuted}
+              style={{ flex: 1, color: colors.textPrimary, ...typography.bodyStrong, textAlign: 'center' }}
               accessibilityLabel={label}
               {...props}
             />
@@ -177,14 +194,23 @@ export const NumericInput = React.forwardRef<TextInput, NumericInputProps>(
           <TouchableOpacity
             onPress={increment}
             activeOpacity={0.7}
-            className="bg-[#1A1F2E] border border-gray-800 rounded-xl w-12 h-14 items-center justify-center"
+            style={{
+              backgroundColor: colors.surfacePrimary,
+              borderWidth: 1,
+              borderColor: colors.borderSubtle,
+              borderRadius: radius.lg,
+              width: 48,
+              height: 56,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
           >
-            <Ionicons name="add" size={20} color="#FFFFFF" />
+            <Ionicons name="add" size={20} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>
 
         {error ? (
-          <Text maxFontSizeMultiplier={1.2} className="text-red-500 font-inter text-xs mt-1">
+          <Text maxFontSizeMultiplier={1.2} style={{ color: colors.error, ...typography.caption, marginTop: spacing.xxs }}>
             {error}
           </Text>
         ) : null}

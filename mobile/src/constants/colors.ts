@@ -1,33 +1,42 @@
-/**
- * Global color constants for standardizing colors across the app.
- * Kept in sync with tailwind.config.js
- */
 export const colors = {
-  'brand-navy': {
-    DEFAULT: "#1B3A5C",
-    foreground: "#FFFFFF",
-  },
-  'action-orange': {
-    DEFAULT: "#F7941D",
-    foreground: "#FFFFFF",
-  },
-  background: "#0A0F1D",
-  surface: {
-    DEFAULT: "#1A1F2E",
-    light: "#141824",
-  },
-  text: {
-    DEFAULT: "#FFFFFF",
-    muted: "#9CA3AF", // gray-400
-    disabled: "#6B7280", // gray-500
-  },
-  border: {
-    DEFAULT: "#1F2937", // gray-800
-    light: "#374151", // gray-700
-  },
-  status: {
-    success: "#10B981", // emerald-500
-    error: "#EF4444", // red-500
-    warning: "#F59E0B", // amber-500
-  }
-};
+  // Base backgrounds
+  backgroundPrimary: '#0A0F1D',
+  backgroundSecondary: '#141824',
+  backgroundElevated: '#1A1F2E',
+  backgroundSelected: 'rgba(247, 148, 29, 0.1)', // 10% opacity
+  
+  // Surfaces (Cards, Chips, Modals)
+  surfacePrimary: '#1A1F2E',
+  surfaceSecondary: '#141824',
+  surfaceElevated: '#1E2538',
+
+  // Borders
+  borderSubtle: 'rgba(255, 255, 255, 0.05)',
+  borderStrong: 'rgba(255, 255, 255, 0.15)',
+  borderFocus: '#F7941D',
+
+  // Typography
+  textPrimary: '#FFFFFF',
+  textSecondary: '#9CA3AF',
+  textMuted: '#6B7280',
+  textInverse: '#000000',
+
+  // Semantic & Brand
+  accent: '#F7941D',
+  accentSubtle: 'rgba(247, 148, 29, 0.1)',
+  
+  // Status Colors
+  success: '#10B981',
+  successSubtle: 'rgba(16, 185, 129, 0.1)',
+  
+  error: '#EF4444',
+  errorSubtle: 'rgba(239, 68, 68, 0.1)',
+  
+  warning: '#F59E0B',
+  warningSubtle: 'rgba(245, 158, 11, 0.1)',
+  
+  info: '#3B82F6',
+  infoSubtle: 'rgba(59, 130, 246, 0.1)',
+} as const;
+
+export type ThemeColors = typeof colors;

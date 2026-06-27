@@ -14,49 +14,57 @@ interface ToastConfig {
   message: string;
   type?: 'success' | 'error' | 'info' | 'warning';
   duration?: number;
-  icon?: any;
+  icon?: keyof typeof Ionicons.glyphMap;
 }
 
-let showToastFn: ((config: ToastConfig) => void) | null = null;
+import { create } from 'zustand';
+
+interface ToastState {
+  toast: ToastConfig | null;
+  showToast: (config: ToastConfig) => void;
+  hideToast: () => void;
+}
+
+const useToastStore = create<ToastState>((set) => ({
+  toast: null,
+  showToast: (config) => set({ toast: config }),
+  hideToast: () => set({ toast: null }),
+}));
 
 export function showToast(config: ToastConfig) {
-  if (showToastFn) showToastFn(config);
+  useToastStore.getState().showToast(config);
 }
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const translateY = useSharedValue(100);
   const opacity = useSharedValue(0);
-  const [toast, setToast] = useState<ToastConfig | null>(null);
+  const toast = useToastStore((state) => state.toast);
+  const hideToast = useToastStore((state) => state.hideToast);
 
-  const show = useCallback((config: ToastConfig) => {
-    setToast(config);
+  useEffect(() => {
+    if (!toast) return;
     translateY.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.cubic) });
     opacity.value = withTiming(1, { duration: 300 });
 
-    const dur = config.duration || 2500;
+    const dur = toast.duration || 2500;
     translateY.value = withDelay(
       dur,
       withTiming(100, { duration: 300, easing: Easing.in(Easing.cubic) }, (finished) => {
-        if (finished) runOnJS(setToast)(null);
+        if (finished) runOnJS(hideToast)();
       })
     );
     opacity.value = withDelay(
       dur,
       withTiming(0, { duration: 300 })
     );
-  }, []);
-
-  useEffect(() => {
-    showToastFn = show;
-    return () => { showToastFn = null; };
-  }, [show]);
+  }, [toast, hideToast, opacity, translateY]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
     opacity: opacity.value,
   }));
 
-  const iconMap: Record<string, any> = {
+  const iconMap: Record<string, keyof typeof Ionicons.glyphMap> = {
     success: 'checkmark-circle',
     error: 'alert-circle',
     info: 'information-circle',
@@ -75,6 +83,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {children}
       {toast && (
         <Animated.View
+          accessibilityRole="alert"
           style={[styles.toast, animatedStyle]}
           className={`absolute bottom-24 left-4 right-4 ${bgMap[toast.type || 'info']} rounded-2xl px-5 py-4 flex-row items-center shadow-2xl`}
         >

@@ -11,6 +11,7 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import * as SplashScreen from 'expo-splash-screen';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const AnimatedImage = Animated.createAnimatedComponent(Image);
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -29,6 +30,7 @@ export function CustomSplashScreen({ appReady, onAnimationComplete }: CustomSpla
   const loaderOpacity = useSharedValue(0);
   const progressWidth = useSharedValue(0);
   const versionOpacity = useSharedValue(0);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     logoOpacity.value = withTiming(1, { duration: 700, easing: Easing.out(Easing.back(1.2)) });
@@ -101,7 +103,7 @@ export function CustomSplashScreen({ appReady, onAnimationComplete }: CustomSpla
       </View>
 
       {/* Bottom section */}
-      <Animated.View style={[styles.bottomSection, loaderStyle]}>
+      <Animated.View style={[styles.bottomSection, loaderStyle, { bottom: 80 + insets.bottom }]}>
         <View style={styles.progressTrack}>
           <Animated.View style={[styles.progressBar, progressBarStyle]} />
         </View>
@@ -111,7 +113,7 @@ export function CustomSplashScreen({ appReady, onAnimationComplete }: CustomSpla
         </View>
       </Animated.View>
 
-      <Animated.View style={[styles.versionContainer, versionStyle]}>
+      <Animated.View style={[styles.versionContainer, versionStyle, { bottom: Math.max(insets.bottom, 20) }]}>
         <Text style={styles.versionText}>v1.0.0</Text>
       </Animated.View>
     </Animated.View>

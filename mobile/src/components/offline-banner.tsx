@@ -2,9 +2,12 @@ import { useEffect, useState } from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useStore } from '../store/useStore';
+import { Skeleton } from './ui/skeleton';
+import { colors, radius, typography, spacing } from '../constants';
 
 export function OfflineBanner() {
   const isOffline = useStore((state) => state.isOffline);
+  const hasHydrated = useStore((state) => state.hasHydrated);
   const lastSyncedAt = useStore((state) => state.lastSyncedAt);
   const [relativeTime, setRelativeTime] = useState('');
 
@@ -43,14 +46,28 @@ export function OfflineBanner() {
     return () => clearInterval(interval);
   }, [isOffline, lastSyncedAt]);
 
+  if (!hasHydrated) {
+    return <Skeleton height={70} className="mb-5 rounded-2xl" />;
+  }
+
   if (!isOffline) return null;
 
   return (
-    <View className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl flex-row items-center mb-5 gap-3">
-      <Ionicons name="cloud-offline-outline" size={24} color="#F59E0B" />
-      <View className="flex-1">
-        <Text className="text-amber-500 font-bold text-sm">Offline Mode</Text>
-        <Text className="text-amber-500/80 text-xs mt-0.5">
+    <View style={{
+      backgroundColor: colors.warningSubtle,
+      borderColor: 'rgba(245, 158, 11, 0.2)',
+      borderWidth: 1,
+      padding: spacing.lg,
+      borderRadius: radius.lg,
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.xl,
+      gap: spacing.md
+    }}>
+      <Ionicons name="cloud-offline-outline" size={24} color={colors.warning} />
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: colors.warning, ...typography.bodyStrong }}>Offline Mode</Text>
+        <Text style={{ color: colors.warning, opacity: 0.8, ...typography.caption, marginTop: spacing.xxs }}>
           Showing cached data (synced {relativeTime}).
         </Text>
       </View>
