@@ -6,56 +6,73 @@ import * as SecureStore from '../utils/secureStoreWrapper';
 import api from '../utils/api';
 import * as Sentry from '@sentry/react-native';
 
-import { createMMKV, MMKV } from 'react-native-mmkv';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Platform } from 'react-native';
+import type { MMKV } from 'react-native-mmkv';
 
-let mmkvInstance: MMKV | null = null;
-let initPromise: Promise<MMKV> | null = null;
+const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+const useFallbackStorage = isExpoGo || Platform.OS === 'web';
 
-async function getMMKV(): Promise<MMKV> {
-  if (Platform.OS === 'web') {
-    // Fallback for Web since MMKV is native only
-    if (!mmkvInstance) mmkvInstance = createMMKV({ id: 'web-fallback' });
-    return mmkvInstance;
-  }
+let activeStorage: StateStorage;
+
+if (useFallbackStorage) {
+  console.warn(`[Storage] Running in ${Platform.OS === 'web' ? 'Web' : 'Expo Go'}: Falling back to AsyncStorage. Performance will be degraded.`);
+  activeStorage = {
+    getItem: async (name) => await AsyncStorage.getItem(name),
+    setItem: async (name, value) => await AsyncStorage.setItem(name, value),
+    removeItem: async (name) => await AsyncStorage.removeItem(name),
+  };
+} else {
+  // Production / Custom Dev Client
+  // Dynamic require prevents Expo Go from resolving the missing C++ module at load time.
+  const { createMMKV } = require('react-native-mmkv');
   
-  if (mmkvInstance) return mmkvInstance;
-  if (initPromise) return initPromise;
-  
-  initPromise = (async () => {
-    let key = await SecureStore.getItemAsync('mmkv_encryption_key');
-    if (!key) {
-      key = Date.now().toString(36) + Math.random().toString(36).substring(2);
-      await SecureStore.setItemAsync('mmkv_encryption_key', key);
-    }
-    mmkvInstance = createMMKV({
-      id: 'zustand-encrypted',
-      encryptionKey: key
-    });
-    return mmkvInstance;
-  })();
-  
-  return initPromise;
+  let mmkvInstance: MMKV | null = null;
+  let initPromise: Promise<MMKV> | null = null;
+
+  const getMMKV = async (): Promise<MMKV> => {
+    if (mmkvInstance) return mmkvInstance;
+    if (initPromise) return initPromise;
+    
+    initPromise = (async () => {
+      let key = await SecureStore.getItemAsync('mmkv_encryption_key');
+      if (!key) {
+        key = Date.now().toString(36) + Math.random().toString(36).substring(2);
+        await SecureStore.setItemAsync('mmkv_encryption_key', key);
+      }
+      mmkvInstance = createMMKV({
+        id: 'zustand-encrypted',
+        encryptionKey: key
+      });
+      return mmkvInstance;
+    })();
+    
+    return initPromise;
+  };
+
+  activeStorage = {
+    getItem: async (name) => {
+      const storage = await getMMKV();
+      const value = storage.getString(name);
+      return value ?? null;
+    },
+    setItem: async (name, value) => {
+      const storage = await getMMKV();
+      storage.set(name, value);
+    },
+    removeItem: async (name) => {
+      const storage = await getMMKV();
+      // Safely handle both v2 (.delete) and v3 APIs just in case
+      if (typeof storage.delete === 'function') {
+        storage.delete(name);
+      } else if (typeof (storage as any).remove === 'function') {
+        (storage as any).remove(name);
+      }
+    },
+  };
 }
 
-export const zustandStorage: StateStorage = {
-  setItem: async (name, value) => {
-    if (Platform.OS === 'web') return AsyncStorage.setItem(name, value);
-    const storage = await getMMKV();
-    storage.set(name, value);
-  },
-  getItem: async (name) => {
-    if (Platform.OS === 'web') return AsyncStorage.getItem(name);
-    const storage = await getMMKV();
-    const value = storage.getString(name);
-    return value ?? null;
-  },
-  removeItem: async (name) => {
-    if (Platform.OS === 'web') return AsyncStorage.removeItem(name);
-    const storage = await getMMKV();
-    storage.remove(name);
-  },
-};
+export const zustandStorage: StateStorage = activeStorage;
 
 export interface Branch {
   id: number;
@@ -383,6 +400,8 @@ export const useStore = create<StoreState>()(
         await SecureStore.deleteItemAsync('saved_email');
         await SecureStore.deleteItemAsync('saved_password');
         await SecureStore.deleteItemAsync('biometric_opt_in');
+        // Clear AsyncStorage to prevent state divergence when switching between Expo Go and Native Build
+        await AsyncStorage.removeItem('groww-you-erp-mobile-storage').catch(() => {});
         set({ 
           user: null, 
           summary: null, 

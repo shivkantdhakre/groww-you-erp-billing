@@ -1,11 +1,10 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Platform, View } from 'react-native';
+import { Platform, View, Animated, Easing } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStore } from '../../store/useStore';
-import Animated, { useAnimatedStyle, withSpring, useSharedValue, withTiming } from 'react-native-reanimated';
 import { colors, animations, typography, spacing, radius } from '../../constants';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 const TAB_ICONS: Record<string, { focused: any; default: any }> = {
   index: { focused: 'stats-chart', default: 'stats-chart-outline' },
@@ -19,33 +18,17 @@ const TAB_ICONS: Record<string, { focused: any; default: any }> = {
 function TabIcon({ routeName, color, size, focused }: { routeName: string; color: any; size: number; focused: boolean }) {
   const icons = TAB_ICONS[routeName] || { focused: 'ellipse', default: 'ellipse-outline' };
   
-  const scale = useSharedValue(focused ? 1 : 1);
-  const translateY = useSharedValue(focused ? -2 : 0);
-  
-  useReanimatedEffect(() => {
-    scale.value = animations.spring.standard(focused ? animations.motion.bottomTab.activeScale : 1);
-    translateY.value = animations.timing.easeOut(focused ? -4 : 0, 200);
-  }, [focused]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { scale: scale.value },
-      { translateY: translateY.value }
-    ],
-  }));
-
   return (
-    <Animated.View style={[
-      animatedStyle, 
-      focused && {
-        backgroundColor: colors.accentSubtle,
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.xs,
-        borderRadius: radius.full,
-      }
-    ]}>
-      <Ionicons name={focused ? icons.focused : icons.default} size={focused ? size - 2 : size} color={color} />
-    </Animated.View>
+    <View style={{
+      width: 48,
+      height: 32,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 16,
+      backgroundColor: focused ? colors.accentSubtle : 'transparent',
+    }}>
+      <Ionicons name={focused ? icons.focused : icons.default} size={22} color={color} />
+    </View>
   );
 }
 
@@ -68,7 +51,7 @@ export default function TabLayout() {
         },
         tabBarShowLabel: true,
         tabBarLabelStyle: {
-          fontSize: 9,
+          fontSize: 8,
           fontWeight: '700',
           fontFamily: typography.captionStrong.fontFamily,
           marginTop: 2,

@@ -102,11 +102,11 @@ export default function DashboardScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accent} />
       }
     >
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, gap: spacing.xl }}>
 
 
         {/* Welcome Greeting */}
-        <Animated.View entering={FadeInUp.duration(400).delay(100)} className="mb-6 flex-row justify-between items-center" style={{ marginTop: -4 }}>
+        <Animated.View entering={FadeInUp.duration(400).delay(100)} style={{ marginTop: -4, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <View className="flex-1 mr-4">
             <Text style={{ color: colors.textSecondary, ...typography.body }}>Welcome back,</Text>
             <Text style={{ color: colors.textPrimary, ...typography.title }} className="mt-1">
@@ -128,7 +128,7 @@ export default function DashboardScreen() {
         </Animated.View>
 
         {/* Quick Actions */}
-        <Animated.View entering={FadeInUp.duration(400).delay(150)} className="flex-row gap-3 mb-6">
+        <Animated.View entering={FadeInUp.duration(400).delay(150)} style={{ flexDirection: 'row', gap: 12 }}>
           <TouchableOpacity
             onPress={() => router.push('/(app)/billing' as Href)}
             activeOpacity={0.8}
@@ -156,7 +156,7 @@ export default function DashboardScreen() {
         </Animated.View>
 
         {/* Primary KPI Metrics Row */}
-        <Animated.View entering={FadeInUp.duration(400).delay(200)} className="flex-row gap-4 mb-6">
+        <Animated.View entering={FadeInUp.duration(400).delay(200)} style={{ flexDirection: 'row', gap: 16 }}>
           
           {/* Today's Sales Card */}
           <View className="flex-1 overflow-hidden" style={{
@@ -218,7 +218,7 @@ export default function DashboardScreen() {
 
         {/* Low Stock Alerts Section */}
         <Animated.View entering={FadeInUp.duration(400).delay(300)}>
-          <Card className="mb-6">
+          <Card>
           <View className="flex-row justify-between items-center mb-4">
             <View className="flex-row items-center gap-2">
               <Ionicons name="alert-circle-outline" size={20} color="#EF4444" />
@@ -252,8 +252,8 @@ export default function DashboardScreen() {
         </Animated.View>
 
         {/* Recent Activity Logs */}
-        <Animated.View entering={FadeInUp.duration(400).delay(400)}>
-          <Card className="mb-12">
+        <Animated.View entering={FadeInUp.duration(400).delay(400)} style={{ paddingBottom: spacing.xxxl }}>
+          <Card>
           <View className="flex-row items-center gap-2 mb-4">
             <Ionicons name="receipt-outline" size={20} color="#F7941D" />
             <Text className="text-white text-base font-bold font-lexend">Recent Store Activity</Text>

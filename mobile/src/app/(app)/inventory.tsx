@@ -103,7 +103,7 @@ export default function InventoryScreen() {
         <Ionicons name="search" size={20} color="#6B7280" />
         <TextInput
           className="flex-1 ml-3 h-12 text-white font-medium"
-          placeholder="Search inventory..."
+          placeholder="Search products or SKU..."
           placeholderTextColor="#6B7280"
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -126,8 +126,7 @@ export default function InventoryScreen() {
               onPress={() => setSelectedCategory(null)}
               activeOpacity={0.7}
               style={{
-                height: 40,
-                minWidth: 80,
+                height: 36,
                 borderRadius: radius.chip,
                 borderWidth: 1,
                 alignItems: 'center',
@@ -147,8 +146,7 @@ export default function InventoryScreen() {
                 onPress={() => setSelectedCategory(cat)}
                 activeOpacity={0.7}
                 style={{
-                  height: 40,
-                  minWidth: 80,
+                  height: 36,
                   borderRadius: radius.chip,
                   borderWidth: 1,
                   alignItems: 'center',
@@ -222,14 +220,17 @@ const InventoryItem = React.memo(({ item, isExpanded, toggleExpandItem, branches
       <TouchableOpacity
         onPress={() => toggleExpandItem(item.id)}
         activeOpacity={0.9}
-        style={{ padding: spacing.xl }}
+        style={{ paddingTop: spacing.xl + 4, paddingBottom: spacing.lg, paddingHorizontal: spacing.xl }}
       >
-        <View style={{ marginBottom: spacing.sm }}>
+        <View style={{ marginBottom: spacing.md }}>
           <Text style={{ color: colors.textPrimary, ...typography.subheading }} numberOfLines={1}>
             {item.name}
           </Text>
-          <Text style={{ color: colors.textMuted, ...typography.caption, marginTop: spacing.xxs }}>
-            SKU: {item.sku || "N/A"} | Cat: {item.category || "General"}
+          <Text style={{ color: colors.textMuted, ...typography.caption, marginTop: spacing.xs }}>
+            <Text style={{ fontWeight: '400' }}>SKU: </Text>
+            <Text style={{ fontWeight: '600', color: colors.textSecondary }}>{item.sku || "N/A"}</Text>
+            <Text style={{ fontWeight: '400' }}>  |  Cat: </Text>
+            <Text style={{ fontWeight: '600', color: colors.textSecondary }}>{item.category || "General"}</Text>
           </Text>
         </View>
 
@@ -243,12 +244,12 @@ const InventoryItem = React.memo(({ item, isExpanded, toggleExpandItem, branches
             borderColor: isLowStock ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)',
           }}>
             <Text style={{ color: isLowStock ? colors.error : colors.success, ...typography.captionStrong, fontVariant: ['tabular-nums'] }}>
-              {currentStock} {item.unit || "pcs"}
+              {currentStock} PCS
             </Text>
           </View>
           
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-            <View style={{ width: 64, height: 6, backgroundColor: colors.backgroundSecondary, borderRadius: radius.full, overflow: 'hidden' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+            <View style={{ width: 72, height: 6, backgroundColor: colors.backgroundSecondary, borderRadius: radius.full, overflow: 'hidden' }}>
               <View
                 style={{
                   height: '100%',
@@ -260,7 +261,7 @@ const InventoryItem = React.memo(({ item, isExpanded, toggleExpandItem, branches
             </View>
             <Ionicons
               name={isExpanded ? "chevron-up" : "chevron-down"}
-              size={16}
+              size={18}
               color={colors.textSecondary}
             />
           </View>
@@ -300,7 +301,7 @@ const InventoryItem = React.memo(({ item, isExpanded, toggleExpandItem, branches
                 return (
                   <View key={bs.id} className="flex-row justify-between py-1">
                     <Text className="text-gray-400 text-xs font-medium font-inter">{bName}</Text>
-                    <Text className="text-white text-xs font-bold font-inter">{bs.stock} {item.unit}</Text>
+                    <Text className="text-white text-xs font-bold font-inter">{bs.stock} PCS</Text>
                   </View>
                 );
               })}

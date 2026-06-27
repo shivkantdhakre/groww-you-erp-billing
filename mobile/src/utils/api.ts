@@ -2,6 +2,7 @@ import axios from 'axios';
 import * as SecureStore from './secureStoreWrapper';
 import { Platform } from 'react-native';
 import { useStore } from '../store/useStore';
+import { showToast } from '../components/ui/toast';
 
 const getBaseURL = () => {
   const envUrl = process.env.EXPO_PUBLIC_API_URL;
@@ -43,18 +44,29 @@ api.interceptors.request.use(
   }
 );
 
-// Response Interceptor: Catch 401 Unauthorized errors and force logout
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    // 1. Global Network Timeouts & Dropouts
+    if (error.code === 'ECONNABORTED') {
+      showToast({ message: 'Connection timed out. Please check your network.', type: 'error' });
+    } else if (error.message === 'Network Error' || error.code === 'ERR_NETWORK') {
+      showToast({ message: 'No internet connection.', type: 'error' });
+    }
+
+    // 2. 401 Unauthorized
     if (error.response && error.response.status === 401) {
       console.warn('Session expired or unauthorized. Logging out.');
+      showToast({ message: 'Session expired. Please log in again.', type: 'warning' });
       try {
         await useStore.getState().logout();
       } catch (logoutErr) {
         console.error('Error logging out during 401 interception:', logoutErr);
       }
     }
+    
+    // STRICT REJECTION RULE: Never resolve failed promises globally.
+    // This allows the calling component's catch() block to fire safely.
     return Promise.reject(error);
   }
 );
