@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { View, Text, FlatList, TextInput, TouchableOpacity, Pressable, RefreshControl, ActivityIndicator, Alert } from "react-native";
+import { useEffect, useState, useCallback } from "react";
+import { View, Text, FlatList, TextInput, TouchableOpacity, Pressable, RefreshControl, ActivityIndicator, Alert, Modal, Dimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useStore } from "../../store/useStore";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,6 +19,8 @@ export default function InvoicesScreen() {
   const isOffline = useStore((state) => state.isOffline);
 
   const router = useRouter();
+  const [showSheet, setShowSheet] = useState(false);
+  const [pendingShare, setPendingShare] = useState<{ id: number; no: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [selectedLayout, setSelectedLayout] = useState<"A4" | "Thermal">("A4");
@@ -55,32 +57,27 @@ export default function InvoicesScreen() {
       );
       return;
     }
-
-    Alert.alert(
-      `Share Invoice ${invoiceNo}`,
-      `Layout: ${selectedLayout === "A4" ? "A4 Standard" : "80mm Thermal"}`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Generate & Share",
-          onPress: async () => {
-            setSharingId(invoiceId);
-            try {
-              await shareInvoicePDF({ invoiceId, invoiceNo, layout: selectedLayout });
-            } catch (err: any) {
-              Alert.alert(
-                "Sharing Failed",
-                err.message || "An error occurred while sharing the invoice.",
-                [{ text: "OK" }]
-              );
-            } finally {
-              setSharingId(null);
-            }
-          },
-        },
-      ]
-    );
+    setPendingShare({ id: invoiceId, no: invoiceNo });
+    setShowSheet(true);
   };
+
+  const handleConfirmShare = useCallback(async () => {
+    if (!pendingShare) return;
+    setShowSheet(false);
+    setSharingId(pendingShare.id);
+    try {
+      await shareInvoicePDF({ invoiceId: pendingShare.id, invoiceNo: pendingShare.no, layout: selectedLayout });
+    } catch (err: any) {
+      Alert.alert(
+        "Sharing Failed",
+        err.message || "An error occurred while sharing the invoice.",
+        [{ text: "OK" }]
+      );
+    } finally {
+      setSharingId(null);
+      setPendingShare(null);
+    }
+  }, [pendingShare, selectedLayout]);
 
   const filteredInvoices = invoices.filter((inv: any) => {
     const q = searchQuery.toLowerCase().trim();
@@ -255,6 +252,62 @@ export default function InvoicesScreen() {
         }
         renderItem={renderItem}
       />
+
+      {/* Share Confirmation Modal */}
+      <Modal
+        visible={showSheet}
+        transparent
+        animationType="slide"
+        onRequestClose={() => { setShowSheet(false); setPendingShare(null); }}
+      >
+        <Pressable className="flex-1 justify-end bg-black/60" onPress={() => { setShowSheet(false); setPendingShare(null); }}>
+          <Pressable className="bg-[#1A1F2E] rounded-t-[28px] pt-6 pb-10 px-6" onPress={() => {}}>
+            <View className="w-10 h-1 bg-[#4B5563] rounded-full self-center mb-6" />
+
+            <View className="flex-row justify-between items-center mb-4">
+              <View>
+                <Text className="text-white text-lg font-bold font-lexend">Share Invoice</Text>
+                {pendingShare && (
+                  <Text className="text-gray-400 text-xs mt-1 font-inter">{pendingShare.no}</Text>
+                )}
+              </View>
+              <TouchableOpacity onPress={() => { setShowSheet(false); setPendingShare(null); }}>
+                <Ionicons name="close" size={24} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
+
+            <View className="bg-[#0A0F1D]/50 border border-gray-900 rounded-2xl p-4 mb-6">
+              <View className="flex-row justify-between items-center mb-3 pb-3 border-b border-gray-800/40">
+                <Text className="text-gray-400 text-xs font-semibold">Layout</Text>
+                <Text className="text-white text-sm font-bold">{selectedLayout === "A4" ? "A4 Standard" : "80mm Thermal"}</Text>
+              </View>
+              <View className="flex-row justify-between items-center">
+                <Text className="text-gray-400 text-xs font-semibold">Format</Text>
+                <Text className="text-white text-sm font-bold">PDF</Text>
+              </View>
+            </View>
+
+            <View className="flex-row gap-3">
+              <View className="flex-1">
+                <TouchableOpacity
+                  onPress={() => { setShowSheet(false); setPendingShare(null); }}
+                  className="py-3.5 rounded-xl border border-gray-700 items-center justify-center bg-[#1A1F2E]"
+                >
+                  <Text className="text-gray-300 text-sm font-bold">Cancel</Text>
+                </TouchableOpacity>
+              </View>
+              <View className="flex-1">
+                <TouchableOpacity
+                  onPress={handleConfirmShare}
+                  className="py-3.5 rounded-xl items-center justify-center bg-[#F7941D]"
+                >
+                  <Text className="text-white text-sm font-black">Generate & Share</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* Full-screen Loading Overlay for generation/download */}
       {sharingId !== null && (

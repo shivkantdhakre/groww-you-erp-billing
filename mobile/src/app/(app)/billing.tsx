@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,9 +8,9 @@ import {
   Modal,
   FlatList,
   Alert,
-  StyleSheet
+  StyleSheet,
+  Pressable
 } from "react-native";
-import BottomSheet, { BottomSheetBackdrop, BottomSheetTextInput, BottomSheetFlatList } from "@gorhom/bottom-sheet";
 import * as Haptics from "expo-haptics";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card } from "../../components/ui/card";
@@ -53,9 +53,9 @@ export default function BillingScreen() {
   const [paymentMode, setPaymentMode] = useState<"CASH" | "BANK" | "UPI">("CASH");
   const [submitting, setSubmitting] = useState(false);
 
-  const customerSheetRef = useRef<BottomSheet>(null);
-  const itemSheetRef = useRef<BottomSheet>(null);
-  const previewSheetRef = useRef<BottomSheet>(null);
+  const [customerSheetVisible, setCustomerSheetVisible] = useState(false);
+  const [itemSheetVisible, setItemSheetVisible] = useState(false);
+  const [previewSheetVisible, setPreviewSheetVisible] = useState(false);
   const [scannerVisible, setScannerVisible] = useState(false);
 
   // Search queries
@@ -100,7 +100,7 @@ export default function BillingScreen() {
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     showToast({ message: `Added ${product.name} to cart.`, type: 'success', duration: 2000 });
-    itemSheetRef.current?.close();
+    setItemSheetVisible(false);
   };
 
   const handleUpdateQty = (productId: number, change: number) => {
@@ -186,11 +186,11 @@ export default function BillingScreen() {
       showToast({ message: "Please add at least one product to the cart.", type: 'warning', duration: 2000 });
       return;
     }
-    previewSheetRef.current?.expand();
+    setPreviewSheetVisible(true);
   };
 
   const handleConfirmSubmit = async () => {
-    previewSheetRef.current?.close();
+    setPreviewSheetVisible(false);
     const payload = {
       customerId: selectedCustomer.id,
       items: cart.map((c) => ({
@@ -259,7 +259,7 @@ export default function BillingScreen() {
                   </TouchableOpacity>
                 </View>
               ) : (
-                <Button label="Select Customer Profile" variant="outline" onPress={() => customerSheetRef.current?.expand()} />
+                <Button label="Select Customer Profile" variant="outline" onPress={() => setCustomerSheetVisible(true)} />
               )}
             </Card>
 
@@ -268,7 +268,7 @@ export default function BillingScreen() {
               <Button
                 label="Add Item"
                 icon="add-circle-outline"
-                onPress={() => itemSheetRef.current?.expand()}
+                onPress={() => setItemSheetVisible(true)}
                 variant="navy"
                 className="flex-1"
               />
@@ -351,186 +351,188 @@ export default function BillingScreen() {
 
 
 
-      {/* Customer Picker Bottom Sheet */}
-      {/* Invoice Preview Bottom Sheet */}
-      <BottomSheet
-        ref={previewSheetRef}
-        index={-1}
-        snapPoints={['50%']}
-        enablePanDownToClose
-        backdropComponent={(props) => <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.6} />}
-        backgroundStyle={{ backgroundColor: '#1A1F2E' }}
-        handleIndicatorStyle={{ backgroundColor: '#4B5563', width: 40 }}
+      {/* Invoice Preview Modal */}
+      <Modal
+        visible={previewSheetVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setPreviewSheetVisible(false)}
       >
-        <View className="flex-1 p-6 pt-2">
-          <View className="flex-row justify-between items-center mb-6">
-            <Text className="text-white text-lg font-bold font-lexend">Invoice Preview</Text>
-            <TouchableOpacity onPress={() => previewSheetRef.current?.close()}>
-              <Ionicons name="close" size={24} color="#9CA3AF" />
-            </TouchableOpacity>
-          </View>
+        <Pressable className="flex-1 justify-end bg-black/60" onPress={() => setPreviewSheetVisible(false)}>
+          <Pressable className="bg-[#1A1F2E] rounded-t-[28px] pt-6 pb-10 px-6 max-h-[75%]" onPress={() => {}}>
+            <View className="w-10 h-1 bg-[#4B5563] rounded-full self-center mb-6" />
 
-          <View className="bg-[#0A0F1D]/50 border border-gray-900 rounded-2xl p-4 mb-4">
-            <View className="flex-row justify-between items-center mb-3 pb-3 border-b border-gray-800/40">
-              <Text className="text-gray-400 text-xs font-semibold">Customer</Text>
-              <Text className="text-white text-sm font-bold">{selectedCustomer?.name}</Text>
-            </View>
-            <View className="flex-row justify-between items-center mb-3 pb-3 border-b border-gray-800/40">
-              <Text className="text-gray-400 text-xs font-semibold">Items</Text>
-              <Text className="text-white text-sm font-bold">{cart.length}</Text>
-            </View>
-            <View className="flex-row justify-between items-center mb-3 pb-3 border-b border-gray-800/40">
-              <Text className="text-gray-400 text-xs font-semibold">Subtotal</Text>
-              <Text className="text-white text-sm font-bold">₹{calculateSubtotal().toFixed(2)}</Text>
-            </View>
-            <View className="flex-row justify-between items-center mb-3 pb-3 border-b border-gray-800/40">
-              <Text className="text-gray-400 text-xs font-semibold">GST</Text>
-              <Text className="text-white text-sm font-bold">₹{calculateGST().toFixed(2)}</Text>
-            </View>
-            <View className="flex-row justify-between items-center">
-              <Text className="text-gray-300 text-sm font-bold">Grand Total</Text>
-              <Text className="text-[#F7941D] text-lg font-black">₹{calculateGrandTotal().toFixed(2)}</Text>
-            </View>
-          </View>
-
-          <View className="flex-row gap-3">
-            <View className="flex-1">
-              <Button label="Cancel" variant="outline" onPress={() => previewSheetRef.current?.close()} />
-            </View>
-            <View className="flex-1">
-              <Button label={isOffline ? "Save Offline" : "Submit Invoice"} variant="primary" loading={submitting} onPress={handleConfirmSubmit} />
-            </View>
-          </View>
-        </View>
-      </BottomSheet>
-
-      {/* Customer Picker Bottom Sheet */}
-      <BottomSheet
-        ref={customerSheetRef}
-        index={-1}
-        snapPoints={['75%']}
-        enablePanDownToClose
-        backdropComponent={(props) => <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.6} />}
-        backgroundStyle={{ backgroundColor: '#1A1F2E' }}
-        handleIndicatorStyle={{ backgroundColor: '#4B5563', width: 40 }}
-      >
-        <View className="flex-1 p-6 pt-2">
-          <View className="flex-row justify-between items-center mb-4">
-            <Text className="text-white text-lg font-bold">Select Customer</Text>
-            <TouchableOpacity onPress={() => customerSheetRef.current?.close()}>
-              <Ionicons name="close" size={24} color="#9CA3AF" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Customer Search Bar */}
-          <View className="flex-row items-center bg-[#0A0F1D] border border-gray-800 rounded-xl px-3 py-1 mb-4">
-            <Ionicons name="search" size={16} color="#6B7280" />
-            <BottomSheetTextInput
-              className="flex-1 ml-2 h-10 text-white text-xs font-medium"
-              placeholder="Search by customer name or phone..."
-              placeholderTextColor="#6B7280"
-              value={customerSearch}
-              onChangeText={setCustomerSearch}
-              returnKeyType="search"
-              accessibilityLabel="Search customers"
-            />
-          </View>
-
-          <BottomSheetFlatList
-            data={filteredCustomers}
-            keyExtractor={(item) => item.id.toString()}
-            ListEmptyComponent={
-              <Text className="text-gray-400 text-center py-4">No customers found.</Text>
-            }
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                onPress={() => {
-                  setSelectedCustomer(item);
-                  customerSheetRef.current?.close();
-                  setCustomerSearch("");
-                }}
-                className="bg-[#0A0F1D] border border-gray-800 p-4 rounded-xl mb-2 flex-row justify-between items-center"
-              >
-                <View>
-                  <Text className="text-white font-bold text-sm font-inter">{item.name}</Text>
-                  <Text className="text-gray-400 text-xs mt-1 font-inter">Mob: {item.mobile}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color="#F7941D" />
+            <View className="flex-row justify-between items-center mb-6">
+              <Text className="text-white text-lg font-bold font-lexend">Invoice Preview</Text>
+              <TouchableOpacity onPress={() => setPreviewSheetVisible(false)}>
+                <Ionicons name="close" size={24} color="#9CA3AF" />
               </TouchableOpacity>
-            )}
-          />
-        </View>
-      </BottomSheet>
+            </View>
 
-      {/* Item Picker Bottom Sheet */}
-      <BottomSheet
-        ref={itemSheetRef}
-        index={-1}
-        snapPoints={['75%']}
-        enablePanDownToClose
-        backdropComponent={(props) => <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.6} />}
-        backgroundStyle={{ backgroundColor: '#1A1F2E' }}
-        handleIndicatorStyle={{ backgroundColor: '#4B5563', width: 40 }}
+            <View className="bg-[#0A0F1D]/50 border border-gray-900 rounded-2xl p-4 mb-4">
+              <View className="flex-row justify-between items-center mb-3 pb-3 border-b border-gray-800/40">
+                <Text className="text-gray-400 text-xs font-semibold">Customer</Text>
+                <Text className="text-white text-sm font-bold">{selectedCustomer?.name}</Text>
+              </View>
+              <View className="flex-row justify-between items-center mb-3 pb-3 border-b border-gray-800/40">
+                <Text className="text-gray-400 text-xs font-semibold">Items</Text>
+                <Text className="text-white text-sm font-bold">{cart.length}</Text>
+              </View>
+              <View className="flex-row justify-between items-center mb-3 pb-3 border-b border-gray-800/40">
+                <Text className="text-gray-400 text-xs font-semibold">Subtotal</Text>
+                <Text className="text-white text-sm font-bold">₹{calculateSubtotal().toFixed(2)}</Text>
+              </View>
+              <View className="flex-row justify-between items-center mb-3 pb-3 border-b border-gray-800/40">
+                <Text className="text-gray-400 text-xs font-semibold">GST</Text>
+                <Text className="text-white text-sm font-bold">₹{calculateGST().toFixed(2)}</Text>
+              </View>
+              <View className="flex-row justify-between items-center">
+                <Text className="text-gray-300 text-sm font-bold">Grand Total</Text>
+                <Text className="text-[#F7941D] text-lg font-black">₹{calculateGrandTotal().toFixed(2)}</Text>
+              </View>
+            </View>
+
+            <View className="flex-row gap-3">
+              <View className="flex-1">
+                <Button label="Cancel" variant="outline" onPress={() => setPreviewSheetVisible(false)} />
+              </View>
+              <View className="flex-1">
+                <Button label={isOffline ? "Save Offline" : "Submit Invoice"} variant="primary" loading={submitting} onPress={handleConfirmSubmit} />
+              </View>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Customer Picker Modal */}
+      <Modal
+        visible={customerSheetVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setCustomerSheetVisible(false)}
       >
-        <View className="flex-1 p-6 pt-2">
-          <View className="flex-row justify-between items-center mb-4">
-            <Text className="text-white text-lg font-bold">Add Product Item</Text>
-            <TouchableOpacity onPress={() => itemSheetRef.current?.close()}>
-              <Ionicons name="close" size={24} color="#9CA3AF" />
-            </TouchableOpacity>
-          </View>
+        <Pressable className="flex-1 justify-end bg-black/60" onPress={() => setCustomerSheetVisible(false)}>
+          <Pressable className="bg-[#1A1F2E] rounded-t-[28px] pt-6 pb-10 px-6 max-h-[85%]" onPress={() => {}}>
+            <View className="w-10 h-1 bg-[#4B5563] rounded-full self-center mb-6" />
 
-          {/* Item Search Bar */}
-          <View className="flex-row items-center bg-[#0A0F1D] border border-gray-800 rounded-xl px-3 py-1 mb-4">
-            <Ionicons name="search" size={16} color="#6B7280" />
-            <BottomSheetTextInput
-              className="flex-1 ml-2 h-10 text-white text-xs font-medium"
-              placeholder="Search by product name or SKU..."
-              placeholderTextColor="#6B7280"
-              value={itemSearch}
-              onChangeText={setItemSearch}
-              returnKeyType="search"
-              accessibilityLabel="Search products"
-            />
-          </View>
+            <View className="flex-row justify-between items-center mb-4">
+              <Text className="text-white text-lg font-bold">Select Customer</Text>
+              <TouchableOpacity onPress={() => setCustomerSheetVisible(false)}>
+                <Ionicons name="close" size={24} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
 
-          <BottomSheetFlatList
-            data={filteredItems}
-            keyExtractor={(item) => item.id.toString()}
-            ListEmptyComponent={
-              <Text className="text-gray-400 text-center py-4">No products found.</Text>
-            }
-            renderItem={({ item }) => {
-              const stock = getBranchStock(item);
-              const isOutOfStock = stock <= 0;
-              return (
+            {/* Customer Search Bar */}
+            <View className="flex-row items-center bg-[#0A0F1D] border border-gray-800 rounded-xl px-3 py-1 mb-4">
+              <Ionicons name="search" size={16} color="#6B7280" />
+              <TextInput
+                className="flex-1 ml-2 h-10 text-white text-xs font-medium"
+                placeholder="Search by customer name or phone..."
+                placeholderTextColor="#6B7280"
+                value={customerSearch}
+                onChangeText={setCustomerSearch}
+                returnKeyType="search"
+                accessibilityLabel="Search customers"
+              />
+            </View>
+
+            <FlatList
+              data={filteredCustomers}
+              keyExtractor={(item) => item.id.toString()}
+              ListEmptyComponent={
+                <Text className="text-gray-400 text-center py-4">No customers found.</Text>
+              }
+              renderItem={({ item }) => (
                 <TouchableOpacity
-                  disabled={isOutOfStock}
                   onPress={() => {
-                    handleAddProduct(item);
-                    setItemSearch("");
+                    setSelectedCustomer(item);
+                    setCustomerSheetVisible(false);
+                    setCustomerSearch("");
                   }}
-                  className={`bg-[#0A0F1D] border border-gray-800 p-4 rounded-xl mb-2 flex-row justify-between items-center ${
-                    isOutOfStock ? "opacity-40" : ""
-                  }`}
+                  className="bg-[#0A0F1D] border border-gray-800 p-4 rounded-xl mb-2 flex-row justify-between items-center"
                 >
-                  <View className="flex-1 pr-2">
-                    <Text className="text-white font-bold text-sm font-inter" numberOfLines={1}>{item.name}</Text>
-                    <Text className="text-gray-400 text-[10px] mt-1 font-inter">
-                      SKU: {item.sku || "N/A"} | Price: ₹{item.salePrice} | Tax: {item.gstPercentage}%
-                    </Text>
+                  <View>
+                    <Text className="text-white font-bold text-sm font-inter">{item.name}</Text>
+                    <Text className="text-gray-400 text-xs mt-1 font-inter">Mob: {item.mobile}</Text>
                   </View>
-                  <View className="items-end">
-                    <Text className={`text-xs font-bold ${isOutOfStock ? "text-red-500" : "text-emerald-500"}`}>
-                      {isOutOfStock ? "Out of Stock" : `${stock} ${item.unit || "pcs"}`}
-                    </Text>
-                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#F7941D" />
                 </TouchableOpacity>
-              );
-            }}
-          />
-        </View>
-      </BottomSheet>
+              )}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Item Picker Modal */}
+      <Modal
+        visible={itemSheetVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setItemSheetVisible(false)}
+      >
+        <Pressable className="flex-1 justify-end bg-black/60" onPress={() => setItemSheetVisible(false)}>
+          <Pressable className="bg-[#1A1F2E] rounded-t-[28px] pt-6 pb-10 px-6 max-h-[85%]" onPress={() => {}}>
+            <View className="w-10 h-1 bg-[#4B5563] rounded-full self-center mb-6" />
+
+            <View className="flex-row justify-between items-center mb-4">
+              <Text className="text-white text-lg font-bold">Add Product Item</Text>
+              <TouchableOpacity onPress={() => setItemSheetVisible(false)}>
+                <Ionicons name="close" size={24} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Item Search Bar */}
+            <View className="flex-row items-center bg-[#0A0F1D] border border-gray-800 rounded-xl px-3 py-1 mb-4">
+              <Ionicons name="search" size={16} color="#6B7280" />
+              <TextInput
+                className="flex-1 ml-2 h-10 text-white text-xs font-medium"
+                placeholder="Search by product name or SKU..."
+                placeholderTextColor="#6B7280"
+                value={itemSearch}
+                onChangeText={setItemSearch}
+                returnKeyType="search"
+                accessibilityLabel="Search products"
+              />
+            </View>
+
+            <FlatList
+              data={filteredItems}
+              keyExtractor={(item) => item.id.toString()}
+              ListEmptyComponent={
+                <Text className="text-gray-400 text-center py-4">No products found.</Text>
+              }
+              renderItem={({ item }) => {
+                const stock = getBranchStock(item);
+                const isOutOfStock = stock <= 0;
+                return (
+                  <TouchableOpacity
+                    disabled={isOutOfStock}
+                    onPress={() => {
+                      handleAddProduct(item);
+                      setItemSearch("");
+                    }}
+                    className={`bg-[#0A0F1D] border border-gray-800 p-4 rounded-xl mb-2 flex-row justify-between items-center ${
+                      isOutOfStock ? "opacity-40" : ""
+                    }`}
+                  >
+                    <View className="flex-1 pr-2">
+                      <Text className="text-white font-bold text-sm font-inter" numberOfLines={1}>{item.name}</Text>
+                      <Text className="text-gray-400 text-[10px] mt-1 font-inter">
+                        SKU: {item.sku || "N/A"} | Price: ₹{item.salePrice} | Tax: {item.gstPercentage}%
+                      </Text>
+                    </View>
+                    <View className="items-end">
+                      <Text className={`text-xs font-bold ${isOutOfStock ? "text-red-500" : "text-emerald-500"}`}>
+                        {isOutOfStock ? "Out of Stock" : `${stock} ${item.unit || "pcs"}`}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* Barcode Scanner Modal */}
       <Modal

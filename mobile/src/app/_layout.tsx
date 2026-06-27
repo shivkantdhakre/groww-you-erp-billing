@@ -9,6 +9,12 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Sentry from '@sentry/react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { CustomSplashScreen } from '../components/CustomSplashScreen';
+import { configureReanimatedLogger, ReanimatedLogLevel } from 'react-native-reanimated';
+
+configureReanimatedLogger({
+  level: ReanimatedLogLevel.warn,
+  strict: false,
+});
 import { ToastProvider } from '../components/ui/toast';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
