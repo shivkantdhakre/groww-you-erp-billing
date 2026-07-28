@@ -1,41 +1,9 @@
-feat(mobile): execute comprehensive UI/UX audit and performance overhaul
+feat(mobile): enhance offline outbox sync, retry logic, and background sync triggers
 
-This commit implements a massive overhaul of the React Native client, resolving 
-the critical items identified in the UI/UX Audit report to elevate the app from 
-a functional prototype to an enterprise-grade mobile application.
-
-Performance & Architecture:
-- refactor(store): replaced asynchronous AsyncStorage with react-native-mmkv 
-  using a custom JSI synchronous adapter to eliminate hydration blocking on the JS thread.
-- perf(billing): completely restructured billing.tsx to use a virtualized FlatList 
-  as the root scroller with ListHeaderComponent and absolute sticky footer, preventing 
-  memory leaks and lag on large carts.
-- perf(lists): wrapped all heavy renderItem components across inventory.tsx 
-  and invoices.tsx in React.memo() to prevent render cascades.
-
-UI/UX Polish & Visual Identity:
-- feat(design): loaded and applied Inter and Lexend custom fonts globally.
-- feat(splash): built CustomSplashScreen.tsx utilizing react-native-reanimated 
-  for an elastic, multi-stage entrance sequence featuring brand orbs and animated typography.
-- feat(login): injected the primary transparent logo-glow.png into login.tsx for 
-  seamless handoffs from the splash screen.
-- feat(animations): added FadeInUp entrance animations to Dashboard and Login, 
-  and smooth LinearTransition expand/collapse physics to inventory.tsx.
-- feat(feedback): integrated expo-haptics (with safe fallback .catch() wrapping) 
-  into billing cart actions to provide tactile confirmation.
-- style(card): injected explicit elevation values on Android via Platform.select 
-  for correct 3D material shadowing.
-
-Usability & Accessibility:
-- fix(layout): integrated useSafeAreaInsets() on the tab bar in _layout.tsx to 
-  dynamically accommodate Android gesture navigation pills.
-- feat(modals): added w-10 h-1 standard drag handles to all native bottom-sheet 
-  modals and implemented safe setTimeout input auto-focus to prevent keyboard race conditions.
-- feat(scanner): injected a floating hardware torch toggle (enableTorch) over the 
-  CameraView viewfinder for low-light warehouse conditions.
-- fix(empty-states): replaced dead-end empty messages with actionable CTA buttons 
-  (e.g., 'Create a New Sale') across index.tsx, inventory.tsx, and invoices.tsx.
-- a11y(labels): aggressively injected descriptive accessibilityLabel parameters into 
-  icon buttons, interactive text, and form inputs for screen reader compliance.
-- feat(ux): joined branch arrays in inventory.tsx to properly display human-readable 
-  Branch Names instead of raw IDs.
+- Add UUID v4 idempotency key generation to offline invoice payloads to prevent duplicate invoice creation during retries
+- Improve error handling in outbox sync loop with explicit support for 409 conflict handling (treated as success) and 5xx/network error retries
+- Add retry counter (up to 5 attempts) and detailed error messages for persistent outbox failures
+- Introduce `removeFailedOutboxItem` and `retryFailedOutboxItem` actions in Zustand store
+- Add AppState listener to automatically trigger outbox sync when app returns to foreground
+- Add 60-second periodic background interval timer for automatic outbox sync when online
+- Add husky prepare script in root package.json

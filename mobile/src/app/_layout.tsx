@@ -1,7 +1,7 @@
 import '@/global.css';
-import 'react-native-gesture-handler';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useEffect, useState } from 'react';
-import { useColorScheme, View, ActivityIndicator, Text, TextInput } from 'react-native';
+import { useColorScheme, View, Text, AppState } from 'react-native';
 import { DarkTheme, DefaultTheme, ThemeProvider, Slot, useRouter, useSegments, useNavigationContainerRef } from 'expo-router';
 import { useStore } from '../store/useStore';
 import NetInfo from '@react-native-community/netinfo';
@@ -11,13 +11,8 @@ import * as Sentry from '@sentry/react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { CustomSplashScreen } from '../components/CustomSplashScreen';
 import { configureReanimatedLogger, ReanimatedLogLevel } from 'react-native-reanimated';
-
-configureReanimatedLogger({
-  level: ReanimatedLogLevel.warn,
-  strict: false,
-});
 import { ToastProvider } from '../components/ui/toast';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
 import {
   useFonts,
   Inter_400Regular,
@@ -26,7 +21,12 @@ import {
   Inter_900Black,
 } from '@expo-google-fonts/inter';
 import { Lexend_700Bold } from '@expo-google-fonts/lexend';
-import '../global.css';
+
+
+configureReanimatedLogger({
+  level: ReanimatedLogLevel.warn,
+  strict: false,
+});
 
 // Prevent the splash screen from auto-hiding before asset/store hydration
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -104,6 +104,31 @@ function RootLayout() {
     return () => unsubscribe();
   }, [hasHydrated, setOffline, syncOfflineOutbox]);
 
+  // AppState and Periodic sync triggers
+  useEffect(() => {
+    if (!hasHydrated) return;
+
+    const handleAppStateChange = (nextAppState: string) => {
+      if (nextAppState === 'active' && !useStore.getState().isOffline) {
+        console.log('[Sync] App foregrounded. Initializing outbox sync.');
+        syncOfflineOutbox().catch(console.error);
+      }
+    };
+
+    const appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
+
+    const intervalId = setInterval(() => {
+      if (!useStore.getState().isOffline) {
+        syncOfflineOutbox().catch(console.error);
+      }
+    }, 60000); // 60 seconds
+
+    return () => {
+      appStateSubscription.remove();
+      clearInterval(intervalId);
+    };
+  }, [hasHydrated, syncOfflineOutbox]);
+
   // Run security checks and load JWT token on app launch
   useEffect(() => {
     if (!hasHydrated) return;
@@ -150,7 +175,7 @@ function RootLayout() {
     } else if (hasSeenOnboarding && token && inAuthGroup) {
       router.replace('/(app)');
     }
-  }, [token, segments, authInitialized, hasHydrated, deviceCompromised, hasSeenOnboarding]);
+  }, [token, segments, authInitialized, hasHydrated, deviceCompromised, hasSeenOnboarding, router]);
 
   const appReady = hasHydrated && (authInitialized || deviceCompromised) && fontsLoaded;
 

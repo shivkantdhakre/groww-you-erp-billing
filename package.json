@@ -3,5 +3,8 @@
     "lucide-react": "^1.17.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
+  },
+  "scripts": {
+    "prepare": "husky"
   }
 }

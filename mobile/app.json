@@ -3,6 +3,7 @@
     "name": "Groww You ERP",
     "slug": "groww-you-erp",
     "version": "1.0.0",
+    "newArchEnabled": true,
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "growwyou",

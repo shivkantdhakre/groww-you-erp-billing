@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, FlatList, Modal, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card } from "../../components/ui/card";
-import { Button } from "../../components/ui/button";
 import { useStore, Branch } from "../../store/useStore";
 import { Ionicons } from "@expo/vector-icons";
 import { OfflineBanner } from "../../components/offline-banner";
@@ -18,20 +17,36 @@ export default function ProfileScreen() {
   const fetchBranches = useStore((state) => state.fetchBranches);
   const setSelectedBranchId = useStore((state) => state.setSelectedBranchId);
   const syncOfflineOutbox = useStore((state) => state.syncOfflineOutbox);
+  const removeFailedOutboxItem = useStore((state) => state.removeFailedOutboxItem);
+  const retryFailedOutboxItem = useStore((state) => state.retryFailedOutboxItem);
   const logout = useStore((state) => state.logout);
+
+  const pendingItems = offlineOutbox.filter((i: any) => i.syncStatus !== 'failed');
+  const failedItems = offlineOutbox.filter((i: any) => i.syncStatus === 'failed');
 
   const [syncing, setSyncing] = useState(false);
   const [loadingBranches, setLoadingBranches] = useState(false);
   const [branchSheetVisible, setBranchSheetVisible] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
     if (user && (user.role === "SUPER_ADMIN" || user.role === "COMPANY_ADMIN")) {
-      setLoadingBranches(true);
-      fetchBranches()
-        .catch((err) => console.error("Failed to load branches:", err))
-        .finally(() => setLoadingBranches(false));
+      Promise.resolve().then(async () => {
+        if (!isMounted) return;
+        setLoadingBranches(true);
+        try {
+          await fetchBranches();
+        } catch (err) {
+          console.error("Failed to load branches:", err);
+        } finally {
+          if (isMounted) setLoadingBranches(false);
+        }
+      });
     }
-  }, [user]);
+    return () => {
+      isMounted = false;
+    };
+  }, [user, fetchBranches]);
 
   const activeBranch = branches.find((b) => b.id === selectedBranchId) || {
     id: selectedBranchId || 0,
@@ -53,10 +68,28 @@ export default function ProfileScreen() {
       await syncOfflineOutbox();
       Alert.alert("Sync Complete", "Offline outbox synced successfully.");
     } catch (err: any) {
+      console.error("Sync error:", err);
       Alert.alert("Sync Warning", "Some items failed to sync. Check network connectivity.");
     } finally {
       setSyncing(false);
     }
+  };
+
+  const handleDiscard = (id: string) => {
+    if (syncing) return;
+    Alert.alert(
+      "Discard Invoice",
+      "This invoice will not be saved — are you sure?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Discard", style: "destructive", onPress: () => removeFailedOutboxItem(id) }
+      ]
+    );
+  };
+
+  const handleRetry = (id: string) => {
+    if (syncing) return;
+    retryFailedOutboxItem(id);
   };
 
   const isAdmin = user?.role === "SUPER_ADMIN" || user?.role === "COMPANY_ADMIN";
@@ -157,9 +190,15 @@ export default function ProfileScreen() {
           </View>
 
           <View className="flex-row justify-between items-center mb-4 bg-[#0A0F1D]/50 border border-gray-900 rounded-2xl p-4">
-            <View>
-              <Text className="text-gray-400 text-xs font-semibold uppercase font-inter">Pending Transactions</Text>
-              <Text className="text-white text-2xl font-black mt-1 font-lexend">{offlineOutbox.length}</Text>
+            <View className="flex-row gap-6">
+              <View>
+                <Text className="text-gray-400 text-xs font-semibold uppercase font-inter">Pending</Text>
+                <Text className="text-white text-2xl font-black mt-1 font-lexend">{pendingItems.length}</Text>
+              </View>
+              <View>
+                <Text className="text-gray-400 text-xs font-semibold uppercase font-inter">Failed</Text>
+                <Text className={failedItems.length > 0 ? "text-red-500 text-2xl font-black mt-1 font-lexend" : "text-white text-2xl font-black mt-1 font-lexend"}>{failedItems.length}</Text>
+              </View>
             </View>
             <View className="items-end">
               <Text className="text-gray-400 text-xs uppercase font-inter">Last Synced</Text>
@@ -176,17 +215,37 @@ export default function ProfileScreen() {
                 data={offlineOutbox}
                 keyExtractor={(item) => item.id}
                 scrollEnabled={false}
-                renderItem={({ item }) => (
-                  <View className="flex-row justify-between items-center py-2 border-b border-gray-800/30">
-                    <View className="flex-row items-center">
-                      <Ionicons name="receipt-outline" size={14} color="#9CA3AF" />
-                      <Text className="text-gray-300 text-xs ml-2 font-medium font-inter">Invoice</Text>
+                renderItem={({ item }) => {
+                  const isFailed = item.syncStatus === 'failed';
+                  return (
+                    <View className="py-2 border-b border-gray-800/30">
+                      <View className="flex-row justify-between items-center mb-1">
+                        <View className="flex-row items-center">
+                          <Ionicons name={isFailed ? "alert-circle" : "receipt-outline"} size={14} color={isFailed ? "#EF4444" : "#9CA3AF"} />
+                          <Text className={`text-xs ml-2 font-medium font-inter ${isFailed ? "text-red-400" : "text-gray-300"}`}>
+                            Invoice {isFailed ? "(Failed)" : "(Pending)"}
+                          </Text>
+                        </View>
+                        <Text className="text-gray-400 text-[10px] font-inter">
+                          {new Date(item.createdAt).toLocaleTimeString()}
+                        </Text>
+                      </View>
+                      {isFailed && (
+                        <View className="mt-1">
+                          <Text className="text-red-400/80 text-[10px] font-inter leading-relaxed">{item.errorMessage || "Unknown error"}</Text>
+                          <View className="flex-row mt-2 gap-3 justify-end">
+                            <TouchableOpacity disabled={syncing} onPress={() => handleDiscard(item.id)} className="bg-red-500/10 px-3 py-1.5 rounded-lg border border-red-500/20 opacity={syncing ? 0.5 : 1}">
+                              <Text className="text-red-400 text-xs font-semibold">Discard</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity disabled={syncing} onPress={() => handleRetry(item.id)} className="bg-[#F7941D]/10 px-3 py-1.5 rounded-lg border border-[#F7941D]/20 opacity={syncing ? 0.5 : 1}">
+                              <Text className="text-[#F7941D] text-xs font-semibold">Retry</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      )}
                     </View>
-                    <Text className="text-gray-400 text-[10px] font-inter">
-                      {new Date(item.createdAt).toLocaleTimeString()}
-                    </Text>
-                  </View>
-                )}
+                  );
+                }}
               />
             </View>
           ) : (

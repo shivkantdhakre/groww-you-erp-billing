@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist, createJSONStorage , StateStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { StateStorage } from 'zustand/middleware';
+
 import * as SecureStore from '../utils/secureStoreWrapper';
 import api from '../utils/api';
 import * as Sentry from '@sentry/react-native';
@@ -27,10 +27,10 @@ if (useFallbackStorage) {
   // Dynamic require prevents Expo Go from resolving the missing C++ module at load time.
   const { createMMKV } = require('react-native-mmkv');
   
-  let mmkvInstance: MMKV | null = null;
-  let initPromise: Promise<MMKV> | null = null;
+  let mmkvInstance: any = null;
+  let initPromise: Promise<any> | null = null;
 
-  const getMMKV = async (): Promise<MMKV> => {
+  const getMMKV = async (): Promise<any> => {
     if (mmkvInstance) return mmkvInstance;
     if (initPromise) return initPromise;
     
@@ -61,12 +61,12 @@ if (useFallbackStorage) {
       storage.set(name, value);
     },
     removeItem: async (name) => {
-      const storage = await getMMKV();
+      const storage: any = await getMMKV();
       // Safely handle both v2 (.delete) and v3 APIs just in case
       if (typeof storage.delete === 'function') {
         storage.delete(name);
-      } else if (typeof (storage as any).remove === 'function') {
-        (storage as any).remove(name);
+      } else if (typeof storage.remove === 'function') {
+        storage.remove(name);
       }
     },
   };
@@ -177,6 +177,8 @@ interface StoreState {
   upsertCachedItem: (item: any) => void;
   queueOfflineInvoice: (payload: any) => void;
   syncOfflineOutbox: () => Promise<void>;
+  removeFailedOutboxItem: (id: string) => void;
+  retryFailedOutboxItem: (id: string) => void;
 }
 
 export const useStore = create<StoreState>()(
@@ -289,12 +291,24 @@ export const useStore = create<StoreState>()(
       },
 
       queueOfflineInvoice: (payload) => {
+        // Pure JS UUID v4 implementation
+        const generateIdempotencyKey = () => {
+          return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+            const r = (Math.random() * 16) | 0;
+            return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+          });
+        };
+        const idempotencyKey = generateIdempotencyKey();
+        
+        // Inject idempotencyKey into payload
+        const updatedPayload = { ...payload, idempotencyKey };
+
         set((state) => {
           // Optimistically decrement local stocks if payload is a sales-invoice
           let updatedItems = state.items;
-          if (payload.items && Array.isArray(payload.items)) {
+          if (updatedPayload.items && Array.isArray(updatedPayload.items)) {
             updatedItems = state.items.map((item: any) => {
-              const cartItem = payload.items.find((ci: any) => ci.itemId === item.id);
+              const cartItem = updatedPayload.items.find((ci: any) => ci.itemId === item.id);
               if (cartItem && item.branchStocks) {
                 return {
                   ...item,
@@ -313,10 +327,12 @@ export const useStore = create<StoreState>()(
           return {
             items: updatedItems,
             offlineOutbox: [...state.offlineOutbox, {
-              id: `temp_${Date.now()}`,
+              id: idempotencyKey, // Using the idempotency key as the local id
               type: 'sales-invoice',
-              payload,
-              createdAt: new Date().toISOString()
+              payload: updatedPayload,
+              createdAt: new Date().toISOString(),
+              syncStatus: 'pending',
+              retryCount: 0,
             }]
           };
         });
@@ -326,12 +342,15 @@ export const useStore = create<StoreState>()(
         const { offlineOutbox, isOffline } = get();
         if (isOffline || offlineOutbox.length === 0) return;
 
-        console.log(`[Sync] Triggering background outbox flush. Queue size: ${offlineOutbox.length}`);
-        
-        const queue = [...offlineOutbox];
-        const remainingQueue: any[] = [];
+        // Only process pending items
+        const pendingQueue = offlineOutbox.filter((item: any) => item.syncStatus === 'pending');
+        if (pendingQueue.length === 0) return;
 
-        for (const item of queue) {
+        console.log(`[Sync] Triggering background outbox flush. Pending queue size: ${pendingQueue.length}`);
+        
+        const remainingQueue: any[] = offlineOutbox.filter((item: any) => item.syncStatus !== 'pending');
+        
+        for (const item of pendingQueue) {
           try {
             if (item.type === 'sales-invoice') {
               await api.post('/transactions/sales-invoices', item.payload);
@@ -339,12 +358,44 @@ export const useStore = create<StoreState>()(
             console.log(`[Sync] Outbox item ${item.id} successfully synced.`);
           } catch (err: any) {
             console.error(`[Sync] Failed to sync outbox item ${item.id}:`, err);
-            // Keep in queue only if it is a connectivity failure
-            if (!err.response || err.code === 'ERR_NETWORK') {
-              remainingQueue.push(...queue.slice(queue.indexOf(item)));
-              break;
+            
+            const isNetworkOrTransientError = !err.response || err.code === 'ERR_NETWORK' || err.response.status >= 500 || err.response.status === 429;
+            const isAlreadySyncedError = err.response && err.response.status === 409;
+
+            if (isAlreadySyncedError) {
+              console.log(`[Sync] Outbox item ${item.id} returned 409 (already synced). Treating as success.`);
+              // Do not add to remainingQueue, it's effectively a success
+            } else if (isNetworkOrTransientError) {
+              // Transient failure, keep as pending
+              const retryCount = (item.retryCount || 0) + 1;
+              if (retryCount >= 5) {
+                remainingQueue.push({
+                  ...item,
+                  syncStatus: 'failed',
+                  retryCount,
+                  errorMessage: "Repeated sync failures. Please check connection or contact support.",
+                });
+              } else {
+                remainingQueue.push({ ...item, retryCount });
+                // We break here to avoid hammering the server if the network is flaky
+                break;
+              }
+            } else {
+              // Genuine 4xx failure
+              remainingQueue.push({
+                ...item,
+                syncStatus: 'failed',
+                errorMessage: err.response?.data?.error || err.response?.data?.message || err.message,
+              });
             }
-            // Discard toxic payloads (validation error/bad payload) so we do not block subsequent syncs
+          }
+        }
+
+        // Merge any items from pendingQueue that we didn't process because of a break
+        const processedIds = new Set(remainingQueue.map(item => item.id));
+        for (const item of pendingQueue) {
+          if (!processedIds.has(item.id) && item.syncStatus === 'pending') {
+            remainingQueue.push(item);
           }
         }
 
@@ -357,6 +408,22 @@ export const useStore = create<StoreState>()(
         } catch (e) {
           console.warn('[Sync] Post-sync data refresh failed:', e);
         }
+      },
+
+      removeFailedOutboxItem: (id) => {
+        set((state) => ({
+          offlineOutbox: state.offlineOutbox.filter((item) => item.id !== id)
+        }));
+      },
+
+      retryFailedOutboxItem: (id) => {
+        set((state) => ({
+          offlineOutbox: state.offlineOutbox.map((item) => 
+            item.id === id ? { ...item, syncStatus: 'pending', retryCount: 0, errorMessage: undefined } : item
+          )
+        }));
+        // Trigger a flush immediately after setting it to pending
+        get().syncOfflineOutbox().catch(console.error);
       },
 
       initializeAuth: async () => {
