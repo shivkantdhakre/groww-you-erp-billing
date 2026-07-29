@@ -1,9 +1,9 @@
-feat(mobile): enhance offline outbox sync, retry logic, and background sync triggers
+feat(analytics): add AI Pipeline Sales Insights and theme-responsive brand logo
 
-- Add UUID v4 idempotency key generation to offline invoice payloads to prevent duplicate invoice creation during retries
-- Improve error handling in outbox sync loop with explicit support for 409 conflict handling (treated as success) and 5xx/network error retries
-- Add retry counter (up to 5 attempts) and detailed error messages for persistent outbox failures
-- Introduce `removeFailedOutboxItem` and `retryFailedOutboxItem` actions in Zustand store
-- Add AppState listener to automatically trigger outbox sync when app returns to foreground
-- Add 60-second periodic background interval timer for automatic outbox sync when online
-- Add husky prepare script in root package.json
+- Implement Gemini 2.5 Flash API structured JSON schema integration via @google/generative-ai SDK with fallback heuristic engine
+- Add real-time Prisma multi-tenant pipeline aggregation metrics (total sales, receivables, customer concentration, sales velocity)
+- Add 1-hour TTL caching layer with active event invalidation on sales invoice and voucher transactions
+- Add user feedback loop endpoint (POST /api/analytics/sales-insights/feedback)
+- Build executive AIPipelineInsightsCard component with 0-100 radial health score gauge, observations, and route-sanitized execution links
+- Integrate AIPipelineInsightsCard into 3-column executive dashboard layout
+- Align web client logo with mobile app, featuring automatic light/dark theme switching and cropped outer margins

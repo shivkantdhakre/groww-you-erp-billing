@@ -1,6 +1,7 @@
 import prisma from "../utils/prisma.js";
 import { paginate } from "../utils/pagination.js";
 import { getSequenceNextValue, SEQUENCE_TYPES } from "../utils/sequence.js";
+import { invalidateInsightsCache } from "../utils/cacheService.js";
 
 // Get vouchers with optional filters and date bounding
 export const getVouchers = async (req, res) => {
@@ -190,6 +191,9 @@ export const createVoucher = async (req, res) => {
 
       return voucher;
     });
+
+    // Invalidate AI sales insights cache on financial movement
+    invalidateInsightsCache(req.user.companyId);
 
     res.status(201).json(result);
   } catch (error) {

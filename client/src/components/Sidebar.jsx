@@ -148,8 +148,8 @@ function Sidebar() {
             >
                 <div className="flex flex-col flex-1 min-h-0">
                     {/* Brand Logo and Mobile Close Button */}
-                    <div className="flex items-center justify-between mb-8 px-2 shrink-0">
-                        <BrandLogo size={34} showText={true} />
+                    <div className="flex items-center justify-between mb-8 px-1 shrink-0">
+                        <BrandLogo size={48} showText={true} />
                         <button
                             onClick={() => setSidebarOpen(false)}
                             className="lg:hidden p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer focus:outline-none transition-colors"

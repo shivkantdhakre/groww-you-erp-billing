@@ -119,7 +119,7 @@ export default function Login() {
 
       <div className="relative w-full max-w-md p-8 glass-panel-blur border border-border rounded-2xl shadow-2xl transition-all duration-300">
         <div className="flex flex-col items-center text-center mb-8">
-          <BrandLogo size={44} showText={true} className="mb-2" />
+          <BrandLogo size={68} showText={true} className="mb-2" />
           <p className="text-sm text-muted-foreground mt-2 font-medium">
             {showForgot
               ? "Verify Tenant details to reset your password"

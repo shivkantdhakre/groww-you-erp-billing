@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useStore } from "../store/useStore";
 import api from "../utils/api";
 import { Link } from "react-router-dom";
+import AIPipelineInsightsCard from "../components/dashboard/AIPipelineInsightsCard";
 import {
   Users,
   Truck,
@@ -207,56 +208,66 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* Business Summary & Recent Activities */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-card p-5 rounded-xl shadow border border-border text-foreground flex flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <Receipt className="w-5 h-5 text-primary shrink-0" aria-hidden="true" />
-              <h2 className="text-lg font-bold text-foreground">Profitability Summary</h2>
+      {/* 3-Column Layout: Business Overview & AI Pipeline Insights */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column Span 2: Business Summary & Recent Activities */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-card p-5 rounded-xl shadow border border-border text-foreground flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Receipt className="w-5 h-5 text-primary shrink-0" aria-hidden="true" />
+                  <h2 className="text-lg font-bold text-foreground">Profitability Summary</h2>
+                </div>
+                <div className="space-y-2 font-medium text-muted-foreground">
+                  <div className="flex justify-between border-b border-border/40 pb-2">
+                    <span>Total Sales Revenue</span>
+                    <span className="text-foreground">₹ {totalSales.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-border/40 pb-2">
+                    <span>Total Purchase Cost</span>
+                    <span className="text-foreground">₹ {totalPurchases.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between pt-2">
+                    <span className="text-foreground font-semibold">Net Estimated Profit</span>
+                    <span className={`font-bold ${totalProfit >= 0 ? "text-emerald-500" : "text-destructive"}`}>
+                      ₹ {totalProfit.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="space-y-2 font-medium text-muted-foreground">
-              <div className="flex justify-between border-b border-border/40 pb-2">
-                <span>Total Sales Revenue</span>
-                <span className="text-foreground">₹ {totalSales.toLocaleString()}</span>
+
+            {/* Recent Activities */}
+            <div className="bg-card p-5 rounded-xl shadow border border-border text-foreground">
+              <div className="flex items-center gap-2 mb-3">
+                <Activity className="w-5 h-5 text-primary shrink-0" aria-hidden="true" />
+                <h2 className="text-lg font-bold text-foreground">Recent Activities</h2>
               </div>
-              <div className="flex justify-between border-b border-border/40 pb-2">
-                <span>Total Purchase Cost</span>
-                <span className="text-foreground">₹ {totalPurchases.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between pt-2">
-                <span className="text-foreground font-semibold">Net Estimated Profit</span>
-                <span className={`font-bold ${totalProfit >= 0 ? "text-emerald-500" : "text-destructive"}`}>
-                  ₹ {totalProfit.toLocaleString()}
-                </span>
-              </div>
+              {recentActivities.length > 0 ? (
+                <ul className="space-y-3">
+                  {recentActivities.map((item) => (
+                    <li key={item.id} className="border-b border-border/40 pb-2 flex justify-between items-start">
+                      <div>
+                        <p className="font-semibold text-foreground text-sm">{item.action}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{item.name}</p>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground/80 font-semibold uppercase">
+                        {new Date(item.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-muted-foreground text-sm py-4">No recent activity recorded.</p>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Recent Activities */}
-        <div className="bg-card p-5 rounded-xl shadow border border-border text-foreground">
-          <div className="flex items-center gap-2 mb-3">
-            <Activity className="w-5 h-5 text-primary shrink-0" aria-hidden="true" />
-            <h2 className="text-lg font-bold text-foreground">Recent Activities</h2>
-          </div>
-          {recentActivities.length > 0 ? (
-            <ul className="space-y-3">
-              {recentActivities.map((item) => (
-                <li key={item.id} className="border-b border-border/40 pb-2 flex justify-between items-start">
-                  <div>
-                    <p className="font-semibold text-foreground text-sm">{item.action}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{item.name}</p>
-                  </div>
-                  <span className="text-[10px] text-muted-foreground/80 font-semibold uppercase">
-                    {new Date(item.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-muted-foreground text-sm py-4">No recent activity recorded.</p>
-          )}
+        {/* Right Column: AI Sales Pipeline Insights Component */}
+        <div className="lg:col-span-1">
+          <AIPipelineInsightsCard />
         </div>
       </div>
 

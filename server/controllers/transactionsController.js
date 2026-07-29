@@ -1,6 +1,7 @@
 import prisma from "../utils/prisma.js";
 import { paginate } from "../utils/pagination.js";
 import { getSequenceNextValue, SEQUENCE_TYPES } from "../utils/sequence.js";
+import { invalidateInsightsCache } from "../utils/cacheService.js";
 
 // ==========================================
 // SALES INVOICE CONTROLLERS
@@ -243,6 +244,9 @@ export const createSalesInvoice = async (req, res) => {
 
       return invoice;
     });
+
+    // Invalidate AI insights cache for company tenant
+    invalidateInsightsCache(req.user.companyId);
 
     res.status(201).json(result);
   } catch (error) {
