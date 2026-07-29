@@ -20,6 +20,7 @@ export const useStore = create((set, get) => ({
   customers: [],
   vendors: [],
   items: [],
+  leads: [],
   company: null,
   notifications: [],
   users: [],
@@ -28,6 +29,7 @@ export const useStore = create((set, get) => ({
   loadingCustomers: false,
   loadingVendors: false,
   loadingItems: false,
+  loadingLeads: false,
   loadingCompany: false,
 
   // Auth Actions
@@ -364,6 +366,87 @@ export const useStore = create((set, get) => ({
       if (err.response?.status === 401 || err.response?.status === 403) {
         get().logout();
       }
+      throw err;
+    }
+  },
+
+  // CRM Lead Store Actions
+  fetchLeads: async (force = false) => {
+    if (get().leads.length > 0 && !force) return;
+    set({ loadingLeads: true });
+    try {
+      const res = await api.get("/leads?limit=1000&page=1");
+      set({ leads: res.data.data });
+    } catch (err) {
+      console.error("Failed to fetch leads:", err);
+      throw err;
+    } finally {
+      set({ loadingLeads: false });
+    }
+  },
+
+  addLead: async (leadData) => {
+    try {
+      const res = await api.post("/leads", leadData);
+      set((state) => ({
+        leads: [res.data, ...state.leads],
+      }));
+      return res.data;
+    } catch (err) {
+      console.error("Failed to create lead:", err);
+      throw err;
+    }
+  },
+
+  updateLead: async (leadId, leadData) => {
+    try {
+      const res = await api.put(`/leads/${leadId}`, leadData);
+      set((state) => ({
+        leads: state.leads.map((l) => (l.id === leadId ? res.data : l)),
+      }));
+      return res.data;
+    } catch (err) {
+      console.error("Failed to update lead:", err);
+      throw err;
+    }
+  },
+
+  addLeadInteraction: async (leadId, interactionData) => {
+    try {
+      const res = await api.post(`/leads/${leadId}/interactions`, interactionData);
+      // Re-fetch or update lead locally
+      const leadRes = await api.get(`/leads/${leadId}`);
+      set((state) => ({
+        leads: state.leads.map((l) => (l.id === leadId ? leadRes.data : l)),
+      }));
+      return leadRes.data;
+    } catch (err) {
+      console.error("Failed to add interaction:", err);
+      throw err;
+    }
+  },
+
+  analyzeLeadWithAI: async (leadId) => {
+    try {
+      const res = await api.put(`/leads/${leadId}/ai-analyze`);
+      set((state) => ({
+        leads: state.leads.map((l) => (l.id === leadId ? res.data : l)),
+      }));
+      return res.data;
+    } catch (err) {
+      console.error("Failed to analyze lead with AI:", err);
+      throw err;
+    }
+  },
+
+  deleteLead: async (leadId) => {
+    try {
+      await api.delete(`/leads/${leadId}`);
+      set((state) => ({
+        leads: state.leads.filter((l) => l.id !== leadId),
+      }));
+    } catch (err) {
+      console.error("Failed to delete lead:", err);
       throw err;
     }
   },

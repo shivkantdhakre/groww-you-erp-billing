@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import Customers from "./pages/masters/Customers";
 import Vendors from "./pages/masters/Vendors";
 import Inventory from "./pages/masters/Inventory";
+import Leads from "./pages/crm/Leads";
 import Login from "./pages/Login";
 
 import SalesInvoice from "./pages/sales/SalesInvoice";
@@ -61,6 +62,7 @@ function AppContent() {
       <Route path="/" element={<Dashboard />} />
 
       <Route path="/customers" element={<Customers />} />
+      <Route path="/leads" element={<Leads />} />
       <Route path="/vendors" element={<Vendors />} />
       <Route path="/inventory" element={<Inventory />} />
 

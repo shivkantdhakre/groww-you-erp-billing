@@ -33,6 +33,7 @@ model Company {
   nicPassword          String?
   subscription         Subscription?
   sequences            Sequence[]
+  leads                Lead[]
   
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
@@ -72,12 +73,83 @@ model Customer {
   returns            Return[]
   financialTransactions FinancialTransaction[]
   vouchers           Voucher[]
+  leads              Lead[]
 
   createdAt          DateTime               @default(now())
   updatedAt          DateTime               @updatedAt
 
   @@index([companyId, mobile])
   @@index([companyId, createdAt])
+}
+
+// -- CRM & SALES LEADS --
+enum LeadStage {
+  NEW
+  QUALIFIED
+  PROPOSAL_SENT
+  NEGOTIATION
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+enum LeadActionType {
+  CALL
+  EMAIL
+  MEETING
+  PROPOSAL
+  RESEARCH
+}
+
+enum LeadPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model Lead {
+  id                Int               @id @default(autoincrement())
+  companyId         Int
+  company           Company           @relation(fields: [companyId], references: [id])
+  customerId        Int?
+  customer          Customer?         @relation(fields: [customerId], references: [id])
+  
+  companyName       String
+  contactName       String?
+  email             String?
+  mobile            String?
+  stage             LeadStage         @default(NEW)
+  dealValue         Float             @default(0.0)
+  notes             String?
+  
+  interactions      LeadInteraction[]
+
+  // Cached AI Analysis fields (Write-Time Caching)
+  aiSummary         String?
+  aiRiskScore       Int?              // 0 - 100
+  aiPriority        LeadPriority?
+  aiActionType      LeadActionType?
+  aiNextBestAction  String?
+  aiAnalyzedAt      DateTime?
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([companyId, stage])
+  @@index([companyId, createdAt])
+}
+
+model LeadInteraction {
+  id        Int            @id @default(autoincrement())
+  leadId    Int
+  lead      Lead           @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type      LeadActionType
+  summary   String
+  author    String
+  date      DateTime       @default(now())
+
+  createdAt DateTime       @default(now())
+
+  @@index([leadId, date])
 }
 
 model Vendor {

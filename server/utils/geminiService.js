@@ -208,3 +208,158 @@ function generateHeuristicFallback(metrics) {
     generatedAt: new Date().toISOString()
   };
 }
+
+// ==========================================
+// AI LEAD EXECUTIVE SUMMARY & RISK PROFILER
+// ==========================================
+
+const leadAnalysisSchema = {
+  type: SchemaType.OBJECT,
+  properties: {
+    aiSummary: {
+      type: SchemaType.STRING,
+      description: "A concise 2-3 sentence executive summary of the account status, deal context, and sales momentum."
+    },
+    aiRiskScore: {
+      type: SchemaType.INTEGER,
+      description: "Deal Risk Score from 0 to 100 (0-30 = Low risk/High momentum, 31-65 = Medium risk/Stalling, 66-100 = High risk/Likely to churn)."
+    },
+    aiPriority: {
+      type: SchemaType.STRING,
+      description: "Must be exactly 'LOW', 'MEDIUM', or 'HIGH'."
+    },
+    aiActionType: {
+      type: SchemaType.STRING,
+      description: "Categorize the next best action into exactly one of: 'CALL', 'EMAIL', 'MEETING', 'PROPOSAL', or 'RESEARCH'."
+    },
+    aiNextBestAction: {
+      type: SchemaType.STRING,
+      description: "The single most important concrete action for the sales rep to take today."
+    }
+  },
+  required: ["aiSummary", "aiRiskScore", "aiPriority", "aiActionType", "aiNextBestAction"]
+};
+
+const leadSystemInstruction = `You are an expert B2B Sales Analyst for an enterprise ERP system. Review the provided lead metadata, deal value, stage, notes, and recent interaction history.
+1. Provide a concise 2-3 sentence executive summary emphasizing deal momentum, key decision-maker context, and primary blockers.
+2. Calculate a Deal Risk Score from 0 to 100. (0-30 = Low risk/High momentum, 31-65 = Medium risk/Stalling, 66-100 = High risk/Likely to churn). Factor in the deal stage, time elapsed since last interaction, and sentiment of notes/interactions.
+3. Assign a Priority ('LOW', 'MEDIUM', 'HIGH').
+4. Categorize the Next Best Action ('CALL', 'EMAIL', 'MEETING', 'PROPOSAL', 'RESEARCH') and specify the exact action text for the sales rep.`;
+
+/**
+ * Generates AI Executive Summary & Risk Profiler for a specific B2B Lead.
+ * @param {object} lead 
+ * @returns {Promise<object>}
+ */
+export const analyzeLeadExecutiveSummary = async (lead) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+
+  if (!apiKey) {
+    console.warn("[GeminiService] GEMINI_API_KEY missing. Generating heuristic fallback for lead analysis.");
+    return generateLeadHeuristicFallback(lead);
+  }
+
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.0-flash-exp",
+      systemInstruction: leadSystemInstruction,
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: leadAnalysisSchema,
+        temperature: 0.2,
+      },
+    });
+
+    const interactionsText = Array.isArray(lead.interactions) && lead.interactions.length > 0
+      ? lead.interactions.map((item, idx) => {
+          const text = item.summary && item.summary.length > 500
+            ? item.summary.substring(0, 500) + "..."
+            : (item.summary || "");
+          return `  ${idx + 1}. [${item.type}] on ${new Date(item.date).toLocaleDateString()} by ${item.author || "Rep"}: "${text}"`;
+        }).join("\n")
+      : "  No recorded interactions yet.";
+
+    const promptData = `
+Analyze the following B2B Lead Context:
+- Company Name: ${lead.companyName}
+- Contact Person: ${lead.contactName || "Not specified"} (${lead.email || "No email"}, ${lead.mobile || "No phone"})
+- Current Deal Stage: ${lead.stage}
+- Deal Value: ₹${Number(lead.dealValue || 0).toLocaleString('en-IN')}
+- Internal Notes: ${lead.notes || "No notes entered."}
+- Last 20 Interactions (Most Recent First):
+${interactionsText}
+`;
+
+    const result = await model.generateContent(promptData);
+    const responseText = result.response.text();
+    const parsedJSON = JSON.parse(responseText);
+
+    const validPriorities = ["LOW", "MEDIUM", "HIGH"];
+    const validActionTypes = ["CALL", "EMAIL", "MEETING", "PROPOSAL", "RESEARCH"];
+
+    const rawPriority = (parsedJSON.aiPriority || "MEDIUM").toUpperCase();
+    const rawActionType = (parsedJSON.aiActionType || "CALL").toUpperCase();
+
+    return {
+      aiSummary: parsedJSON.aiSummary || `${lead.companyName} is currently in the ${lead.stage} stage with a deal value of ₹${Number(lead.dealValue || 0).toLocaleString('en-IN')}. Consistent follow-ups are recommended to maintain pipeline velocity.`,
+      aiRiskScore: Math.min(100, Math.max(0, parseInt(parsedJSON.aiRiskScore) || 45)),
+      aiPriority: validPriorities.includes(rawPriority) ? rawPriority : "MEDIUM",
+      aiActionType: validActionTypes.includes(rawActionType) ? rawActionType : "CALL",
+      aiNextBestAction: parsedJSON.aiNextBestAction || "Reach out to key decision maker to clarify immediate requirements.",
+      source: "gemini-2.0-flash"
+    };
+  } catch (error) {
+    console.error("[GeminiService] Error generating lead analysis via Gemini:", error.message);
+    return generateLeadHeuristicFallback(lead);
+  }
+};
+
+/**
+ * Fallback heuristic generator when Gemini API is unavailable.
+ */
+function generateLeadHeuristicFallback(lead) {
+  let score = 40;
+  let priority = "MEDIUM";
+  let actionType = "CALL";
+  let actionText = "Schedule a discovery call with the lead contact.";
+
+  if (lead.stage === "CLOSED_WON") {
+    score = 5;
+    priority = "LOW";
+    actionType = "RESEARCH";
+    actionText = "Review onboarding requirements and initiate account billing.";
+  } else if (lead.stage === "CLOSED_LOST") {
+    score = 95;
+    priority = "LOW";
+    actionType = "RESEARCH";
+    actionText = "Log win/loss feedback and schedule win-back check-in for next quarter.";
+  } else if (lead.stage === "NEGOTIATION") {
+    score = 25;
+    priority = "HIGH";
+    actionType = "PROPOSAL";
+    actionText = "Finalize contract terms and send revised proposal for sign-off.";
+  } else if (lead.stage === "PROPOSAL_SENT") {
+    score = 35;
+    priority = "HIGH";
+    actionType = "EMAIL";
+    actionText = "Send follow-up email regarding the proposed commercial proposal.";
+  } else if (lead.stage === "QUALIFIED") {
+    score = 50;
+    priority = "MEDIUM";
+    actionType = "MEETING";
+    actionText = "Schedule product demonstration with primary stakeholders.";
+  }
+
+  const interactionCount = Array.isArray(lead.interactions) ? lead.interactions.length : 0;
+  const summary = `${lead.companyName} is actively engaged in the ${lead.stage} pipeline stage with an estimated deal value of ₹${Number(lead.dealValue || 0).toLocaleString('en-IN')}. ${interactionCount} interaction(s) logged to date.`;
+
+  return {
+    aiSummary: summary,
+    aiRiskScore: score,
+    aiPriority: priority,
+    aiActionType: actionType,
+    aiNextBestAction: actionText,
+    source: "heuristic-fallback"
+  };
+}

@@ -35,6 +35,7 @@ import {
     UserCog,
     HardDrive,
     ShieldCheck,
+    Sparkles,
     X
 } from "lucide-react";
 
@@ -177,10 +178,14 @@ function Sidebar() {
                             </div>
                             <NavIcon icon={ChevronDown} className={`w-4 h-4 transition-transform duration-200 ${masters ? "rotate-180" : ""}`} />
                         </button>
-                        <div className={`ml-4 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${masters ? "max-h-60 opacity-100" : "max-h-0 opacity-0"}`}>
+                        <div className={`ml-4 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${masters ? "max-h-80 opacity-100" : "max-h-0 opacity-0"}`}>
                             <Link to="/customers" className={linkClass("/customers")}>
                                 <NavIcon icon={Users} isSubLink />
                                 <span>Customer Master</span>
+                            </Link>
+                            <Link to="/leads" className={linkClass("/leads")}>
+                                <NavIcon icon={Sparkles} isSubLink />
+                                <span>CRM & AI Leads</span>
                             </Link>
                             <Link to="/vendors" className={linkClass("/vendors")}>
                                 <NavIcon icon={Truck} isSubLink />
