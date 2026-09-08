@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import CommonModal from "../../components/common/CommonModal";
 import Autocomplete from "../../components/common/Autocomplete";
+import InvoiceOcrUpload from "../../components/purchase/InvoiceOcrUpload";
 import { useStore } from "../../store/useStore";
 import api from "../../utils/api";
 
@@ -108,6 +109,7 @@ function InvoiceTable({
                     valueKey="id"
                     placeholder="Search Item..."
                     selectedId={item.itemId}
+                    value={item.itemName}
                     searchFields={["name", "sku"]}
                     customRender={(opt) => {
                       const stock = user?.branchId
@@ -163,15 +165,15 @@ function InvoiceTable({
                 </td>
 
                 <td className="p-3 text-right align-middle font-mono font-semibold text-foreground">
-                  {item.itemId ? `₹ ${item.rate.toFixed(2)}` : "-"}
+                  {(item.itemId || item.itemName || item.rate > 0) ? `₹ ${Number(item.rate || 0).toFixed(2)}` : "-"}
                 </td>
 
                 <td className="p-3 text-right align-middle font-mono font-semibold text-muted-foreground">
-                  {item.itemId ? `${item.gstPercentage}%` : "-"}
+                  {(item.itemId || item.itemName || item.gstPercentage > 0) ? `${Number(item.gstPercentage || 0)}%` : "-"}
                 </td>
 
                 <td className="p-3 text-right align-middle font-mono font-bold text-foreground">
-                  {item.itemId ? `₹ ${item.amount.toFixed(2)}` : "-"}
+                  {(item.itemId || item.itemName || item.amount > 0) ? `₹ ${Number(item.amount || 0).toFixed(2)}` : "-"}
                 </td>
 
                 <td className="p-3 text-center align-middle">
@@ -323,6 +325,15 @@ function PurchaseInvoice() {
     },
   ]);
 
+  // Multimodal Vision AI OCR State
+  const [ocrResult, setOcrResult] = useState(null);
+  const [scannedFileUrl, setScannedFileUrl] = useState(null);
+  const [ocrConfidenceScore, setOcrConfidenceScore] = useState(null);
+  const [localFilePreviewUrl, setLocalFilePreviewUrl] = useState(null);
+  const [localFileType, setLocalFileType] = useState(null);
+  const [showMobilePreviewModal, setShowMobilePreviewModal] = useState(false);
+  const [s3WarningMsg, setS3WarningMsg] = useState("");
+
   const [savedPurchases, setSavedPurchases] = useState([]);
   const [loadingPurchases, setLoadingPurchases] = useState(false);
   const [message, setMessage] = useState("");
@@ -382,6 +393,69 @@ function PurchaseInvoice() {
     }
   }, []);
 
+  const handleOcrSuccess = (resData, fileObj) => {
+    setOcrResult(resData);
+    setScannedFileUrl(resData.scannedFileUrl || null);
+    setOcrConfidenceScore(resData.ocrConfidenceScore || 85);
+    setS3WarningMsg(resData.s3Warning || "");
+
+    if (fileObj) {
+      const url = URL.createObjectURL(fileObj);
+      setLocalFilePreviewUrl(url);
+      setLocalFileType(fileObj.type);
+    }
+
+    const { vendor, invoiceNo, invoiceDate, items: extractedItems } = resData.data;
+
+    if (vendor && vendor.matchedId) {
+      setVendorId(vendor.matchedId);
+    } else {
+      setVendorId(null);
+    }
+    if (invoiceNo) {
+      setCustomInvoiceNo(invoiceNo);
+    }
+    if (invoiceDate) {
+      setPurchaseDate(invoiceDate);
+    }
+    if (extractedItems && extractedItems.length > 0) {
+      setPurchaseItems(extractedItems);
+    }
+
+    setMessage("AI OCR extraction successful! Please review auto-populated values before saving.");
+    setMessageType("success");
+    setTimeout(() => setMessage(""), 5000);
+  };
+
+  const handleClearOcr = () => {
+    setOcrResult(null);
+    setScannedFileUrl(null);
+    setOcrConfidenceScore(null);
+    if (localFilePreviewUrl) {
+      URL.revokeObjectURL(localFilePreviewUrl);
+    }
+    setLocalFilePreviewUrl(null);
+    setLocalFileType(null);
+    setS3WarningMsg("");
+
+    // Reset pre-filled form fields back to clean defaults
+    setVendorId(null);
+    setCustomInvoiceNo("");
+    setPurchaseDate(new Date().toISOString().split("T")[0]);
+    setPurchaseItems([
+      {
+        id: Date.now(),
+        itemId: "",
+        itemName: "",
+        qty: 1,
+        rate: 0,
+        gstPercentage: 0,
+        amount: 0,
+        currentStock: 0
+      }
+    ]);
+  };
+
   const selectedVendor = vendors.find((v) => v.id === vendorId);
 
   const savePurchase = useCallback(async () => {
@@ -412,6 +486,8 @@ function PurchaseInvoice() {
         vendorId,
         invoiceDate: purchaseDate,
         invoiceNo: customInvoiceNo || undefined,
+        scannedFileUrl: scannedFileUrl || undefined,
+        ocrConfidenceScore: ocrConfidenceScore || undefined,
         items: purchaseItems.map((item) => ({
           itemId: item.itemId,
           qty: item.qty
@@ -427,6 +503,7 @@ function PurchaseInvoice() {
 
       setVendorId(null);
       setCustomInvoiceNo("");
+      handleClearOcr();
       setPurchaseItems([
         {
           id: Date.now(),
@@ -456,7 +533,7 @@ function PurchaseInvoice() {
       setMessage(errorMsg);
       setMessageType("error");
     }
-  }, [purchaseDate, vendorId, customInvoiceNo, purchaseItems, fetchItems, fetchVendors, fetchPurchaseInvoices]);
+  }, [purchaseDate, vendorId, customInvoiceNo, purchaseItems, scannedFileUrl, ocrConfidenceScore, fetchItems, fetchVendors, fetchPurchaseInvoices]);
 
   const addRow = useCallback(() => {
     const newId = Date.now();
@@ -621,11 +698,66 @@ function PurchaseInvoice() {
   );
 
 
+  const activeDocumentUrl = localFilePreviewUrl || scannedFileUrl;
+  const isPdf = 
+    (localFileType && localFileType.includes("pdf")) || 
+    (activeDocumentUrl && (activeDocumentUrl.toLowerCase().includes(".pdf") || activeDocumentUrl.startsWith("data:application/pdf")));
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Purchase Invoice</h1>
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Create Purchase Invoice</h1>
+          <p className="text-sm text-muted-foreground mt-1">Record vendor bills, update inventory stock, and track accounts payable.</p>
+        </div>
       </div>
+
+      {/* Multimodal AI OCR Scanner Zone */}
+      <InvoiceOcrUpload
+        onOcrSuccess={handleOcrSuccess}
+        onClearOcr={handleClearOcr}
+        hasOcrData={!!ocrResult}
+        scannedFileUrl={scannedFileUrl}
+        ocrConfidenceScore={ocrConfidenceScore}
+      />
+
+      {/* S3 Upload Warning Banner (Partial failure fallback handling) */}
+      {s3WarningMsg && (
+        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-sm flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <svg className="w-5 h-5 shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span>{s3WarningMsg}</span>
+          </div>
+          <button onClick={() => setS3WarningMsg("")} className="text-amber-500 hover:text-amber-600 text-xs font-bold cursor-pointer underline">Dismiss</button>
+        </div>
+      )}
+
+      {/* Human-in-the-Loop AI Verification Alert Banner */}
+      {ocrResult && (
+        <div className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-foreground text-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm animate-fade-in">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-indigo-500 text-white flex items-center justify-center font-bold text-sm shrink-0">
+              AI
+            </div>
+            <div>
+              <p className="font-bold text-indigo-500">Human-in-the-Loop Review Mode Active</p>
+              <p className="text-xs text-muted-foreground">
+                Gemini Vision extracted vendor, line items, and totals. Please review auto-filled fields against the source document before clicking Save.
+              </p>
+            </div>
+          </div>
+          {activeDocumentUrl && (
+            <button
+              onClick={() => setShowMobilePreviewModal(true)}
+              className="lg:hidden bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition shrink-0 cursor-pointer"
+            >
+              👁️ View Source Document
+            </button>
+          )}
+        </div>
+      )}
 
       {message && (
         <div
@@ -641,40 +773,161 @@ function PurchaseInvoice() {
         </div>
       )}
 
-      {/* Grid Layout: Left is Invoice Items, Right is Vendor / Summary */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        <div className="lg:col-span-2">
-          <InvoiceTable
-            purchaseItems={purchaseItems}
-            items={items}
-            updateItemDetails={updateItemDetails}
-            clearItemDetails={clearItemDetails}
-            updateItemQty={updateItemQty}
-            removeRow={removeRow}
-            addRow={addRow}
-            itemSearchRefs={itemSearchRefs}
-            quantityRefs={quantityRefs}
-          />
-        </div>
+      {/* Main Grid Layout: Split-Screen View when OCR Document Active */}
+      {activeDocumentUrl ? (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left Column: Embedded Source Document Viewer */}
+          <div className="hidden lg:flex lg:col-span-5 sticky top-6 bg-card p-4 rounded-2xl border border-border shadow-sm h-[750px] flex-col">
+            <div className="flex justify-between items-center mb-3 pb-3 border-b border-border shrink-0">
+              <span className="text-sm font-bold text-foreground flex items-center gap-2">
+                <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                Original Document
+              </span>
+              <a
+                href={activeDocumentUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-indigo-500 hover:text-indigo-600 font-semibold flex items-center gap-1 cursor-pointer"
+              >
+                Open New Tab
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+            </div>
 
-        <div className="lg:col-span-1">
-          <InvoiceSummaryCard
-            purchaseDate={purchaseDate}
-            setPurchaseDate={setPurchaseDate}
-            customInvoiceNo={customInvoiceNo}
-            setCustomInvoiceNo={setCustomInvoiceNo}
-            vendorId={vendorId}
-            setVendorId={setVendorId}
-            vendors={vendors}
-            selectedVendor={selectedVendor}
-            totalItems={totalItems}
-            totalQty={totalQty}
-            grandTotal={grandTotal}
-            savePurchase={savePurchase}
-            vendorSearchRef={vendorSearchRef}
-          />
+            <div className="flex-1 w-full h-full min-h-0 overflow-hidden rounded-xl border border-border bg-slate-950/5 dark:bg-slate-950/40 relative">
+              {isPdf ? (
+                <iframe
+                  src={activeDocumentUrl}
+                  title="Source PDF Document"
+                  className="w-full h-full min-h-[660px] rounded-lg border-0"
+                />
+              ) : (
+                <div className="w-full h-full overflow-y-auto p-2 flex flex-col items-center justify-start bg-black/5 dark:bg-black/20">
+                  <img
+                    src={activeDocumentUrl}
+                    alt="Source Invoice"
+                    className="w-full h-auto max-w-full object-contain rounded-lg shadow-md"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right Column: Pre-filled Purchase Invoice Form */}
+          <div className="lg:col-span-7 space-y-6">
+            <InvoiceTable
+              purchaseItems={purchaseItems}
+              items={items}
+              updateItemDetails={updateItemDetails}
+              clearItemDetails={clearItemDetails}
+              updateItemQty={updateItemQty}
+              removeRow={removeRow}
+              addRow={addRow}
+              itemSearchRefs={itemSearchRefs}
+              quantityRefs={quantityRefs}
+            />
+
+            <InvoiceSummaryCard
+              purchaseDate={purchaseDate}
+              setPurchaseDate={setPurchaseDate}
+              customInvoiceNo={customInvoiceNo}
+              setCustomInvoiceNo={setCustomInvoiceNo}
+              vendorId={vendorId}
+              setVendorId={setVendorId}
+              vendors={vendors}
+              selectedVendor={selectedVendor}
+              totalItems={totalItems}
+              totalQty={totalQty}
+              grandTotal={grandTotal}
+              savePurchase={savePurchase}
+              vendorSearchRef={vendorSearchRef}
+            />
+          </div>
         </div>
-      </div>
+      ) : (
+        /* Standard View when no OCR Document Active */
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          <div className="lg:col-span-2">
+            <InvoiceTable
+              purchaseItems={purchaseItems}
+              items={items}
+              updateItemDetails={updateItemDetails}
+              clearItemDetails={clearItemDetails}
+              updateItemQty={updateItemQty}
+              removeRow={removeRow}
+              addRow={addRow}
+              itemSearchRefs={itemSearchRefs}
+              quantityRefs={quantityRefs}
+            />
+          </div>
+
+          <div className="lg:col-span-1">
+            <InvoiceSummaryCard
+              purchaseDate={purchaseDate}
+              setPurchaseDate={setPurchaseDate}
+              customInvoiceNo={customInvoiceNo}
+              setCustomInvoiceNo={setCustomInvoiceNo}
+              vendorId={vendorId}
+              setVendorId={setVendorId}
+              vendors={vendors}
+              selectedVendor={selectedVendor}
+              totalItems={totalItems}
+              totalQty={totalQty}
+              grandTotal={grandTotal}
+              savePurchase={savePurchase}
+              vendorSearchRef={vendorSearchRef}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Floating Document Peek Modal */}
+      <CommonModal
+        isOpen={showMobilePreviewModal}
+        title="Source Document Preview"
+        onClose={() => setShowMobilePreviewModal(false)}
+      >
+        <div className="h-[500px] flex flex-col space-y-4">
+          <div className="flex-1 overflow-hidden rounded-xl border border-border bg-slate-900/5">
+            {isPdf ? (
+              <iframe
+                src={activeDocumentUrl}
+                title="Mobile PDF Preview"
+                className="w-full h-full rounded-lg border-0"
+              />
+            ) : (
+              <div className="w-full h-full overflow-auto flex items-center justify-center p-2">
+                <img
+                  src={activeDocumentUrl}
+                  alt="Source Invoice"
+                  className="max-w-full max-h-full object-contain rounded-lg"
+                />
+              </div>
+            )}
+          </div>
+          <div className="flex justify-between items-center pt-2">
+            <a
+              href={activeDocumentUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-indigo-500 font-semibold underline"
+            >
+              Open in New Tab
+            </a>
+            <button
+              onClick={() => setShowMobilePreviewModal(false)}
+              className="bg-secondary text-foreground text-xs font-semibold px-4 py-2 rounded-xl border border-border cursor-pointer"
+            >
+              Close Preview
+            </button>
+          </div>
+        </div>
+      </CommonModal>
 
       {/* Purchase History Table */}
       <div className="bg-card p-6 rounded-2xl border border-border shadow-sm">

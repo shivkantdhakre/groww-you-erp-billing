@@ -233,6 +233,8 @@ model Invoice {
   distanceKm       Int?
   gstFilingStatus  String          @default("PENDING")
   gstFilingDate    DateTime?
+  scannedFileUrl   String?
+  ocrConfidenceScore Int?
   
   returns          Return[]
 

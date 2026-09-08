@@ -6,18 +6,44 @@ import path from 'path';
 let puppeteer;
 const isWindows = process.platform === 'win32';
 
+// Helper to find installed Chrome or Edge executable on Windows if Puppeteer binary cache is missing
+const getWindowsExecutablePath = () => {
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+    return process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
+  const localAppData = process.env.LOCALAPPDATA || '';
+  const possiblePaths = [
+    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+    path.join(localAppData, 'Google\\Chrome\\Application\\chrome.exe'),
+    'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+    'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe'
+  ];
+  for (const p of possiblePaths) {
+    if (p && fs.existsSync(p)) {
+      return p;
+    }
+  }
+  return undefined;
+};
+
 // We dynamically import puppeteer or puppeteer-core depending on environment
 // to optimize RAM in serverless/low-memory environments (like Render free tier).
 const getBrowserInstance = async () => {
   if (isWindows) {
-    // Local Windows uses standard puppeteer
+    // Local Windows uses standard puppeteer (or system installed Chrome/Edge)
     if (!puppeteer) {
       puppeteer = (await import('puppeteer')).default;
     }
-    return await puppeteer.launch({
+    const exePath = getWindowsExecutablePath();
+    const launchOptions = {
       headless: 'new',
       args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
+    };
+    if (exePath) {
+      launchOptions.executablePath = exePath;
+    }
+    return await puppeteer.launch(launchOptions);
   } else {
     // Production/Linux uses serverless puppeteer-core + sparticuz/chromium
     const chromium = (await import('@sparticuz/chromium')).default;

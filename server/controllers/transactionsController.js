@@ -367,7 +367,7 @@ export const getPurchaseInvoices = async (req, res) => {
 
 // Create an atomic Purchase Invoice
 export const createPurchaseInvoice = async (req, res) => {
-  const { vendorId, items: clientItems, invoiceDate, invoiceNo: customInvoiceNo } = req.body;
+  const { vendorId, items: clientItems, invoiceDate, invoiceNo: customInvoiceNo, scannedFileUrl, ocrConfidenceScore } = req.body;
 
   if (!vendorId || !clientItems || clientItems.length === 0) {
     return res.status(400).json({ error: "Vendor and at least one item are required" });
@@ -410,6 +410,18 @@ export const createPurchaseInvoice = async (req, res) => {
         );
         const prefix = company.invoicePrefix || "GY-";
         invoiceNo = `${prefix}PUR-${String(seqValue).padStart(4, "0")}`;
+      } else {
+        const existingInvoice = await tx.invoice.findFirst({
+          where: {
+            companyId: req.user.companyId,
+            branchId: req.user.branchId,
+            invoiceType: "PURCHASE",
+            invoiceNo: invoiceNo
+          }
+        });
+        if (existingInvoice) {
+          throw new Error(`Purchase Invoice number '${invoiceNo}' already exists in your branch. Please use a unique invoice number.`);
+        }
       }
 
       let totalQty = 0;
@@ -484,6 +496,8 @@ export const createPurchaseInvoice = async (req, res) => {
           totalItems: invoiceItemsData.length,
           totalQty,
           grandTotal,
+          scannedFileUrl: scannedFileUrl || null,
+          ocrConfidenceScore: ocrConfidenceScore ? parseInt(ocrConfidenceScore) : null,
           items: {
             create: invoiceItemsData.map(item => ({
               itemId: item.itemId,
@@ -546,6 +560,9 @@ export const createPurchaseInvoice = async (req, res) => {
     res.status(201).json(result);
   } catch (error) {
     console.error("Error in createPurchaseInvoice transaction:", error);
+    if (error.code === "P2002") {
+      return res.status(400).json({ error: "Purchase Invoice number already exists for this branch. Please specify a unique invoice number." });
+    }
     res.status(400).json({ error: error.message });
   }
 };

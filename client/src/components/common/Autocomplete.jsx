@@ -8,6 +8,7 @@ function Autocomplete({
   placeholder = "Search...",
   onSelect,
   selectedId = null,
+  value = "",
   onClear = null,
   searchFields = ["name"],
   customRender = null,
@@ -38,12 +39,14 @@ function Autocomplete({
     const timer = setTimeout(() => {
       if (selectedOption) {
         setSearchTerm(selectedOption[labelKey]);
+      } else if (value) {
+        setSearchTerm(value);
       } else {
         setSearchTerm("");
       }
     }, 0);
     return () => clearTimeout(timer);
-  }, [selectedOption, labelKey]);
+  }, [selectedOption, labelKey, value]);
 
   // Reset active index when list opens or filters change
   useEffect(() => {
