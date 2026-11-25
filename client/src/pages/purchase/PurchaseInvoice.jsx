@@ -717,7 +717,6 @@ function PurchaseInvoice() {
         onOcrSuccess={handleOcrSuccess}
         onClearOcr={handleClearOcr}
         hasOcrData={!!ocrResult}
-        scannedFileUrl={scannedFileUrl}
         ocrConfidenceScore={ocrConfidenceScore}
       />
 

@@ -42,10 +42,16 @@ export const processInvoiceOCR = async (req, res) => {
     try {
       extracted = await parseInvoiceOCR(buffer, mimetype);
     } catch (aiErr) {
-      console.error("[OCRController] Gemini OCR extraction failed:", aiErr?.message || aiErr);
-      return res.status(500).json({
-        error: "Failed to extract invoice data using Gemini AI. Please ensure the document is clear and legible."
-      });
+      console.error(
+        "[OCRController] Gemini OCR extraction failed:",
+        aiErr?.code || "UNKNOWN",
+        aiErr?.message || aiErr
+      );
+      const statusCode = aiErr?.statusCode || 500;
+      const errorMessage =
+        aiErr?.userMessage ||
+        "Failed to extract invoice data using Gemini AI. Please ensure the document is clear and legible.";
+      return res.status(statusCode).json({ error: errorMessage });
     }
 
     // 4. Sequential S3 Upload (Sequential Step 2 - Partial failure fallback)
@@ -66,7 +72,7 @@ export const processInvoiceOCR = async (req, res) => {
     if (finalInvoiceNo && invalidWords.includes(finalInvoiceNo.toLowerCase())) {
       finalInvoiceNo = null;
     }
-    if (!finalInvoiceNo || finalInvoiceNo.length < 3 || /^\d+$/.test(finalInvoiceNo)) {
+    if (!finalInvoiceNo && mimetype === 'application/pdf') {
       const bufferText = buffer.toString('utf-8') + '\n' + buffer.toString('latin1');
       const invPattern = bufferText.match(/(?:INV-[A-Za-z0-9-]+|[A-Z]{2,6}-[0-9]{3,8}|\bInvoice\s*(?:Number|No|#)?\s*[:#-]?\s*([A-Za-z0-9-]+))/i);
       if (invPattern) {
@@ -153,9 +159,12 @@ export const processInvoiceOCR = async (req, res) => {
       }
 
       const qty = Math.max(1, parseInt(extractedItem.qty) || 1);
-      const rate = parseFloat(extractedItem.unitPrice) || matchedItem?.purchasePrice || 0;
-      const gstPercentage = parseFloat(extractedItem.gstPercentage) || matchedItem?.gstPercentage || 0;
-      const amount = extractedItem.lineTotal ? parseFloat(extractedItem.lineTotal) : Math.round((qty * rate * (1 + gstPercentage / 100)) * 100) / 100;
+      const parsedRate = parseFloat(extractedItem.unitPrice);
+      const rate = !Number.isNaN(parsedRate) ? parsedRate : (matchedItem?.purchasePrice || 0);
+      const parsedGst = parseFloat(extractedItem.gstPercentage);
+      const gstPercentage = !Number.isNaN(parsedGst) ? parsedGst : (matchedItem?.gstPercentage || 0);
+      const parsedLineTotal = parseFloat(extractedItem.lineTotal);
+      const amount = !Number.isNaN(parsedLineTotal) ? parsedLineTotal : Math.round((qty * rate * (1 + gstPercentage / 100)) * 100) / 100;
 
       return {
         id: Date.now() + idx,
@@ -197,7 +206,7 @@ export const processInvoiceOCR = async (req, res) => {
           extractedName: extractedVendorName || null,
           extractedGstin: extractedGstin || null
         },
-        invoiceNo: finalInvoiceNo || extracted.invoiceNo || null,
+        invoiceNo: finalInvoiceNo || null,
         invoiceDate: extracted.invoiceDate || null,
         taxableAmount: extracted.taxableAmount || 0,
         gstAmount: extracted.gstAmount || 0,

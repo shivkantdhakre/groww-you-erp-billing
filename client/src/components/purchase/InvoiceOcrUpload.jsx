@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import api from "../../utils/api";
 
-export default function InvoiceOcrUpload({ onOcrSuccess, onClearOcr, hasOcrData, scannedFileUrl, ocrConfidenceScore }) {
+export default function InvoiceOcrUpload({ onOcrSuccess, onClearOcr, hasOcrData, ocrConfidenceScore }) {
   const [loading, setLoading] = useState(false);
   const [statusText, setStatusText] = useState("");
   const [error, setError] = useState("");
@@ -20,9 +20,12 @@ export default function InvoiceOcrUpload({ onOcrSuccess, onClearOcr, hasOcrData,
       return;
     }
 
-    // 2. Client-Side Mime Validation
-    const allowedTypes = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
-    if (!allowedTypes.includes(file.type)) {
+    // 2. Client-Side Mime / Extension Validation
+    const allowedTypes = ["application/pdf", "image/jpeg", "image/jpg", "image/png", "image/webp"];
+    const allowedExts = ["pdf", "jpg", "jpeg", "png", "webp"];
+    const fileType = (file.type || "").toLowerCase();
+    const fileExt = file.name?.split(".").pop()?.toLowerCase() || "";
+    if (fileType ? !allowedTypes.includes(fileType) : !allowedExts.includes(fileExt)) {
       setError("Unsupported file format. Please upload a PDF, PNG, JPEG, or WEBP file.");
       return;
     }
@@ -52,7 +55,11 @@ export default function InvoiceOcrUpload({ onOcrSuccess, onClearOcr, hasOcrData,
       }
     } catch (err) {
       console.error("[OCR Upload Error]", err);
-      const errMsg = err.response?.data?.error || err.message || "Failed to parse document with Gemini AI.";
+      const errMsg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to parse document with Gemini AI.";
       setError(errMsg);
       setLoading(false);
       setStatusText("");
@@ -84,6 +91,7 @@ export default function InvoiceOcrUpload({ onOcrSuccess, onClearOcr, hasOcrData,
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       processFile(e.target.files[0]);
+      e.target.value = "";
     }
   };
 

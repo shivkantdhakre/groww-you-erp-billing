@@ -14,14 +14,17 @@ const upload = multer({
   fileFilter: (req, file, cb) => {
     const allowedMimeTypes = [
       'image/jpeg',
+      'image/jpg',
       'image/png',
       'image/webp',
       'application/pdf'
     ];
-    if (allowedMimeTypes.includes(file.mimetype)) {
+    if (allowedMimeTypes.includes(String(file.mimetype || '').toLowerCase())) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only PDF, PNG, JPG, and WEBP files are allowed.'));
+      const err = new Error('Invalid file type. Only PDF, PNG, JPG, and WEBP files are allowed.');
+      err.status = 400;
+      cb(err);
     }
   }
 });
@@ -30,7 +33,18 @@ const upload = multer({
 router.post(
   '/',
   verifyTokenAndTenant,
-  upload.single('file'),
+  (req, res, next) => {
+    upload.single('file')(req, res, (err) => {
+      if (err) {
+        const status = err.status || (err.code === 'LIMIT_FILE_SIZE' ? 400 : 400);
+        const message = err.code === 'LIMIT_FILE_SIZE'
+          ? 'File size exceeds 5MB limit. Please upload a smaller receipt or invoice.'
+          : (err.message || 'Invalid document upload.');
+        return res.status(status).json({ error: message });
+      }
+      next();
+    });
+  },
   processInvoiceOCR
 );
 

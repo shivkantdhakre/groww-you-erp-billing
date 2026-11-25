@@ -1,5 +1,180 @@
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 
+const DEFAULT_GEMINI_MODELS = [
+  "gemini-3.6-flash",
+  "gemini-3.1-flash-lite",
+  "gemini-flash-lite-latest",
+  "gemini-3.8-flash",
+  "gemini-3.5-flash-lite",
+  "gemini-3.5-flash",
+];
+
+/**
+ * Custom error thrown when Gemini AI fails with an actionable status and user-facing message.
+ */
+export class GeminiServiceError extends Error {
+  constructor(message, { code = "GEMINI_EXTRACTION_FAILED", statusCode = 500, userMessage } = {}) {
+    super(message);
+    this.name = "GeminiServiceError";
+    this.code = code;
+    this.statusCode = statusCode;
+    this.userMessage = userMessage || message;
+  }
+}
+
+function getCandidateModels() {
+  const configuredModel = process.env.GEMINI_MODEL?.trim();
+  const candidates = configuredModel
+    ? [configuredModel, ...DEFAULT_GEMINI_MODELS]
+    : DEFAULT_GEMINI_MODELS;
+  return [...new Set(candidates)];
+}
+
+function parseGeminiJson(responseText) {
+  if (!responseText || typeof responseText !== "string") {
+    throw new Error("Empty response returned by Gemini AI.");
+  }
+  const cleaned = responseText
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/, "")
+    .trim();
+  return JSON.parse(cleaned);
+}
+
+function isAuthError(err) {
+  const status = err?.status;
+  const msg = String(err?.message || "");
+  if (status === 401 || status === 403) return true;
+  return status === 400 && /api[_ ]?key|permission|unauthorized/i.test(msg);
+}
+
+function isTransientError(err) {
+  const status = err?.status;
+  const msg = String(err?.message || "");
+  if ([429, 502, 503, 504].includes(status)) return true;
+  if (err?.name === "GoogleGenerativeAIAbortError" || err?.name === "AbortError") return true;
+  return /high demand|rate limit|quota|resource_exhausted|unavailable|timeout|timed out|aborted|fetch failed|econnreset|etimedout|enotfound/i.test(msg);
+}
+
+function isModelNotFoundError(err) {
+  return err?.status === 404 || /is no longer available|not found|models\//i.test(String(err?.message || ""));
+}
+
+/**
+ * Invokes Gemini across prioritized active models with timeout and structured JSON parsing.
+ */
+async function generateStructuredJson({
+  apiKey,
+  systemInstruction,
+  responseSchema,
+  contents,
+  temperature = 0.2,
+  timeoutMs = 20000,
+}) {
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const candidateModels = getCandidateModels();
+  let lastError = null;
+  let sawTransientError = false;
+  let allModelsNotFound = true;
+
+  for (const modelName of candidateModels) {
+    try {
+      const model = genAI.getGenerativeModel(
+        {
+          model: modelName,
+          systemInstruction,
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema,
+            temperature,
+          },
+        },
+        { timeout: timeoutMs }
+      );
+
+      const result = await model.generateContent(contents);
+      const data = parseGeminiJson(result.response.text());
+      return { data, modelName };
+    } catch (err) {
+      lastError = err;
+      if (isAuthError(err)) {
+        throw new GeminiServiceError(err.message || "Gemini AI authentication failed.", {
+          code: "GEMINI_AUTH_ERROR",
+          statusCode: 502,
+          userMessage: "Gemini AI authentication failed. Please verify the server GEMINI_API_KEY.",
+        });
+      }
+      if (!isModelNotFoundError(err)) {
+        allModelsNotFound = false;
+      }
+      if (isTransientError(err)) {
+        sawTransientError = true;
+      }
+      console.warn(`[GeminiService] Model ${modelName} failed: ${err?.message || err}. Trying next candidate model...`);
+    }
+  }
+
+  if (sawTransientError) {
+    throw new GeminiServiceError(lastError?.message || "Gemini AI service temporarily unavailable.", {
+      code: "GEMINI_UNAVAILABLE",
+      statusCode: 503,
+      userMessage: "Gemini AI OCR service is temporarily busy or rate-limited. Please try again in a moment.",
+    });
+  }
+
+  if (allModelsNotFound) {
+    throw new GeminiServiceError(lastError?.message || "Configured Gemini AI models are unavailable.", {
+      code: "GEMINI_MODEL_UNAVAILABLE",
+      statusCode: 502,
+      userMessage: "Configured Gemini AI vision models are unavailable. Please contact an administrator.",
+    });
+  }
+
+  throw new GeminiServiceError(lastError?.message || "Failed to extract structured data via Gemini AI.", {
+    code: "GEMINI_EXTRACTION_FAILED",
+    statusCode: 422,
+    userMessage: "Failed to extract invoice data using Gemini AI. Please ensure the document is clear and legible.",
+  });
+}
+
+function buildValidIsoDate(year, month, day) {
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+    return null;
+  }
+  const candidate = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  const parsed = new Date(`${candidate}T00:00:00Z`);
+  if (
+    Number.isNaN(parsed.getTime()) ||
+    parsed.getUTCFullYear() !== year ||
+    parsed.getUTCMonth() + 1 !== month ||
+    parsed.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  return candidate;
+}
+
+function normalizeInvoiceDate(rawDate) {
+  if (!rawDate || typeof rawDate !== "string") return null;
+  const trimmed = rawDate.trim();
+  const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    return buildValidIsoDate(Number(isoMatch[1]), Number(isoMatch[2]), Number(isoMatch[3]));
+  }
+  const dmyMatch = trimmed.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
+  if (dmyMatch) {
+    let day = Number(dmyMatch[1]);
+    let month = Number(dmyMatch[2]);
+    const year = Number(dmyMatch[3]);
+    if (month > 12 && day <= 12) {
+      [day, month] = [month, day];
+    }
+    return buildValidIsoDate(year, month, day);
+  }
+  return null;
+}
+
 const pipelineInsightsSchema = {
   type: SchemaType.OBJECT,
   properties: {
@@ -58,7 +233,11 @@ Valid frontend routes for suggestedRoute are: '/sales-invoice', '/customers', '/
  * @returns {Promise<object>}
  */
 export const generatePipelineInsights = async (metrics) => {
-  const apiKey = process.env.GEMINI_API_KEY;
+  if ((metrics?.totalSales || 0) === 0 && (metrics?.activeCustomersCount || 0) === 0) {
+    return generateHeuristicFallback(metrics || {});
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
 
   if (!apiKey) {
     console.warn("[GeminiService] GEMINI_API_KEY missing. Generating heuristic fallback pipeline insights.");
@@ -66,17 +245,6 @@ export const generatePipelineInsights = async (metrics) => {
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash-exp",
-      systemInstruction: systemInstruction,
-      generationConfig: {
-        responseMimeType: "application/json",
-        responseSchema: pipelineInsightsSchema,
-        temperature: 0.2,
-      },
-    });
-
     const promptData = `
 Analyze the following pipeline & financial metrics for this enterprise tenant:
 - Total Pipeline Value (Total Sales Volume): ₹${metrics.totalSales?.toLocaleString() || 0}
@@ -91,9 +259,14 @@ Analyze the following pipeline & financial metrics for this enterprise tenant:
 - Low Stock Items Alert Count: ${metrics.lowStockItemsCount || 0}
 `;
 
-    const result = await model.generateContent(promptData);
-    const responseText = result.response.text();
-    const parsedJSON = JSON.parse(responseText);
+    const { data: parsedJSON } = await generateStructuredJson({
+      apiKey,
+      systemInstruction,
+      responseSchema: pipelineInsightsSchema,
+      contents: promptData,
+      temperature: 0.2,
+      timeoutMs: 15000,
+    });
 
     return {
       healthScore: Math.min(100, Math.max(0, parsedJSON.healthScore || 75)),
@@ -252,7 +425,7 @@ const leadSystemInstruction = `You are an expert B2B Sales Analyst for an enterp
  * @returns {Promise<object>}
  */
 export const analyzeLeadExecutiveSummary = async (lead) => {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
 
   if (!apiKey) {
     console.warn("[GeminiService] GEMINI_API_KEY missing. Generating heuristic fallback for lead analysis.");
@@ -260,17 +433,6 @@ export const analyzeLeadExecutiveSummary = async (lead) => {
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash-exp",
-      systemInstruction: leadSystemInstruction,
-      generationConfig: {
-        responseMimeType: "application/json",
-        responseSchema: leadAnalysisSchema,
-        temperature: 0.2,
-      },
-    });
-
     const interactionsText = Array.isArray(lead.interactions) && lead.interactions.length > 0
       ? lead.interactions.map((item, idx) => {
           const text = item.summary && item.summary.length > 500
@@ -291,9 +453,14 @@ Analyze the following B2B Lead Context:
 ${interactionsText}
 `;
 
-    const result = await model.generateContent(promptData);
-    const responseText = result.response.text();
-    const parsedJSON = JSON.parse(responseText);
+    const { data: parsedJSON, modelName } = await generateStructuredJson({
+      apiKey,
+      systemInstruction: leadSystemInstruction,
+      responseSchema: leadAnalysisSchema,
+      contents: promptData,
+      temperature: 0.2,
+      timeoutMs: 15000,
+    });
 
     const validPriorities = ["LOW", "MEDIUM", "HIGH"];
     const validActionTypes = ["CALL", "EMAIL", "MEETING", "PROPOSAL", "RESEARCH"];
@@ -307,7 +474,7 @@ ${interactionsText}
       aiPriority: validPriorities.includes(rawPriority) ? rawPriority : "MEDIUM",
       aiActionType: validActionTypes.includes(rawActionType) ? rawActionType : "CALL",
       aiNextBestAction: parsedJSON.aiNextBestAction || "Reach out to key decision maker to clarify immediate requirements.",
-      source: "gemini-2.0-flash"
+      source: modelName
     };
   } catch (error) {
     console.error("[GeminiService] Error generating lead analysis via Gemini:", error.message);
@@ -463,143 +630,55 @@ CRITICAL INSTRUCTIONS:
  * @returns {Promise<object>}
  */
 export const parseInvoiceOCR = async (fileBuffer, mimeType) => {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
 
   if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is unconfigured in server environment.");
+    throw new GeminiServiceError("GEMINI_API_KEY is unconfigured in server environment.", {
+      code: "GEMINI_UNCONFIGURED",
+      statusCode: 503,
+      userMessage: "Gemini AI OCR is not configured on the server. Please set GEMINI_API_KEY in the server environment.",
+    });
   }
 
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const candidateModels = [
-    "gemini-2.0-flash",
-    "gemini-2.0-flash-lite"
-  ];
-  
+  if (!Buffer.isBuffer(fileBuffer) || fileBuffer.length === 0) {
+    throw new GeminiServiceError("Empty or invalid document buffer provided.", {
+      code: "GEMINI_EXTRACTION_FAILED",
+      statusCode: 400,
+      userMessage: "Uploaded document is empty or unreadable.",
+    });
+  }
+
+  const rawMimeType = String(mimeType || "").split(";")[0].trim().toLowerCase();
+  const normalizedMimeType = rawMimeType === "image/jpg" ? "image/jpeg" : rawMimeType;
   const inlineData = {
     inlineData: {
       data: fileBuffer.toString("base64"),
-      mimeType: mimeType
-    }
+      mimeType: normalizedMimeType,
+    },
   };
 
   const prompt = "Extract structured purchase invoice data from this document strictly adhering to the JSON schema.";
+  const { data } = await generateStructuredJson({
+    apiKey,
+    systemInstruction: invoiceOcrSystemInstruction,
+    responseSchema: invoiceOcrSchema,
+    contents: [prompt, inlineData],
+    temperature: 0.1,
+    timeoutMs: 25000,
+  });
 
-  let lastError = null;
-
-  for (const modelName of candidateModels) {
-    try {
-      const model = genAI.getGenerativeModel({
-        model: modelName,
-        systemInstruction: invoiceOcrSystemInstruction,
-        generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: invoiceOcrSchema,
-          temperature: 0.1,
-        },
-      });
-
-      const result = await model.generateContent([prompt, inlineData]);
-      const responseText = result.response.text();
-      return JSON.parse(responseText);
-    } catch (err) {
-      lastError = err;
-      console.warn(`[GeminiService] Model ${modelName} failed: ${err.message}. Trying next candidate model...`);
-    }
-  }
-
-  console.warn("[GeminiService] Gemini Vision models rate limited or unavailable. Parsing document buffer locally...");
-  return extractBufferDataFallback(fileBuffer);
-};
-
-/**
- * Local buffer text extraction fallback when external LLM rate limit is reached.
- * @param {Buffer} fileBuffer 
- * @returns {object}
- */
-function extractBufferDataFallback(fileBuffer) {
-  const text = fileBuffer.toString('utf-8') + '\n' + fileBuffer.toString('latin1');
-
-  // Extract Invoice Number (prevent matching 'oice' or 'Invoice' word)
-  const invalidWords = ["invoice", "oice", "number", "date", "details", "total", "subtotal", "vendor", "bill", "tax"];
-  const invMatch = text.match(/(?:INV-[A-Za-z0-9-]+|[A-Z]{2,6}-[0-9]{3,8}|\bInvoice\s*(?:Number|No|#)?\s*[:#-]?\s*([A-Za-z0-9-]+))/i);
-  let invoiceNo = null;
-  if (invMatch) {
-    const candidate = (invMatch[1] || invMatch[0]).trim();
-    if (candidate && !invalidWords.includes(candidate.toLowerCase())) {
-      invoiceNo = candidate;
-    }
-  }
-  if (!invoiceNo) {
-    invoiceNo = `INV-PUR-${Date.now().toString().slice(-6)}`;
-  }
-
-  // Extract Invoice Date
-  const dateMatch = text.match(/(\d{4}-\d{2}-\d{2})/);
-  const invoiceDate = dateMatch ? dateMatch[1] : new Date().toISOString().split("T")[0];
-
-  // Extract Vendor GSTIN
-  const gstinMatch = text.match(/([0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1})/i);
-  const vendorGstin = gstinMatch ? gstinMatch[1].toUpperCase() : "27AAACA1234A1Z5";
-
-  // Extract Vendor Name
-  let vendorName = "Acme Industrial Tools Pvt Ltd";
-  if (text.includes("Acme Office Supplies")) {
-    vendorName = "Acme Office Supplies Ltd.";
-  } else if (text.includes("Acme Industrial Tools")) {
-    vendorName = "Acme Industrial Tools Pvt Ltd";
-  } else {
-    const vMatch = text.match(/(?:Vendor|Seller|From)[\s:]*([^\r\n]+)/i);
-    if (vMatch) vendorName = vMatch[1].trim();
-  }
-
-  // Extract Line Items based on document content
-  const items = [];
-  if (text.includes("Steel Rod 12mm") || text.includes("Steel Rod")) {
-    items.push({
-      description: "Steel Rod 12mm",
-      qty: 10,
-      unitPrice: 1450.00,
-      gstPercentage: 18,
-      lineTotal: 17110.00
+  if (!data || typeof data !== "object") {
+    throw new GeminiServiceError("Gemini AI returned an unexpected OCR payload.", {
+      code: "GEMINI_EXTRACTION_FAILED",
+      statusCode: 422,
+      userMessage: "Failed to extract invoice data using Gemini AI. Please ensure the document is clear and legible.",
     });
-  }
-  if (text.includes("Wireless Mouse Pro") || text.includes("Wireless Mouse") || text.includes("Mouse")) {
-    items.push({
-      description: "Wireless Mouse Pro",
-      qty: 5,
-      unitPrice: 850.00,
-      gstPercentage: 12,
-      lineTotal: 4760.00
-    });
-  } else if (text.includes("Aluminum Sheet 2mm") || text.includes("Aluminum Sheet")) {
-    items.push({
-      description: "Aluminum Sheet 2mm",
-      qty: 5,
-      unitPrice: 850.00,
-      gstPercentage: 12,
-      lineTotal: 4760.00
-    });
-  }
-
-  if (items.length === 0) {
-    items.push(
-      { description: "Steel Rod 12mm", qty: 10, unitPrice: 1450.00, gstPercentage: 18, lineTotal: 17110.00 },
-      { description: "Wireless Mouse Pro", qty: 5, unitPrice: 850.00, gstPercentage: 12, lineTotal: 4760.00 }
-    );
   }
 
   return {
-    vendorName,
-    vendorGstin,
-    vendorAddress: "123 Business Way, Industrial Estate",
-    invoiceNo,
-    invoiceDate,
-    taxableAmount: 18750.00,
-    gstAmount: 3120.00,
-    grandTotal: 21870.00,
-    items,
-    confidenceScore: 95,
-    notes: "Extracted via OCR Engine."
+    ...data,
+    invoiceDate: normalizeInvoiceDate(data.invoiceDate),
+    items: Array.isArray(data.items) ? data.items : [],
   };
-}
+};
 
