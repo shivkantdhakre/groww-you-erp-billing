@@ -196,9 +196,18 @@ const NAV_SECTIONS = [
  * and understated footer logout action.
  */
 function Sidebar() {
+  const user = useStore((state) => state.user);
+  const branches = useStore((state) => state.branches);
+  const activeBranchId = useStore((state) => state.activeBranchId);
+  const setActiveBranch = useStore((state) => state.setActiveBranch);
   const logout = useStore((state) => state.logout);
   const sidebarOpen = useStore((state) => state.sidebarOpen);
   const setSidebarOpen = useStore((state) => state.setSidebarOpen);
+  const canSwitchBranch = user?.role === "SUPER_ADMIN" || user?.role === "COMPANY_ADMIN";
+  const currentBranch =
+    branches.find((b) => String(b.id) === String(activeBranchId)) ||
+    branches.find((b) => String(b.id) === String(user?.branchId)) ||
+    branches[0];
   const location = useLocation();
   const pathname = location.pathname;
 
@@ -257,6 +266,34 @@ function Sidebar() {
             <X className="w-4 h-4" />
           </button>
         </div>
+
+        {/* Mobile Branch Context Switcher (< 768px where topbar selector is hidden) */}
+        {branches.length > 0 && (
+          <div className="md:hidden px-3 py-2.5 border-b border-border bg-secondary/35 shrink-0">
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+              Active Branch
+            </label>
+            <div className="flex items-center gap-2 h-8 px-2.5 rounded-md border border-border bg-card text-xs text-foreground">
+              <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" aria-hidden="true" />
+              {canSwitchBranch ? (
+                <select
+                  aria-label="Mobile Active Branch"
+                  value={activeBranchId || currentBranch?.id || ""}
+                  onChange={(e) => setActiveBranch(Number(e.target.value))}
+                  className="bg-transparent w-full text-xs font-medium text-foreground focus:outline-none cursor-pointer"
+                >
+                  {branches.map((branch) => (
+                    <option key={branch.id} value={branch.id} className="bg-card text-foreground">
+                      {branch.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="font-medium truncate">{currentBranch?.name || "Main Branch"}</span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Navigation Sections */}
         <nav className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-1 scrollbar-thin">

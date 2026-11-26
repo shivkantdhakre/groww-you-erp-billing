@@ -218,7 +218,7 @@ export default function LeadDetailDrawer({ leadId, isOpen, onClose, onLeadUpdate
     >
       <div className="absolute inset-0" onClick={onClose} />
 
-      <div className="fixed inset-y-0 right-0 max-w-full flex pl-8">
+      <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-8">
         <div className="w-screen max-w-xl bg-card text-foreground popover-shadow border-l border-border flex flex-col">
           {/* Header */}
           <div className="px-5 py-4 border-b border-border flex items-center justify-between bg-secondary/40 shrink-0">
@@ -230,12 +230,12 @@ export default function LeadDetailDrawer({ leadId, isOpen, onClose, onLeadUpdate
                 <h2 className="text-base font-semibold tracking-tight text-foreground truncate">
                   {lead ? lead.companyName : "Lead Details"}
                 </h2>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 tabular-nums">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground mt-0.5 tabular-nums">
                   <span>
                     Stage: <strong className="text-foreground">{lead?.stage || "—"}</strong>
                   </span>
                   <span>·</span>
-                  <span>
+                  <span className="whitespace-nowrap">
                     Value:{" "}
                     <strong className="text-foreground font-mono">
                       ₹ {Number(lead?.dealValue || 0).toLocaleString("en-IN")}

@@ -195,7 +195,7 @@ export default function Leads() {
       />
 
       {/* Pipeline Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <CommonCard
           title="Total Active Leads"
           value={String(metrics.totalCount)}
@@ -232,8 +232,8 @@ export default function Leads() {
       </div>
 
       {/* Filter & Stage Strip */}
-      <div className="p-4 rounded-lg bg-card border border-border surface-shadow flex flex-col lg:flex-row gap-3 lg:items-center justify-between">
-        <div className="relative w-full lg:w-80">
+      <div className="p-4 rounded-lg bg-card border border-border surface-shadow flex flex-col xl:flex-row gap-3 xl:items-center justify-between">
+        <div className="relative w-full xl:w-80">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
           <input
             type="text"
@@ -244,7 +244,7 @@ export default function Leads() {
           />
         </div>
 
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 scrollbar-thin">
+        <div className="flex flex-wrap items-center gap-1.5">
           {STAGE_OPTIONS.map((stg) => (
             <button
               key={stg.id}

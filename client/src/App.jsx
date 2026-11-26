@@ -100,9 +100,13 @@ function AppContent() {
       
       {/* Print Templates */}
       <Route path="/print/sales-invoice" element={<SalesInvoicePrint />} />
+      <Route path="/print/sales-invoice/:id" element={<SalesInvoicePrint />} />
       <Route path="/print/purchase-invoice" element={<PurchaseInvoicePrint />} />
+      <Route path="/print/purchase-invoice/:id" element={<PurchaseInvoicePrint />} />
       <Route path="/print/payment-voucher" element={<PaymentVoucherPrint />} />
+      <Route path="/print/payment-voucher/:id" element={<PaymentVoucherPrint />} />
       <Route path="/print/receipt-voucher" element={<ReceiptVoucherPrint />} />
+      <Route path="/print/receipt-voucher/:id" element={<ReceiptVoucherPrint />} />
       <Route path="/print/thermal-invoice/:id" element={<ThermalInvoicePrint />} />
 
       <Route path="/login" element={<Navigate to="/" replace />} />

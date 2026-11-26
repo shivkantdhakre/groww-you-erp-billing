@@ -399,7 +399,7 @@ function SalesInvoice() {
     }
   }, []);
 
-  const handlePrintInvoice = useCallback(async (invoiceId, layout) => {
+  const handlePrintInvoice = useCallback((invoiceId, layout) => {
     if (layout.toLowerCase() === "thermal") {
       const width = 450;
       const height = 600;
@@ -412,19 +412,7 @@ function SalesInvoice() {
       );
       return;
     }
-    try {
-      const res = await api.get(`/pdf/invoices/${invoiceId}?layout=${layout}`);
-      if (res.data.pdfUrl) {
-        window.open(res.data.pdfUrl, "_blank");
-      } else {
-        setMessage("Failed to retrieve PDF invoice link.");
-        setMessageType("error");
-      }
-    } catch (err) {
-      console.error("Print Error:", err);
-      setMessage("Error generating PDF invoice.");
-      setMessageType("error");
-    }
+    window.open(`/print/sales-invoice/${invoiceId}`, "_blank");
   }, []);
 
   const handleSaveInvoice = useCallback(async () => {
@@ -842,7 +830,7 @@ function SalesInvoice() {
                     <td className="px-4 py-2.5 text-right font-mono text-xs text-muted-foreground tabular-nums">
                       {invoice.totalQty}
                     </td>
-                    <td className="px-4 py-2.5 text-right text-success font-mono font-semibold tabular-nums">
+                    <td className="px-4 py-2.5 text-right text-success font-mono font-semibold tabular-nums whitespace-nowrap">
                       ₹ {Number(invoice.grandTotal || 0).toFixed(2)}
                     </td>
                     <td className="px-4 py-2.5 text-right whitespace-nowrap">
