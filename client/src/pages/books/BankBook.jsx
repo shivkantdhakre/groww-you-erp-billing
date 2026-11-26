@@ -6,12 +6,11 @@ import TableWrapper from "../../components/common/TableWrapper";
 import ValidationMessage from "../../components/common/ValidationMessage";
 import StatusBadge from "../../components/common/StatusBadge";
 import api from "../../utils/api";
+import { formatINR } from "../../utils/formatters";
 import { Building2, Loader2, Printer, RotateCcw, Search } from "lucide-react";
 
-const INPUT_CLASS =
-  "h-9 px-3 rounded-md w-full border border-input bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors";
-const LABEL_CLASS =
-  "block mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider";
+const INPUT_CLASS = "erp-input";
+const LABEL_CLASS = "erp-label";
 
 /**
  * Bank book cashflow register with account filter, Dr/Cr columns, and print support.
@@ -147,30 +146,30 @@ function BankBook() {
       {loading ? (
         <div className="flex items-center justify-center py-10 gap-2 text-xs text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin text-primary-text" />
-          <span>Loading bank book records...</span>
+          <span>Loading bank book records&hellip;</span>
         </div>
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             <CommonCard
               title="Opening Balance"
-              value={`₹ ${openingBalance.toFixed(2)}`}
+              value={formatINR(openingBalance)}
               color="text-foreground"
               icon={Building2}
             />
             <CommonCard
               title="Total Deposits (Dr)"
-              value={`₹ ${totalDeposit.toFixed(2)}`}
+              value={formatINR(totalDeposit)}
               color="text-success"
             />
             <CommonCard
               title="Total Withdrawals (Cr)"
-              value={`₹ ${totalWithdrawal.toFixed(2)}`}
+              value={formatINR(totalWithdrawal)}
               color="text-destructive"
             />
             <CommonCard
               title="Closing Balance"
-              value={`₹ ${closingBalance.toFixed(2)}`}
+              value={formatINR(closingBalance)}
               color="text-primary-text"
             />
           </div>
@@ -190,29 +189,29 @@ function BankBook() {
               <tbody className="divide-y divide-border/70">
                 {filteredEntries.map((item, index) => (
                   <tr key={index} className="elevated-table-row transition-colors">
-                    <td className="px-4 py-2.5 text-xs text-muted-foreground tabular-nums">
+                    <td className="px-4 py-2.5 text-xs text-muted-foreground tabular-nums whitespace-nowrap">
                       {item.date}
                     </td>
-                    <td className="px-4 py-2.5 font-mono text-xs font-semibold text-foreground">
+                    <td className="px-4 py-2.5 font-mono text-xs font-semibold text-foreground whitespace-nowrap">
                       {item.voucherNo}
                     </td>
                     <td className="px-4 py-2.5 text-foreground font-medium">{item.particulars}</td>
-                    <td className="px-4 py-2.5 text-right font-mono text-xs text-success tabular-nums">
+                    <td className="px-4 py-2.5 text-right font-mono text-xs text-success tabular-nums whitespace-nowrap">
                       {item.receipt > 0 ? (
-                        <span>₹ {item.receipt.toFixed(2)}</span>
+                        <span>{formatINR(item.receipt)}</span>
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}
                     </td>
-                    <td className="px-4 py-2.5 text-right font-mono text-xs text-destructive tabular-nums">
+                    <td className="px-4 py-2.5 text-right font-mono text-xs text-destructive tabular-nums whitespace-nowrap">
                       {item.payment > 0 ? (
-                        <span>₹ {item.payment.toFixed(2)}</span>
+                        <span>{formatINR(item.payment)}</span>
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}
                     </td>
-                    <td className="px-4 py-2.5 text-right font-mono text-xs font-semibold text-foreground tabular-nums">
-                      ₹ {item.balance.toFixed(2)}{" "}
+                    <td className="px-4 py-2.5 text-right font-mono text-xs font-semibold text-foreground tabular-nums whitespace-nowrap">
+                      {formatINR(item.balance)}{" "}
                       <StatusBadge variant={item.balance >= 0 ? "success" : "destructive"} className="ml-1">
                         {item.balance >= 0 ? "Dr" : "Cr"}
                       </StatusBadge>

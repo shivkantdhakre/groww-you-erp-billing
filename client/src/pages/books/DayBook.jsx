@@ -6,12 +6,11 @@ import TableWrapper from "../../components/common/TableWrapper";
 import ValidationMessage from "../../components/common/ValidationMessage";
 import StatusBadge from "../../components/common/StatusBadge";
 import api from "../../utils/api";
+import { formatINR } from "../../utils/formatters";
 import { CalendarDays, Loader2, Printer, RotateCcw, Search } from "lucide-react";
 
-const INPUT_CLASS =
-  "h-9 px-3 rounded-md w-full border border-input bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors";
-const LABEL_CLASS =
-  "block mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider";
+const INPUT_CLASS = "erp-input";
+const LABEL_CLASS = "erp-label";
 
 /**
  * Chronological daily voucher & invoice book displaying Dr / Cr postings.
@@ -116,7 +115,7 @@ function DayBook() {
       {loading ? (
         <div className="flex items-center justify-center py-10 gap-2 text-xs text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin text-primary-text" />
-          <span>Loading daily transactions...</span>
+          <span>Loading daily transactions&hellip;</span>
         </div>
       ) : (
         <>
@@ -124,12 +123,12 @@ function DayBook() {
             <CommonCard title="Total Entries" value={String(totalEntries)} icon={CalendarDays} />
             <CommonCard
               title="Total Debit (Dr)"
-              value={`₹ ${totalDebit.toFixed(2)}`}
+              value={formatINR(totalDebit)}
               color="text-destructive"
             />
             <CommonCard
               title="Total Credit (Cr)"
-              value={`₹ ${totalCredit.toFixed(2)}`}
+              value={formatINR(totalCredit)}
               color="text-success"
             />
           </div>
@@ -154,10 +153,10 @@ function DayBook() {
                       item.isCancelled ? "opacity-60 bg-destructive/5" : ""
                     }`}
                   >
-                    <td className="px-4 py-2.5 text-xs text-muted-foreground tabular-nums">
+                    <td className="px-4 py-2.5 text-xs text-muted-foreground tabular-nums whitespace-nowrap">
                       {item.date}
                     </td>
-                    <td className="px-4 py-2.5 font-mono text-xs font-semibold text-foreground">
+                    <td className="px-4 py-2.5 font-mono text-xs font-semibold text-foreground whitespace-nowrap">
                       {item.voucherNo}
                     </td>
                     <td className="px-4 py-2.5 text-foreground font-medium">
@@ -167,11 +166,11 @@ function DayBook() {
                       </div>
                     </td>
                     <td className="px-4 py-2.5 text-xs text-muted-foreground">{item.particulars}</td>
-                    <td className="px-4 py-2.5 text-right font-mono text-xs text-destructive tabular-nums">
-                      {item.debit > 0 ? `₹ ${item.debit.toFixed(2)}` : "-"}
+                    <td className="px-4 py-2.5 text-right font-mono text-xs text-destructive tabular-nums whitespace-nowrap">
+                      {item.debit > 0 ? formatINR(item.debit) : "-"}
                     </td>
-                    <td className="px-4 py-2.5 text-right font-mono text-xs text-success tabular-nums">
-                      {item.credit > 0 ? `₹ ${item.credit.toFixed(2)}` : "-"}
+                    <td className="px-4 py-2.5 text-right font-mono text-xs text-success tabular-nums whitespace-nowrap">
+                      {item.credit > 0 ? formatINR(item.credit) : "-"}
                     </td>
                   </tr>
                 ))}

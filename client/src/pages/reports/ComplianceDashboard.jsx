@@ -7,6 +7,7 @@ import TableWrapper from "../../components/common/TableWrapper";
 import ValidationMessage from "../../components/common/ValidationMessage";
 import StatusBadge from "../../components/common/StatusBadge";
 import api from "../../utils/api";
+import { formatINR } from "../../utils/formatters";
 import {
   Shield,
   AlertTriangle,
@@ -19,10 +20,8 @@ import {
   Loader2,
 } from "lucide-react";
 
-const INPUT_CLASS =
-  "h-9 px-3 rounded-md w-full border border-input bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors";
-const LABEL_CLASS =
-  "block mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider";
+const INPUT_CLASS = "erp-input";
+const LABEL_CLASS = "erp-label";
 
 const MONTHS = [
   { value: "01", label: "January" },
@@ -378,7 +377,7 @@ export default function ComplianceDashboard() {
               aria-label="Filing Month"
               value={month}
               onChange={(e) => setMonth(e.target.value)}
-              className="h-8 px-2.5 rounded-md border border-border bg-card text-foreground text-xs font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
+              className="erp-input h-8 w-auto px-2.5 text-xs font-medium cursor-pointer"
             >
               {MONTHS.map((m) => (
                 <option key={m.value} value={m.value}>
@@ -390,7 +389,7 @@ export default function ComplianceDashboard() {
               aria-label="Filing Year"
               value={year}
               onChange={(e) => setYear(e.target.value)}
-              className="h-8 px-2.5 rounded-md border border-border bg-card text-foreground text-xs font-medium font-mono cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
+              className="erp-input h-8 w-auto px-2.5 text-xs font-medium font-mono cursor-pointer"
             >
               <option value="2025">2025</option>
               <option value="2026">2026</option>
@@ -509,13 +508,13 @@ export default function ComplianceDashboard() {
           title="Outward Sales Tax (GSTR-3B Liability)"
           value={
             gstr3b
-              ? `₹ ${gstr3b.summary.outwardSupplies.taxableValue.toLocaleString("en-IN")}`
+              ? formatINR(gstr3b.summary.outwardSupplies.taxableValue)
               : "Auth Required"
           }
           color={gstr3b ? "text-foreground" : "text-muted-foreground"}
           subtitle={
             gstr3b
-              ? `CGST: ₹ ${gstr3b.summary.outwardSupplies.cgst.toLocaleString("en-IN")} · SGST: ₹ ${gstr3b.summary.outwardSupplies.sgst.toLocaleString("en-IN")}`
+              ? `CGST ${formatINR(gstr3b.summary.outwardSupplies.cgst)} / SGST ${formatINR(gstr3b.summary.outwardSupplies.sgst)}`
               : "Authenticate GST portal session to retrieve live return summary"
           }
           icon={Shield}
@@ -525,13 +524,13 @@ export default function ComplianceDashboard() {
           title="Eligible Input Tax Credit (ITC)"
           value={
             gstr3b
-              ? `₹ ${(gstr3b.summary.eligibleItc.cgst + gstr3b.summary.eligibleItc.sgst).toLocaleString("en-IN")}`
+              ? formatINR(gstr3b.summary.eligibleItc.cgst + gstr3b.summary.eligibleItc.sgst)
               : "Auth Required"
           }
           color={gstr3b ? "text-success" : "text-muted-foreground"}
           subtitle={
             gstr3b
-              ? `CGST: ₹ ${gstr3b.summary.eligibleItc.cgst.toLocaleString("en-IN")} · SGST: ₹ ${gstr3b.summary.eligibleItc.sgst.toLocaleString("en-IN")}`
+              ? `CGST ${formatINR(gstr3b.summary.eligibleItc.cgst)} / SGST ${formatINR(gstr3b.summary.eligibleItc.sgst)}`
               : "Authenticate GST portal session to inspect ITC eligibility"
           }
           icon={CheckCircle2}
@@ -567,7 +566,7 @@ export default function ComplianceDashboard() {
               ) : (
                 <UploadCloud className="w-3.5 h-3.5" />
               )}
-              <span>{loading ? "Uploading..." : "File GSTR-1 to Staging"}</span>
+              <span>{loading ? "Uploading\u2026" : "File GSTR-1 to Staging"}</span>
             </button>
           </div>
         </div>
@@ -651,7 +650,7 @@ export default function ComplianceDashboard() {
                           disabled={resolvingId === ret.id}
                           className="h-7 px-2.5 rounded-md border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80 text-xs font-medium cursor-pointer disabled:opacity-50"
                         >
-                          {resolvingId === ret.id ? "Processing..." : "Write Off"}
+                          {resolvingId === ret.id ? "Processing\u2026" : "Write Off"}
                         </button>
                       </div>
                     </td>
@@ -805,7 +804,7 @@ export default function ComplianceDashboard() {
           setMappingError("");
         }}
         title={
-          reconcilingReturn ? `Map Original Invoice · ${reconcilingReturn.returnNo}` : "Map Invoice"
+          reconcilingReturn ? `Map Original Invoice (${reconcilingReturn.returnNo})` : "Map Invoice"
         }
         description="Link this return to an existing ERP invoice or external legacy bill number."
       >
@@ -863,7 +862,7 @@ export default function ComplianceDashboard() {
                 disabled={resolvingId === reconcilingReturn.id}
                 className="h-8 px-4 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-medium cursor-pointer disabled:opacity-50"
               >
-                {resolvingId === reconcilingReturn.id ? "Linking..." : "Link Invoice"}
+                {resolvingId === reconcilingReturn.id ? "Linking\u2026" : "Link Invoice"}
               </button>
             </div>
           </form>
@@ -875,7 +874,7 @@ export default function ComplianceDashboard() {
         isOpen={showEwayModal}
         onClose={() => setShowEwayModal(false)}
         title={
-          selectedInvoice ? `Generate E-Way Bill · ${selectedInvoice.invoiceNo}` : "Generate E-Way Bill"
+          selectedInvoice ? `Generate E-Way Bill (${selectedInvoice.invoiceNo})` : "Generate E-Way Bill"
         }
         description={
           selectedInvoice

@@ -5,10 +5,8 @@ import CommonPageHeader from "../../components/common/CommonPageHeader";
 import ValidationMessage from "../../components/common/ValidationMessage";
 import { CreditCard, Loader2 } from "lucide-react";
 
-const INPUT_CLASS =
-  "h-9 px-3 rounded-md w-full border border-input bg-card text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors";
-const LABEL_CLASS =
-  "block mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider";
+const INPUT_CLASS = "erp-input";
+const LABEL_CLASS = "erp-label";
 
 /**
  * Sandbox payment gateway diagnostic screen verifying Razorpay order creation & HMAC signature verification.
@@ -162,7 +160,7 @@ function RazorpayCheckoutTest() {
           <div>
             <h2 className="text-sm font-semibold text-foreground">Gateway Parameters</h2>
             <p className="text-xs text-muted-foreground">
-              Currency: INR · Environment: Sandbox
+              Currency: INR | Environment: Sandbox
             </p>
           </div>
         </div>
@@ -234,7 +232,7 @@ function RazorpayCheckoutTest() {
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Processing...</span>
+                  <span>Processing\u2026</span>
                 </>
               ) : (
                 <>

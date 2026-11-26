@@ -228,7 +228,7 @@ function Sidebar() {
 
   const linkClass = (path) => {
     const isActive = pathname === path;
-    return `relative flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] transition-colors duration-150 cursor-pointer ${
+    return `relative flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] transition-colors duration-150 cursor-pointer erp-focus-ring ${
       isActive
         ? "bg-primary/10 text-primary-text font-semibold before:content-[''] before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-0.5 before:rounded-full before:bg-primary"
         : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground font-medium"
@@ -248,39 +248,40 @@ function Sidebar() {
 
       <aside
         aria-label="Primary Navigation"
-        className={`fixed inset-y-0 left-0 w-60 xl:w-64 bg-sidebar border-r border-border z-50 transform transition-transform duration-200 ease-out flex flex-col justify-between text-foreground no-print lg:sticky lg:top-0 lg:self-start lg:h-screen lg:inset-auto lg:z-auto lg:translate-x-0 shrink-0 ${
+        className={`fixed inset-y-0 left-0 w-60 xl:w-64 bg-sidebar border-r border-border z-50 transform transition-transform duration-200 ease-[var(--ease-drawer)] flex flex-col justify-between text-foreground no-print overscroll-contain lg:sticky lg:top-0 lg:self-start lg:h-dvh lg:inset-auto lg:z-auto lg:translate-x-0 shrink-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         {/* Header Logo */}
         <div className="h-14 px-4 border-b border-border flex items-center justify-between shrink-0">
-          <Link to="/" className="focus:outline-none">
+          <Link to="/" className="rounded-md erp-focus-ring">
             <BrandLogo size={34} showText={true} />
           </Link>
           <button
             type="button"
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+            className="lg:hidden p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground erp-focus-ring cursor-pointer"
             aria-label="Close menu"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
 
         {/* Mobile Branch Context Switcher (< 768px where topbar selector is hidden) */}
         {branches.length > 0 && (
           <div className="md:hidden px-3 py-2.5 border-b border-border bg-secondary/35 shrink-0">
-            <label className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+            <label htmlFor="mobile-active-branch" className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
               Active Branch
             </label>
-            <div className="flex items-center gap-2 h-8 px-2.5 rounded-md border border-border bg-card text-xs text-foreground">
+            <div className="flex items-center gap-2 h-9 px-2.5 rounded-md border border-border bg-input-bg text-xs text-foreground">
               <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" aria-hidden="true" />
               {canSwitchBranch ? (
                 <select
+                  id="mobile-active-branch"
                   aria-label="Mobile Active Branch"
                   value={activeBranchId || currentBranch?.id || ""}
                   onChange={(e) => setActiveBranch(Number(e.target.value))}
-                  className="bg-transparent w-full text-xs font-medium text-foreground focus:outline-none cursor-pointer"
+                  className="bg-transparent w-full text-xs font-medium text-foreground erp-focus-ring rounded cursor-pointer"
                 >
                   {branches.map((branch) => (
                     <option key={branch.id} value={branch.id} className="bg-card text-foreground">
@@ -313,7 +314,7 @@ function Sidebar() {
                     type="button"
                     aria-expanded={open}
                     onClick={() => toggleSection(section.key)}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-[13px] font-medium transition-colors cursor-pointer ${
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-[13px] font-medium transition-colors cursor-pointer erp-focus-ring ${
                       containsActive
                         ? "text-foreground bg-secondary/50"
                         : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
@@ -352,7 +353,7 @@ function Sidebar() {
           <button
             type="button"
             onClick={logout}
-            className="w-full h-9 flex items-center justify-between px-3 rounded-md border border-border bg-card hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 text-xs font-medium text-muted-foreground transition-colors cursor-pointer"
+            className="w-full h-9 flex items-center justify-between px-3 rounded-md border border-border bg-card hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 text-xs font-medium text-muted-foreground erp-focus-ring transition-colors cursor-pointer"
           >
             <span>Sign out of workspace</span>
             <LogOut className="w-3.5 h-3.5" aria-hidden="true" />

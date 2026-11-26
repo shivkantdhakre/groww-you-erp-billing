@@ -7,12 +7,11 @@ import ValidationMessage from "../../components/common/ValidationMessage";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import StatusBadge from "../../components/common/StatusBadge";
 import api from "../../utils/api";
+import { formatINR, formatCount } from "../../utils/formatters";
 import { Search, Wallet, Ban, Save } from "lucide-react";
 
-const INPUT_CLASS =
-  "h-9 px-3 rounded-md w-full border border-input bg-card text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors";
-const LABEL_CLASS =
-  "block mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider";
+const INPUT_CLASS = "erp-input";
+const LABEL_CLASS = "erp-label";
 
 /**
  * Customer receipt voucher recording inward collections and updating receivable ledgers.
@@ -168,7 +167,7 @@ function ReceiptVoucher() {
                   .filter((c) => c.isActive)
                   .map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name} (Bal: ₹{Number(c.outstandingBalance || 0).toFixed(2)})
+                      {c.name} (Bal: {formatINR(c.outstandingBalance)})
                     </option>
                   ))}
               </select>
@@ -214,10 +213,10 @@ function ReceiptVoucher() {
           <div>
             <label className={LABEL_CLASS}>Remarks</label>
             <textarea
-              placeholder="Optional narration for ledger audit..."
+              placeholder={"Optional narration for ledger audit\u2026"}
               value={remarks}
               onChange={(e) => setRemarks(e.target.value)}
-              className="p-3 rounded-md border border-input bg-card text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary w-full min-h-[72px]"
+              className="erp-input h-auto p-3 min-h-[72px]"
             />
           </div>
 
@@ -225,9 +224,9 @@ function ReceiptVoucher() {
             <button
               type="button"
               onClick={saveReceipt}
-              className="inline-flex items-center gap-2 h-9 px-4 rounded-md bg-primary text-primary-foreground text-xs sm:text-sm font-medium cursor-pointer hover:bg-primary/90 transition-colors"
+              className="inline-flex items-center gap-2 h-9 px-4 rounded-md bg-primary text-primary-foreground text-xs sm:text-sm font-medium erp-focus-ring cursor-pointer hover:bg-primary/90 transition-colors"
             >
-              <Save className="w-4 h-4" />
+              <Save className="w-4 h-4" aria-hidden="true" />
               <span>Save Receipt Voucher</span>
             </button>
           </div>
@@ -236,9 +235,9 @@ function ReceiptVoucher() {
         <div>
           <CommonCard
             title="Active Receipts (30d)"
-            value={`₹ ${activeTotal.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            value={formatINR(activeTotal)}
             color="text-success"
-            subtitle={`${payments.filter((p) => !p.isCancelled).length} active vouchers`}
+            subtitle={formatCount(payments.filter((p) => !p.isCancelled).length, "active voucher")}
             icon={Wallet}
           />
         </div>
@@ -250,18 +249,19 @@ function ReceiptVoucher() {
           <div>
             <h2 className="text-sm font-semibold text-foreground">Receipt History</h2>
             <p className="text-xs text-muted-foreground tabular-nums">
-              {filteredReceipts.length} vouchers
+              {formatCount(filteredReceipts.length, "voucher")}
             </p>
           </div>
 
           <div className="relative w-full sm:w-64">
-            <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true" />
             <input
               type="text"
-              placeholder="Filter by customer..."
+              aria-label="Filter receipts by customer"
+              placeholder={"Filter by customer\u2026"}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-8 pl-9 pr-3 rounded-md bg-background border border-input text-foreground text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring w-full"
+              className="erp-input h-8 pl-9 text-xs"
             />
           </div>
         </div>
@@ -297,8 +297,8 @@ function ReceiptVoucher() {
                     {payment.customer?.name || "-"}
                   </td>
                   <td className="px-4 py-2.5 text-xs text-muted-foreground">{payment.paymentMode}</td>
-                  <td className="px-4 py-2.5 text-right font-mono font-semibold text-foreground tabular-nums">
-                    ₹ {Number(payment.amount || 0).toFixed(2)}
+                  <td className="px-4 py-2.5 text-right font-mono font-semibold text-foreground tabular-nums whitespace-nowrap">
+                    {formatINR(payment.amount)}
                   </td>
                   <td className="px-4 py-2.5">
                     {payment.isCancelled ? (
@@ -338,7 +338,7 @@ function ReceiptVoucher() {
         title="Void Receipt Voucher"
         message={
           voidTarget
-            ? `Void voucher ${voidTarget.voucherNo} (₹ ${Number(voidTarget.amount || 0).toFixed(2)})? Customer receivable balance will be restored.`
+            ? `Void voucher ${voidTarget.voucherNo} (${formatINR(voidTarget.amount)})? Customer receivable balance will be restored.`
             : ""
         }
         confirmLabel="Void Voucher"

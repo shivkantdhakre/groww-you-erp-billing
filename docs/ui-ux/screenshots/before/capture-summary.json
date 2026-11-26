@@ -1,0 +1,298 @@
+{
+  "phase": "before",
+  "screenshotCount": 47,
+  "overflowIssues": [],
+  "consoleErrors": [
+    "[http://localhost:5000/api/compliance/gst/gstr3b/summary?month=11&year=2026] Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "[http://localhost:5000/api/compliance/gst/gstr3b/summary?month=11&year=2026] Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "[http://localhost:5000/api/compliance/gst/gstr3b/summary?month=11&year=2026] Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "[http://localhost:5000/api/compliance/gst/gstr3b/summary?month=11&year=2026] Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "[http://localhost:5000/api/compliance/gst/gstr3b/summary?month=11&year=2026] Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+    "[http://localhost:5000/api/compliance/gst/gstr3b/summary?month=11&year=2026] Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+  ],
+  "pageErrors": [],
+  "captures": [
+    {
+      "fileName": "login-1440-light.png",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "login-1440-dark.png",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "login-390-dark.png",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "dashboard-1440-light.png",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "dashboard-1280-light.png",
+      "scrollWidth": 1280,
+      "clientWidth": 1280,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "dashboard-768-light.png",
+      "scrollWidth": 768,
+      "clientWidth": 768,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "dashboard-390-light.png",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "dashboard-1440-dark.png",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "sales-invoice-1440-light.png",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "sales-invoice-1280-light.png",
+      "scrollWidth": 1280,
+      "clientWidth": 1280,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "sales-invoice-1024-light.png",
+      "scrollWidth": 1024,
+      "clientWidth": 1024,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "sales-invoice-768-light.png",
+      "scrollWidth": 768,
+      "clientWidth": 768,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "sales-invoice-390-light.png",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "sales-invoice-1440-dark.png",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "purchase-invoice-1440-light.png",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "purchase-invoice-1280-light.png",
+      "scrollWidth": 1280,
+      "clientWidth": 1280,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "purchase-invoice-1024-light.png",
+      "scrollWidth": 1024,
+      "clientWidth": 1024,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "purchase-invoice-390-light.png",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "purchase-invoice-1440-dark.png",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "inventory-1440-light.png",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "inventory-1280-light.png",
+      "scrollWidth": 1280,
+      "clientWidth": 1280,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "inventory-390-light.png",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "inventory-1440-dark.png",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "customers-1440-light.png",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "customers-390-light.png",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "leads-1440-light.png",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "leads-1280-light.png",
+      "scrollWidth": 1280,
+      "clientWidth": 1280,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "leads-390-light.png",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "leads-1440-dark.png",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "leads-drawer-1440-light.png",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "leads-drawer-1440-dark.png",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "payment-voucher-1440-light.png",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "payment-voucher-390-light.png",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "customer-ledger-1440-light.png",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "customer-ledger-390-light.png",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "reports-dashboard-1440-light.png",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "reports-dashboard-1280-light.png",
+      "scrollWidth": 1280,
+      "clientWidth": 1280,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "reports-dashboard-390-light.png",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "reports-dashboard-1440-dark.png",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "compliance-dashboard-1440-light.png",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "compliance-dashboard-1280-light.png",
+      "scrollWidth": 1280,
+      "clientWidth": 1280,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "compliance-dashboard-390-light.png",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "compliance-dashboard-1440-dark.png",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "company-settings-1440-light.png",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "company-settings-390-light.png",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "pricing-1440-light.png",
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "overflowPx": 0
+    },
+    {
+      "fileName": "pricing-390-light.png",
+      "scrollWidth": 390,
+      "clientWidth": 390,
+      "overflowPx": 0
+    }
+  ]
+}

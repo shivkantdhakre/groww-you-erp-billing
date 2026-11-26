@@ -7,14 +7,12 @@ import ValidationMessage from "../../components/common/ValidationMessage";
 import Autocomplete from "../../components/common/Autocomplete";
 import { useStore } from "../../store/useStore";
 import api from "../../utils/api";
+import { formatINR, formatCount } from "../../utils/formatters";
 import { RotateCcw, Save } from "lucide-react";
 
-const INPUT_CLASS =
-  "h-9 px-3 rounded-md w-full border border-input bg-card text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors";
-const READONLY_CLASS =
-  "h-9 px-3 rounded-md w-full border border-border bg-muted text-muted-foreground text-sm focus:outline-none";
-const LABEL_CLASS =
-  "block mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider";
+const INPUT_CLASS = "erp-input";
+const READONLY_CLASS = "erp-readonly";
+const LABEL_CLASS = "erp-label";
 
 /**
  * Debit-note / purchase return intake adjusting stock levels & supplier payables.
@@ -184,14 +182,14 @@ function PurchaseReturn() {
                 options={vendors}
                 labelKey="name"
                 valueKey="id"
-                placeholder="Select vendor..."
+                placeholder={"Select vendor\u2026"}
                 selectedId={vendorId}
                 searchFields={["name", "mobile"]}
                 customRender={(opt) => (
                   <div className="flex justify-between w-full gap-2">
                     <span className="font-medium text-foreground truncate">{opt.name}</span>
-                    <span className="text-xs text-muted-foreground tabular-nums shrink-0">
-                      Bal: ₹ {opt.outstandingBalance}
+                    <span className="text-xs text-muted-foreground font-mono tabular-nums shrink-0">
+                      Bal: {formatINR(opt.outstandingBalance)}
                     </span>
                   </div>
                 )}
@@ -201,8 +199,8 @@ function PurchaseReturn() {
               {selectedVendor && (
                 <p className="text-[11px] text-muted-foreground mt-1 tabular-nums">
                   Payable Balance:{" "}
-                  <span className="font-semibold text-foreground">
-                    ₹ {selectedVendor.outstandingBalance}
+                  <span className="font-mono font-semibold text-foreground">
+                    {formatINR(selectedVendor.outstandingBalance)}
                   </span>
                 </p>
               )}
@@ -236,14 +234,14 @@ function PurchaseReturn() {
                 options={items}
                 labelKey="name"
                 valueKey="id"
-                placeholder="Select product..."
+                placeholder={"Select product\u2026"}
                 selectedId={itemId}
                 searchFields={["name", "sku"]}
                 customRender={(opt) => (
                   <div className="flex justify-between w-full gap-2">
                     <span className="font-medium text-foreground truncate">{opt.name}</span>
-                    <span className="text-xs text-muted-foreground tabular-nums shrink-0">
-                      Stock: {getBranchStock(opt)} | Cost: ₹ {opt.purchasePrice}
+                    <span className="text-xs text-muted-foreground font-mono tabular-nums shrink-0">
+                      Stock: {getBranchStock(opt)} | Cost: {formatINR(opt.purchasePrice)}
                     </span>
                   </div>
                 )}
@@ -279,9 +277,9 @@ function PurchaseReturn() {
               <label className={LABEL_CLASS}>Purchase Rate</label>
               <input
                 type="text"
-                value={itemId ? `₹ ${rate}` : "-"}
+                value={itemId ? formatINR(rate) : "-"}
                 readOnly
-                className={`${READONLY_CLASS} tabular-nums font-medium`}
+                className={`${READONLY_CLASS} font-medium`}
               />
             </div>
 
@@ -289,9 +287,9 @@ function PurchaseReturn() {
               <label className={LABEL_CLASS}>Return Value</label>
               <input
                 type="text"
-                value={`₹ ${amount.toFixed(2)}`}
+                value={formatINR(amount)}
                 readOnly
-                className={`${READONLY_CLASS} tabular-nums font-semibold text-foreground`}
+                className={`${READONLY_CLASS} font-semibold text-foreground`}
               />
             </div>
           </div>
@@ -300,9 +298,9 @@ function PurchaseReturn() {
             <button
               type="button"
               onClick={handleSaveReturn}
-              className="inline-flex items-center gap-2 h-9 px-4 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium transition-colors cursor-pointer"
+              className="inline-flex items-center gap-2 h-9 px-4 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium erp-focus-ring transition-colors cursor-pointer"
             >
-              <Save className="w-4 h-4" />
+              <Save className="w-4 h-4" aria-hidden="true" />
               <span>Save Purchase Return</span>
             </button>
           </div>
@@ -311,9 +309,9 @@ function PurchaseReturn() {
         <div>
           <CommonCard
             title="Total Purchase Returns"
-            value={`₹ ${totalReturnAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            value={formatINR(totalReturnAmount)}
             color="text-destructive"
-            subtitle={`${returns.length} debit note${returns.length === 1 ? "" : "s"} recorded`}
+            subtitle={`${formatCount(returns.length, "debit note")} recorded`}
             icon={RotateCcw}
           />
         </div>
@@ -323,11 +321,11 @@ function PurchaseReturn() {
       <div className="bg-card text-foreground rounded-lg border border-border surface-shadow overflow-hidden">
         <div className="px-4 sm:px-5 py-3.5 border-b border-border flex items-center justify-between">
           <h2 className="text-sm font-semibold text-foreground">Purchase Return Register</h2>
-          <span className="text-xs text-muted-foreground tabular-nums">{returns.length} entries</span>
+          <span className="text-xs text-muted-foreground tabular-nums">{formatCount(returns.length, "entry", "entries")}</span>
         </div>
 
         {loadingReturns ? (
-          <div className="text-center py-8 text-xs text-muted-foreground">Loading returns...</div>
+          <div className="text-center py-8 text-xs text-muted-foreground">Loading returns&hellip;</div>
         ) : returns.length > 0 ? (
           <TableWrapper className="!border-none !rounded-none !shadow-none !bg-transparent">
             <table className="w-full text-sm text-left border-collapse">
@@ -363,8 +361,8 @@ function PurchaseReturn() {
                     <td className="px-4 py-2.5 text-right text-muted-foreground tabular-nums">
                       {item.totalQty}
                     </td>
-                    <td className="px-4 py-2.5 text-right text-destructive font-semibold tabular-nums">
-                      ₹ {Number(item.grandTotal || 0).toFixed(2)}
+                    <td className="px-4 py-2.5 text-right text-destructive font-mono font-semibold tabular-nums whitespace-nowrap">
+                      {formatINR(item.grandTotal)}
                     </td>
                   </tr>
                 ))}

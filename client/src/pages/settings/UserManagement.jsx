@@ -5,12 +5,11 @@ import ValidationMessage from "../../components/common/ValidationMessage";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import StatusBadge from "../../components/common/StatusBadge";
 import TableWrapper from "../../components/common/TableWrapper";
+import { formatCount } from "../../utils/formatters";
 import { Eye, EyeOff, UserPlus, Pencil, UserX, RotateCcw } from "lucide-react";
 
-const INPUT_CLASS =
-  "h-9 px-3 rounded-md w-full border border-input bg-card text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors";
-const LABEL_CLASS =
-  "block mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider";
+const INPUT_CLASS = "erp-input";
+const LABEL_CLASS = "erp-label";
 
 /**
  * Tenant staff directory with role assignment, credential resets, and deactivation confirmation.
@@ -160,7 +159,7 @@ function UserManagement() {
       <CommonPageHeader
         title="User Management"
         subtitle="Provision staff accounts, assign operational designations, and revoke access"
-        badge={<StatusBadge variant="neutral tabular-nums">{users.length} members</StatusBadge>}
+        badge={<StatusBadge variant="neutral tabular-nums">{formatCount(users.length, "member")}</StatusBadge>}
       />
 
       <ValidationMessage

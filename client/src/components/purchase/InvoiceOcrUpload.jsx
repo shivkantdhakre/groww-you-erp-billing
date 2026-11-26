@@ -44,7 +44,7 @@ export default function InvoiceOcrUpload({
     }
 
     setLoading(true);
-    setStatusText("Extracting invoice lines and supplier details...");
+    setStatusText("Extracting invoice lines and supplier details\u2026");
 
     try {
       const formData = new FormData();
@@ -57,7 +57,7 @@ export default function InvoiceOcrUpload({
       });
 
       if (res.data && res.data.success) {
-        setStatusText("Extraction complete. Matching master records...");
+        setStatusText("Extraction complete. Matching master records\u2026");
         setTimeout(() => {
           setLoading(false);
           setStatusText("");
@@ -165,7 +165,7 @@ export default function InvoiceOcrUpload({
           <Loader2 className="w-6 h-6 text-primary-text animate-spin mb-2" aria-hidden="true" />
           <p className="text-xs sm:text-sm font-medium text-foreground">{statusText}</p>
           <p className="text-[11px] text-muted-foreground mt-1">
-            Matching vendor GSTIN and inventory catalog items...
+            Matching vendor GSTIN and inventory catalog items&hellip;
           </p>
         </div>
       ) : (

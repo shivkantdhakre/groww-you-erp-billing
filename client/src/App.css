@@ -271,7 +271,9 @@
   color: hsl(var(--secondary-foreground));
 }
 
-/* Transition enhancements */
+/* Smooth interactive transition (explicit properties only; avoids unintended layout jitter) */
 .transition-all-300 {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition-property: color, background-color, border-color, opacity, box-shadow;
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
 }

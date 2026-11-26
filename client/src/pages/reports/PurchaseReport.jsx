@@ -6,12 +6,11 @@ import CommonCard from "../../components/common/CommonCard";
 import TableWrapper from "../../components/common/TableWrapper";
 import ValidationMessage from "../../components/common/ValidationMessage";
 import api from "../../utils/api";
+import { formatINR } from "../../utils/formatters";
 import { Loader2, Printer, RotateCcw, Search, ShoppingCart } from "lucide-react";
 
-const INPUT_CLASS =
-  "h-9 px-3 rounded-md w-full border border-input bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors";
-const LABEL_CLASS =
-  "block mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider";
+const INPUT_CLASS = "erp-input";
+const LABEL_CLASS = "erp-label";
 
 /**
  * Date-range and supplier-filtered purchase register report.
@@ -147,21 +146,21 @@ function PurchaseReport() {
       {loading ? (
         <div className="flex items-center justify-center py-10 gap-2 text-xs text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin text-primary-text" />
-          <span>Loading purchase report...</span>
+          <span>Loading purchase report&hellip;</span>
         </div>
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <CommonCard
               title="Total Purchases"
-              value={`₹ ${totalPurchase.toFixed(2)}`}
+              value={formatINR(totalPurchase)}
               color="text-foreground"
               icon={ShoppingCart}
             />
             <CommonCard title="Total Bills" value={String(totalInvoices)} />
             <CommonCard
               title="Average Bill Value"
-              value={`₹ ${averageInvoiceValue.toFixed(2)}`}
+              value={formatINR(averageInvoiceValue)}
               color="text-primary-text"
             />
           </div>
@@ -180,10 +179,10 @@ function PurchaseReport() {
               <tbody className="divide-y divide-border/70">
                 {purchaseData.map((purchase) => (
                   <tr key={purchase.id} className="elevated-table-row transition-colors">
-                    <td className="px-4 py-2.5 font-mono text-xs font-semibold text-foreground">
+                    <td className="px-4 py-2.5 font-mono text-xs font-semibold text-foreground whitespace-nowrap">
                       {purchase.invoiceNo}
                     </td>
-                    <td className="px-4 py-2.5 text-xs text-muted-foreground tabular-nums">
+                    <td className="px-4 py-2.5 text-xs text-muted-foreground tabular-nums whitespace-nowrap">
                       {purchase.invoiceDate.split("T")[0]}
                     </td>
                     <td className="px-4 py-2.5 text-foreground font-medium">
@@ -192,8 +191,8 @@ function PurchaseReport() {
                     <td className="px-4 py-2.5 text-right text-muted-foreground tabular-nums">
                       {purchase.totalQty}
                     </td>
-                    <td className="px-4 py-2.5 text-right font-mono font-semibold text-foreground tabular-nums">
-                      ₹ {Number(purchase.grandTotal || 0).toFixed(2)}
+                    <td className="px-4 py-2.5 text-right font-mono font-semibold text-foreground tabular-nums whitespace-nowrap">
+                      {formatINR(purchase.grandTotal)}
                     </td>
                   </tr>
                 ))}

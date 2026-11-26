@@ -35,7 +35,7 @@ function CommonModal({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-4 overscroll-contain"
       onClick={(e) => {
         if (onClose && e.target === e.currentTarget) {
           onClose();
@@ -45,7 +45,7 @@ function CommonModal({
       <div
         className={`bg-card text-foreground border border-border rounded-xl w-full ${
           MODAL_SIZES[size] || MODAL_SIZES.md
-        } popover-shadow max-h-[90vh] flex flex-col overflow-hidden ${className}`}
+        } popover-shadow max-h-[90dvh] flex flex-col overflow-hidden animate-erp-modal ${className}`}
       >
         {(title || onClose) && (
           <div className="flex items-start justify-between gap-4 px-5 py-4 border-b border-border shrink-0">
@@ -64,15 +64,15 @@ function CommonModal({
                 type="button"
                 onClick={onClose}
                 aria-label="Close modal"
-                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer shrink-0"
+                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary erp-focus-ring transition-colors cursor-pointer shrink-0"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4" aria-hidden="true" />
               </button>
             )}
           </div>
         )}
 
-        <div className="p-5 overflow-y-auto scrollbar-thin">{children}</div>
+        <div className="p-5 overflow-y-auto overscroll-contain scrollbar-thin">{children}</div>
       </div>
     </div>
   );

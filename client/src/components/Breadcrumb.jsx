@@ -54,9 +54,9 @@ function Breadcrumb() {
     <nav aria-label="Breadcrumb" className="mb-3 flex items-center gap-1.5 text-xs text-muted-foreground flex-wrap">
       <Link
         to="/"
-        className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+        className="inline-flex items-center gap-1 hover:text-foreground transition-colors rounded erp-focus-ring"
       >
-        <Home className="w-3.5 h-3.5" />
+        <Home className="w-3.5 h-3.5" aria-hidden="true" />
         <span>Dashboard</span>
       </Link>
 
@@ -71,7 +71,7 @@ function Breadcrumb() {
             {isLast ? (
               <span className="font-medium text-foreground">{label}</span>
             ) : (
-              <Link to={routeTo} className="hover:text-foreground transition-colors">
+              <Link to={routeTo} className="hover:text-foreground transition-colors rounded erp-focus-ring">
                 {label}
               </Link>
             )}

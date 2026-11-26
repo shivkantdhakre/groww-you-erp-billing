@@ -6,6 +6,7 @@ import ValidationMessage from "../../components/common/ValidationMessage";
 import StatusBadge from "../../components/common/StatusBadge";
 import TableWrapper from "../../components/common/TableWrapper";
 import api from "../../utils/api";
+import { formatCount, formatCompactINR } from "../../utils/formatters";
 import { Check, Loader2, CreditCard, ShieldAlert, X } from "lucide-react";
 
 /**
@@ -286,11 +287,12 @@ function PricingPlans() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {plans.map((plan) => {
+          {(() => {
+            const standardPlans = plans.filter((p) => p.interval?.toLowerCase() !== "yearly");
+            const annualPlans = plans.filter((p) => p.interval?.toLowerCase() === "yearly");
+            const renderPlanCard = (plan) => {
               const isActive = activeSub?.planCode === plan.code;
               const features = plan.features || {};
-
               const activePlan = plans.find((p) => p.code === activeSub?.planCode);
               const activePlanPrice = activePlan ? activePlan.price : 0;
               const isDowngrade = plan.price < activePlanPrice;
@@ -319,11 +321,11 @@ function PricingPlans() {
                     </div>
 
                     <div className="flex items-baseline gap-1 mb-3">
-                      <span className="text-2xl sm:text-3xl font-semibold tracking-tight tabular-nums">
-                        ₹ {Number(plan.price || 0).toLocaleString("en-IN")}
+                      <span className="text-2xl sm:text-3xl font-mono font-semibold tracking-tight tabular-nums">
+                        {formatCompactINR(plan.price)}
                       </span>
                       <span className="text-muted-foreground text-xs">
-                        / {plan.interval.toLowerCase() === "yearly" ? "year" : "month"}
+                        / {plan.interval?.toLowerCase() === "yearly" ? "year" : "month"}
                       </span>
                     </div>
 
@@ -335,17 +337,17 @@ function PricingPlans() {
                     <ul className="space-y-2.5 mb-6 text-xs sm:text-sm">
                       {features.maxInvoicesPerMonth && (
                         <li className="flex items-center gap-2">
-                          <Check className="w-4 h-4 text-success shrink-0" />
+                          <Check className="w-4 h-4 text-success shrink-0" aria-hidden="true" />
                           <span>Up to {features.maxInvoicesPerMonth} invoices / mo</span>
                         </li>
                       )}
                       <li className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-success shrink-0" />
-                        <span>Billing & POS Terminal</span>
+                        <Check className="w-4 h-4 text-success shrink-0" aria-hidden="true" />
+                        <span>Billing &amp; POS Terminal</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-success shrink-0" />
-                        <span>Customer & Vendor Ledgers</span>
+                        <Check className="w-4 h-4 text-success shrink-0" aria-hidden="true" />
+                        <span>Customer &amp; Vendor Ledgers</span>
                       </li>
                       <li
                         className={`flex items-center gap-2 ${
@@ -353,9 +355,9 @@ function PricingPlans() {
                         }`}
                       >
                         {features.ewayBill ? (
-                          <Check className="w-4 h-4 text-success shrink-0" />
+                          <Check className="w-4 h-4 text-success shrink-0" aria-hidden="true" />
                         ) : (
-                          <X className="w-4 h-4 text-muted-foreground/50 shrink-0" />
+                          <X className="w-4 h-4 text-muted-foreground/50 shrink-0" aria-hidden="true" />
                         )}
                         <span>E-Way Bill Integration</span>
                       </li>
@@ -365,11 +367,11 @@ function PricingPlans() {
                         }`}
                       >
                         {features.gstFiling ? (
-                          <Check className="w-4 h-4 text-success shrink-0" />
+                          <Check className="w-4 h-4 text-success shrink-0" aria-hidden="true" />
                         ) : (
-                          <X className="w-4 h-4 text-muted-foreground/50 shrink-0" />
+                          <X className="w-4 h-4 text-muted-foreground/50 shrink-0" aria-hidden="true" />
                         )}
-                        <span>GSTR-1 & GSTR-3B Filing</span>
+                        <span>GSTR-1 &amp; GSTR-3B Filing</span>
                       </li>
                     </ul>
                   </div>
@@ -378,7 +380,7 @@ function PricingPlans() {
                     type="button"
                     disabled={isButtonDisabled}
                     onClick={() => handleSubscribe(plan.code)}
-                    className={`w-full h-9 rounded-md text-xs sm:text-sm font-medium transition-colors cursor-pointer flex items-center justify-center gap-2 ${
+                    className={`w-full h-9 rounded-md text-xs sm:text-sm font-medium erp-focus-ring transition-colors cursor-pointer flex items-center justify-center gap-2 ${
                       isButtonDisabled
                         ? "bg-muted text-muted-foreground cursor-not-allowed"
                         : isDowngrade
@@ -387,25 +389,59 @@ function PricingPlans() {
                     }`}
                   >
                     {checkoutLoading === plan.code ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
                     ) : (
                       <>
-                        <CreditCard className="w-4 h-4" />
+                        <CreditCard className="w-4 h-4" aria-hidden="true" />
                         <span>{buttonText}</span>
                       </>
                     )}
                   </button>
                 </div>
               );
-            })}
-          </div>
+            };
+
+            return (
+              <div className="space-y-6">
+                {standardPlans.length > 0 && (
+                  <section className="space-y-3">
+                    <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Trial &amp; Monthly Plans
+                    </h2>
+                    <div
+                      className={`grid grid-cols-1 gap-5 ${
+                        standardPlans.length === 2 ? "md:grid-cols-2" : "md:grid-cols-3"
+                      }`}
+                    >
+                      {standardPlans.map(renderPlanCard)}
+                    </div>
+                  </section>
+                )}
+
+                {annualPlans.length > 0 && (
+                  <section className="space-y-3">
+                    <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Annual Billing Plans
+                    </h2>
+                    <div
+                      className={`grid grid-cols-1 gap-5 ${
+                        annualPlans.length === 2 ? "md:grid-cols-2" : "md:grid-cols-3"
+                      }`}
+                    >
+                      {annualPlans.map(renderPlanCard)}
+                    </div>
+                  </section>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Billing History */}
           <div className="bg-card text-foreground rounded-lg border border-border surface-shadow overflow-hidden">
             <div className="px-4 sm:px-5 py-3.5 border-b border-border flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-foreground">Billing & Invoice History</h2>
+              <h2 className="text-sm font-semibold text-foreground">Billing &amp; Invoice History</h2>
               <span className="text-xs text-muted-foreground tabular-nums">
-                {invoices.length} statements
+                {formatCount(invoices.length, "statement")}
               </span>
             </div>
 

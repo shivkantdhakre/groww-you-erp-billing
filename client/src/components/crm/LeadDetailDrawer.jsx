@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useStore } from "../../store/useStore";
 import StatusBadge from "../common/StatusBadge";
 import api from "../../utils/api";
+import { formatINR, formatStageLabel } from "../../utils/formatters";
 import {
   X,
   Sparkles,
@@ -219,26 +220,25 @@ export default function LeadDetailDrawer({ leadId, isOpen, onClose, onLeadUpdate
       <div className="absolute inset-0" onClick={onClose} />
 
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-8">
-        <div className="w-screen max-w-xl bg-card text-foreground popover-shadow border-l border-border flex flex-col">
+        <div className="w-screen max-w-xl bg-card text-foreground popover-shadow border-l border-border flex flex-col overscroll-contain">
           {/* Header */}
           <div className="px-5 py-4 border-b border-border flex items-center justify-between bg-secondary/40 shrink-0">
             <div className="flex items-center gap-3 min-w-0">
               <div className="p-2 rounded-md bg-primary/10 border border-primary/20 text-primary-text shrink-0">
-                <Building2 className="w-4 h-4" />
+                <Building2 className="w-4 h-4" aria-hidden="true" />
               </div>
               <div className="min-w-0">
                 <h2 className="text-base font-semibold tracking-tight text-foreground truncate">
                   {lead ? lead.companyName : "Lead Details"}
                 </h2>
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground mt-0.5 tabular-nums">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-0.5 tabular-nums">
                   <span>
-                    Stage: <strong className="text-foreground">{lead?.stage || "—"}</strong>
+                    Stage: <strong className="text-foreground">{formatStageLabel(lead?.stage)}</strong>
                   </span>
-                  <span>·</span>
-                  <span className="whitespace-nowrap">
+                  <span className="whitespace-nowrap pl-2.5 border-l border-border">
                     Value:{" "}
                     <strong className="text-foreground font-mono">
-                      ₹ {Number(lead?.dealValue || 0).toLocaleString("en-IN")}
+                      {formatINR(lead?.dealValue, { decimals: 0 })}
                     </strong>
                   </span>
                 </div>
@@ -248,19 +248,19 @@ export default function LeadDetailDrawer({ leadId, isOpen, onClose, onLeadUpdate
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary cursor-pointer transition-colors"
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary erp-focus-ring cursor-pointer transition-colors"
               aria-label="Close drawer"
             >
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
 
           {/* Body */}
-          <div className="flex-1 overflow-y-auto p-5 space-y-5 scrollbar-thin">
+          <div className="flex-1 overflow-y-auto overscroll-contain p-5 space-y-5 scrollbar-thin">
             {loading ? (
               <div className="py-16 text-center text-muted-foreground flex flex-col items-center justify-center gap-2.5">
-                <RefreshCw className="w-6 h-6 animate-spin text-primary-text" />
-                <p className="text-xs font-medium">Loading account context...</p>
+                <RefreshCw className="w-6 h-6 animate-spin text-primary-text" aria-hidden="true" />
+                <p className="text-xs font-medium">Loading account context&hellip;</p>
               </div>
             ) : errorMsg ? (
               <div className="p-3.5 rounded-md bg-destructive/10 border border-destructive/25 text-destructive text-xs sm:text-sm flex items-center gap-2.5">
@@ -322,8 +322,8 @@ export default function LeadDetailDrawer({ leadId, isOpen, onClose, onLeadUpdate
                     >
                       {analyzing ? (
                         <>
-                          <RefreshCw className="w-3 h-3 animate-spin" />
-                          <span>Analyzing...</span>
+                          <RefreshCw className="w-3 h-3 animate-spin" aria-hidden="true" />
+                          <span>Analyzing&hellip;</span>
                         </>
                       ) : (
                         <>
@@ -352,7 +352,7 @@ export default function LeadDetailDrawer({ leadId, isOpen, onClose, onLeadUpdate
                           </div>
                           <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
                             <div
-                              className={`h-full transition-all duration-300 ${riskInfo.bar}`}
+                              className={`h-full transition-[width] duration-200 ease-[var(--ease-out)] ${riskInfo.bar}`}
                               style={{
                                 width: `${Math.min(100, Math.max(5, lead.aiRiskScore))}%`,
                               }}
@@ -480,9 +480,10 @@ export default function LeadDetailDrawer({ leadId, isOpen, onClose, onLeadUpdate
                   >
                     <div className="flex items-center gap-2">
                       <select
+                        aria-label="Activity Type"
                         value={newInteractionType}
                         onChange={(e) => setNewInteractionType(e.target.value)}
-                        className="h-8 px-2.5 text-xs rounded-md border border-input bg-card font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer"
+                        className="erp-input h-8 w-auto px-2.5 text-xs font-medium cursor-pointer"
                       >
                         <option value="CALL">Call</option>
                         <option value="EMAIL">Email</option>
@@ -496,10 +497,11 @@ export default function LeadDetailDrawer({ leadId, isOpen, onClose, onLeadUpdate
                     <div className="flex gap-2">
                       <input
                         type="text"
-                        placeholder="Summarize call outcome or follow-up note..."
+                        aria-label="Interaction note summary"
+                        placeholder={"Summarize call outcome or follow-up note\u2026"}
                         value={newInteractionSummary}
                         onChange={(e) => setNewInteractionSummary(e.target.value)}
-                        className="flex-1 h-8 px-3 text-xs rounded-md border border-input bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                        className="erp-input flex-1 h-8 text-xs"
                       />
                       <button
                         type="submit"
@@ -527,7 +529,7 @@ export default function LeadDetailDrawer({ leadId, isOpen, onClose, onLeadUpdate
                                 {item.type}
                               </span>
                               <span className="tabular-nums">
-                                {new Date(item.date).toLocaleDateString()} · {item.author || "Rep"}
+                                {new Date(item.date).toLocaleDateString("en-IN")} &mdash; {item.author || "Rep"}
                               </span>
                             </div>
                             <p className="text-foreground leading-relaxed">{item.summary}</p>

@@ -7,15 +7,11 @@ import TableWrapper from "../../components/common/TableWrapper";
 import ValidationMessage from "../../components/common/ValidationMessage";
 import StatusBadge from "../../components/common/StatusBadge";
 import api from "../../utils/api";
+import { formatINR } from "../../utils/formatters";
 import { ArrowDownLeft, ArrowUpRight, BookMarked, Loader2, Printer, RotateCcw, Scale, Search } from "lucide-react";
 
-const formatINR = (num) =>
-  `₹ ${Number(num || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-const INPUT_CLASS =
-  "h-9 px-3 rounded-md w-full border border-input bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors";
-const LABEL_CLASS =
-  "block mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider";
+const INPUT_CLASS = "erp-input";
+const LABEL_CLASS = "erp-label";
 
 /**
  * Supplier account statement tracking purchase bills, payments, returns, and closing payables.
@@ -217,13 +213,14 @@ function VendorLedger() {
             <div className="px-4 sm:px-5 py-3.5 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <h2 className="text-sm font-semibold text-foreground">Ledger Statement</h2>
               <div className="relative w-full sm:w-64 no-print">
-                <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true" />
                 <input
                   type="text"
-                  placeholder="Filter reference..."
+                  aria-label="Filter reference"
+                  placeholder={"Filter reference\u2026"}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="h-8 pl-9 pr-3 rounded-md bg-background border border-input text-foreground text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring w-full"
+                  className="erp-input h-8 pl-9 text-xs"
                 />
               </div>
             </div>

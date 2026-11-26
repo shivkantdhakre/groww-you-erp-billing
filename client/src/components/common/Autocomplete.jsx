@@ -10,7 +10,7 @@ function Autocomplete({
   options = [],
   labelKey = "name",
   valueKey = "id",
-  placeholder = "Search...",
+  placeholder = "Search\u2026",
   onSelect,
   selectedId = null,
   value = "",
@@ -186,7 +186,7 @@ function Autocomplete({
         width: `${dropdownPos.width}px`,
         maxHeight: `${dropdownPos.maxHeight}px`,
       }}
-      className="z-[9999] bg-card border border-border rounded-lg popover-shadow overflow-y-auto divide-y divide-border/60 text-foreground scrollbar-thin"
+      className="z-[9999] bg-popover border border-border rounded-lg popover-shadow overflow-y-auto overscroll-contain divide-y divide-border/60 text-popover-foreground scrollbar-thin"
     >
       {filteredOptions.length > 0 ? (
         filteredOptions.map((option, index) => (
@@ -227,7 +227,7 @@ function Autocomplete({
           onFocus={() => !disabled && setIsOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className={`h-9 px-3 pr-8 rounded-md w-full border border-input bg-card text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${inputClassName}`}
+          className={`erp-input pr-8 ${inputClassName}`}
         />
         {searchTerm && !disabled && (
           <button
@@ -237,9 +237,9 @@ function Autocomplete({
               setSearchTerm("");
               if (onClear) onClear();
             }}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary/70 focus:outline-none cursor-pointer"
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary/70 erp-focus-ring cursor-pointer"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-3.5 h-3.5" aria-hidden="true" />
           </button>
         )}
       </div>

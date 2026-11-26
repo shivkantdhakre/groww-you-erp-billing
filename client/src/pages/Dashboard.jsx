@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import AIPipelineInsightsCard from "../components/dashboard/AIPipelineInsightsCard";
 import CommonPageHeader from "../components/common/CommonPageHeader";
 import StatusBadge from "../components/common/StatusBadge";
+import { formatDashboardINR as formatINR } from "../utils/formatters";
 import {
   Users,
   Truck,
@@ -18,11 +19,9 @@ import {
   FileText,
   FileInput,
   ArrowUpRight,
+  ChevronRight,
   Shield,
 } from "lucide-react";
-
-const formatINR = (num) =>
-  `₹ ${Number(num || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 
 /**
  * Executive workspace dashboard organizing financial totals, monthly momentum,
@@ -119,7 +118,7 @@ function Dashboard() {
       {/* Operational Header + Primary Workflow Triggers */}
       <CommonPageHeader
         title={`Welcome back, ${user?.name || "Admin"}`}
-        subtitle={`${company?.name || "Groww You ERP"} · Financial Year ${
+        subtitle={`${company?.name || "Groww You ERP"} — FY ${
           company?.financialYear || "Active"
         }`}
         badge={
@@ -165,11 +164,11 @@ function Dashboard() {
             </span>
             <TrendingUp className="w-4 h-4 text-success shrink-0" aria-hidden="true" />
           </div>
-          <p className="text-2xl font-semibold tracking-tight tabular-nums text-foreground mt-2">
+          <p className="text-lg sm:text-xl xl:text-[21px] font-mono font-semibold tracking-tight tabular-nums whitespace-nowrap text-foreground mt-2">
             {formatINR(totalSales)}
           </p>
           <p className="text-xs text-muted-foreground mt-1.5 tabular-nums">
-            This month: <span className="font-medium text-foreground">{formatINR(monthlyStats.sales)}</span>
+            This month: <span className="font-mono font-medium text-foreground">{formatINR(monthlyStats.sales)}</span>
           </p>
         </div>
 
@@ -180,11 +179,11 @@ function Dashboard() {
             </span>
             <ShoppingCart className="w-4 h-4 text-primary-text shrink-0" aria-hidden="true" />
           </div>
-          <p className="text-2xl font-semibold tracking-tight tabular-nums text-foreground mt-2">
+          <p className="text-lg sm:text-xl xl:text-[21px] font-mono font-semibold tracking-tight tabular-nums whitespace-nowrap text-foreground mt-2">
             {formatINR(totalPurchases)}
           </p>
           <p className="text-xs text-muted-foreground mt-1.5 tabular-nums">
-            This month: <span className="font-medium text-foreground">{formatINR(monthlyStats.purchase)}</span>
+            This month: <span className="font-mono font-medium text-foreground">{formatINR(monthlyStats.purchase)}</span>
           </p>
         </div>
 
@@ -196,14 +195,14 @@ function Dashboard() {
             <Receipt className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden="true" />
           </div>
           <p
-            className={`text-2xl font-semibold tracking-tight tabular-nums mt-2 ${
+            className={`text-lg sm:text-xl xl:text-[21px] font-mono font-semibold tracking-tight tabular-nums whitespace-nowrap mt-2 ${
               totalProfit >= 0 ? "text-success" : "text-destructive"
             }`}
           >
             {formatINR(totalProfit)}
           </p>
           <p className="text-xs text-muted-foreground mt-1.5 tabular-nums">
-            Gross margin: <span className="font-medium text-foreground">{grossMarginPct}%</span>
+            Gross margin: <span className="font-mono font-medium text-foreground">{grossMarginPct}%</span>
           </p>
         </div>
 
@@ -220,7 +219,7 @@ function Dashboard() {
             />
           </div>
           <p
-            className={`text-2xl font-semibold tracking-tight tabular-nums mt-2 ${
+            className={`text-lg sm:text-xl xl:text-[21px] font-mono font-semibold tracking-tight tabular-nums whitespace-nowrap mt-2 ${
               monthlyStats.outstanding > 0 ? "text-warning" : "text-foreground"
             }`}
           >
@@ -228,10 +227,10 @@ function Dashboard() {
           </p>
           <Link
             to="/outstanding-report"
-            className="inline-flex items-center gap-1 text-xs font-medium text-primary-text hover:underline mt-1.5"
+            className="inline-flex items-center gap-1 text-xs font-medium text-primary-text hover:underline mt-1.5 rounded erp-focus-ring"
           >
-            <span>Review aging & dues</span>
-            <ArrowUpRight className="w-3 h-3" />
+            <span>Review aging &amp; dues</span>
+            <ArrowUpRight className="w-3 h-3" aria-hidden="true" />
           </Link>
         </div>
       </div>
@@ -270,53 +269,53 @@ function Dashboard() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-y sm:divide-y-0 sm:divide-x divide-border">
-              <div className="p-4">
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px bg-border">
+              <div className="bg-card p-3.5 sm:p-4">
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide whitespace-nowrap">
                   Today Sales
                 </p>
-                <p className="text-base font-semibold tabular-nums text-success mt-1">
+                <p className="text-base font-mono font-semibold tabular-nums text-success mt-1">
                   {formatINR(todayStats.sales)}
                 </p>
               </div>
-              <div className="p-4">
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+              <div className="bg-card p-3.5 sm:p-4">
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide whitespace-nowrap">
                   Today Purchase
                 </p>
-                <p className="text-base font-semibold tabular-nums text-foreground mt-1">
+                <p className="text-base font-mono font-semibold tabular-nums text-foreground mt-1">
                   {formatINR(todayStats.purchase)}
                 </p>
               </div>
-              <div className="p-4">
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-                  Today Invoices
+              <div className="bg-card p-3.5 sm:p-4">
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide whitespace-nowrap">
+                  Today Orders
                 </p>
-                <p className="text-base font-semibold tabular-nums text-foreground mt-1">
+                <p className="text-base font-mono font-semibold tabular-nums text-foreground mt-1">
                   {todayStats.orders}
                 </p>
               </div>
-              <div className="p-4">
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+              <div className="bg-card p-3.5 sm:p-4">
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide whitespace-nowrap">
                   Customers
                 </p>
-                <p className="text-base font-semibold tabular-nums text-foreground mt-1">
+                <p className="text-base font-mono font-semibold tabular-nums text-foreground mt-1">
                   {activeCustomersCount}
                 </p>
               </div>
-              <div className="p-4">
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+              <div className="bg-card p-3.5 sm:p-4">
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide whitespace-nowrap">
                   Vendors
                 </p>
-                <p className="text-base font-semibold tabular-nums text-foreground mt-1">
+                <p className="text-base font-mono font-semibold tabular-nums text-foreground mt-1">
                   {activeVendorsCount}
                 </p>
               </div>
-              <div className="p-4">
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+              <div className="bg-card p-3.5 sm:p-4">
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide whitespace-nowrap">
                   Low Stock
                 </p>
                 <p
-                  className={`text-base font-semibold tabular-nums mt-1 ${
+                  className={`text-base font-mono font-semibold tabular-nums mt-1 ${
                     lowStockItemsCount > 0 ? "text-destructive" : "text-foreground"
                   }`}
                 >
@@ -335,8 +334,9 @@ function Dashboard() {
                   <Activity className="w-4 h-4 text-primary-text" aria-hidden="true" />
                   <h2 className="text-sm font-semibold text-foreground">Recent Ledger Activity</h2>
                 </div>
-                <Link to="/day-book" className="text-xs font-medium text-primary-text hover:underline">
-                  Day Book &rarr;
+                <Link to="/day-book" className="inline-flex items-center gap-0.5 text-xs font-medium text-primary-text hover:underline rounded erp-focus-ring">
+                  <span>Day Book</span>
+                  <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
                 </Link>
               </div>
               {recentActivities.length > 0 ? (
@@ -377,8 +377,9 @@ function Dashboard() {
                   />
                   <h2 className="text-sm font-semibold text-foreground">Low Stock Watchlist</h2>
                 </div>
-                <Link to="/stock-report" className="text-xs font-medium text-primary-text hover:underline">
-                  Stock Report &rarr;
+                <Link to="/stock-report" className="inline-flex items-center gap-0.5 text-xs font-medium text-primary-text hover:underline rounded erp-focus-ring">
+                  <span>Stock Report</span>
+                  <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
                 </Link>
               </div>
               {lowStockItems.length > 0 ? (
@@ -411,8 +412,9 @@ function Dashboard() {
                   <Users className="w-4 h-4 text-primary-text" aria-hidden="true" />
                   <h2 className="text-sm font-semibold text-foreground">Top Customers</h2>
                 </div>
-                <Link to="/customer-ledger" className="text-xs font-medium text-primary-text hover:underline">
-                  Ledgers &rarr;
+                <Link to="/customer-ledger" className="inline-flex items-center gap-0.5 text-xs font-medium text-primary-text hover:underline rounded erp-focus-ring">
+                  <span>Ledgers</span>
+                  <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
                 </Link>
               </div>
               {topCustomers.length > 0 ? (
@@ -423,7 +425,7 @@ function Dashboard() {
                       className="py-2 first:pt-0 last:pb-0 flex justify-between items-center gap-3 text-xs sm:text-sm"
                     >
                       <span className="font-medium text-foreground truncate">{customer.name}</span>
-                      <span className="font-semibold text-primary-text tabular-nums shrink-0">
+                      <span className="font-mono font-semibold text-primary-text tabular-nums shrink-0">
                         {formatINR(customer.amount)}
                       </span>
                     </div>
@@ -442,8 +444,9 @@ function Dashboard() {
                   <Truck className="w-4 h-4 text-primary-text" aria-hidden="true" />
                   <h2 className="text-sm font-semibold text-foreground">Top Vendors</h2>
                 </div>
-                <Link to="/vendor-ledger" className="text-xs font-medium text-primary-text hover:underline">
-                  Ledgers &rarr;
+                <Link to="/vendor-ledger" className="inline-flex items-center gap-0.5 text-xs font-medium text-primary-text hover:underline rounded erp-focus-ring">
+                  <span>Ledgers</span>
+                  <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
                 </Link>
               </div>
               {topVendors.length > 0 ? (
@@ -454,7 +457,7 @@ function Dashboard() {
                       className="py-2 first:pt-0 last:pb-0 flex justify-between items-center gap-3 text-xs sm:text-sm"
                     >
                       <span className="font-medium text-foreground truncate">{vendor.name}</span>
-                      <span className="font-semibold text-foreground tabular-nums shrink-0">
+                      <span className="font-mono font-semibold text-foreground tabular-nums shrink-0">
                         {formatINR(vendor.amount)}
                       </span>
                     </div>

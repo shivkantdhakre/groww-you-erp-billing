@@ -5,12 +5,11 @@ import TableWrapper from "../../components/common/TableWrapper";
 import ValidationMessage from "../../components/common/ValidationMessage";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import StatusBadge from "../../components/common/StatusBadge";
+import { formatINR, formatCount } from "../../utils/formatters";
 import { Loader2, Search, Pencil, Trash2, PackagePlus, RotateCcw } from "lucide-react";
 
-const INPUT_CLASS =
-  "h-9 px-3 rounded-md w-full border border-input bg-card text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors";
-const LABEL_CLASS =
-  "block mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider";
+const INPUT_CLASS = "erp-input";
+const LABEL_CLASS = "erp-label";
 
 /**
  * Product & HSN catalog manager with branch-aware stock status and delete confirmation.
@@ -290,7 +289,7 @@ function Inventory() {
             <label className={LABEL_CLASS}>GST Slab (%)</label>
             <input
               type="number"
-              placeholder="0, 5, 12, 18, 28"
+              placeholder="e.g. 18 (0–28)"
               value={gstPercentage}
               onChange={(e) => setGstPercentage(e.target.value)}
               className={`${INPUT_CLASS} font-mono tabular-nums`}
@@ -384,25 +383,26 @@ function Inventory() {
           <div>
             <h2 className="text-sm font-semibold text-foreground">Inventory Catalog</h2>
             <p className="text-xs text-muted-foreground tabular-nums">
-              Showing {filteredItems.length} of {items.length} products
+              Showing {filteredItems.length} of {formatCount(items.length, "product")}
             </p>
           </div>
           <div className="relative w-full sm:w-72">
-            <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true" />
             <input
               type="text"
-              placeholder="Filter name, SKU or category..."
+              aria-label="Filter inventory items"
+              placeholder={"Filter name, SKU or category\u2026"}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-8 pl-9 pr-3 rounded-md w-full border border-input bg-background text-foreground text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              className="erp-input h-8 pl-9 text-xs"
             />
           </div>
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-10 gap-2 text-xs text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin text-primary-text" />
-            <span>Loading inventory...</span>
+            <Loader2 className="h-4 w-4 animate-spin text-primary-text" aria-hidden="true" />
+            <span>Loading inventory&hellip;</span>
           </div>
         ) : filteredItems.length > 0 ? (
           <TableWrapper className="!border-none !rounded-none !shadow-none !bg-transparent">
@@ -451,10 +451,10 @@ function Inventory() {
                         {item.gstPercentage || 0}%
                       </td>
                       <td className="px-2.5 py-2.5 text-right font-mono text-xs text-foreground tabular-nums whitespace-nowrap">
-                        ₹ {Number(item.purchasePrice || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {formatINR(item.purchasePrice)}
                       </td>
                       <td className="px-2.5 py-2.5 text-right font-mono text-xs font-medium text-foreground tabular-nums whitespace-nowrap">
-                        ₹ {Number(item.salePrice || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {formatINR(item.salePrice)}
                       </td>
                       <td className="px-2.5 py-2.5 text-right font-mono text-xs font-semibold text-foreground tabular-nums whitespace-nowrap">
                         {activeBranchStock} {item.unit ? <span className="font-normal text-muted-foreground">{item.unit}</span> : null}

@@ -29,19 +29,20 @@ function ValidationMessage({ type = "info", message, onDismiss, className = "" }
 
   return (
     <div
-      role="status"
+      role={type === "error" ? "alert" : "status"}
+      aria-live={type === "error" ? "assertive" : "polite"}
       className={`flex items-start gap-2.5 px-3.5 py-2.5 rounded-lg border text-xs sm:text-sm font-medium mt-3 ${box} ${className}`}
     >
-      <Icon className="w-4 h-4 shrink-0 mt-0.5" />
+      <Icon className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
       <span className="flex-1 leading-relaxed">{message}</span>
       {onDismiss && (
         <button
           type="button"
           onClick={onDismiss}
           aria-label="Dismiss message"
-          className="p-0.5 rounded hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+          className="p-0.5 rounded hover:bg-black/5 dark:hover:bg-white/10 erp-focus-ring transition-colors cursor-pointer shrink-0"
         >
-          <X className="w-3.5 h-3.5" />
+          <X className="w-3.5 h-3.5" aria-hidden="true" />
         </button>
       )}
     </div>

@@ -133,7 +133,7 @@ export default function A4VoucherTemplate({ voucherType = "PAYMENT" }) {
       <div style={container} className="flex items-center justify-center">
         <div className="flex items-center gap-2 text-sm text-[#1C1F1C]">
           <Loader2 className="w-4 h-4 animate-spin" />
-          <span>{requestedId ? "Loading voucher print sheet..." : `Loading ${docLabel.toLowerCase()}s...`}</span>
+          <span>{requestedId ? "Loading voucher print sheet\u2026" : `Loading ${docLabel.toLowerCase()}s\u2026`}</span>
         </div>
       </div>
     );
@@ -163,7 +163,7 @@ export default function A4VoucherTemplate({ voucherType = "PAYMENT" }) {
         subtitle="No voucher ID was specified. Choose an explicit voucher below to open its A4 print sheet."
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        searchPlaceholder="Filter by number or party..."
+        searchPlaceholder={"Filter by number or party\u2026"}
         error={error}
         items={filteredVouchers}
         totalFetchedCount={voucherList.length}
@@ -312,7 +312,7 @@ export default function A4VoucherTemplate({ voucherType = "PAYMENT" }) {
         {voucher.paymentMode && (
           <p style={line}>
             Mode: <strong>{voucher.paymentMode}</strong>
-            {voucher.referenceNo ? ` · Ref: ${voucher.referenceNo}` : ""}
+            {voucher.referenceNo ? ` | Ref: ${voucher.referenceNo}` : ""}
           </p>
         )}
         {voucher.remarks && <p style={line}>Remarks: {voucher.remarks}</p>}

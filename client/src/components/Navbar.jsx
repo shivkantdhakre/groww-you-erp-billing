@@ -143,10 +143,10 @@ function Navbar() {
         <button
           type="button"
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="lg:hidden h-8 w-8 rounded-md border border-border bg-background/60 hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer flex items-center justify-center shrink-0 transition-colors"
+          className="lg:hidden h-8 w-8 rounded-md border border-border bg-input-bg hover:bg-secondary text-muted-foreground hover:text-foreground erp-focus-ring cursor-pointer flex items-center justify-center shrink-0 transition-colors"
           aria-label="Toggle Navigation Sidebar"
         >
-          <Menu className="w-4 h-4" strokeWidth={1.75} />
+          <Menu className="w-4 h-4" strokeWidth={1.75} aria-hidden="true" />
         </button>
 
         <div ref={searchRef} className="w-full max-w-xs sm:max-w-sm md:max-w-md relative flex-1 min-w-0">
@@ -157,7 +157,8 @@ function Navbar() {
             />
             <input
               type="text"
-              placeholder="Search invoices, parties, items..."
+              aria-label="Global workspace search"
+              placeholder={"Search invoices, parties, items\u2026"}
               value={search}
               onChange={handleSearchChange}
               onFocus={() => {
@@ -165,7 +166,7 @@ function Navbar() {
                   setShowSearchDropdown(true);
                 }
               }}
-              className="w-full h-9 pl-9 pr-8 border border-input bg-background/70 focus:bg-card text-foreground text-xs sm:text-sm rounded-md placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors"
+              className="erp-input pl-9 pr-8 text-xs sm:text-sm"
             />
             {search && (
               <button
@@ -176,19 +177,19 @@ function Navbar() {
                   setSearchResults([]);
                   setShowSearchDropdown(false);
                 }}
-                className="absolute right-2 p-0.5 rounded text-muted-foreground hover:text-foreground cursor-pointer"
+                className="absolute right-2 p-0.5 rounded text-muted-foreground hover:text-foreground erp-focus-ring cursor-pointer"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-3.5 h-3.5" aria-hidden="true" />
               </button>
             )}
           </div>
 
           {search && showSearchDropdown && (
-            <div className="absolute left-0 right-0 mt-1.5 bg-card border border-border rounded-lg popover-shadow z-50 max-h-80 overflow-y-auto scrollbar-thin text-foreground divide-y divide-border/60">
+            <div className="absolute left-0 right-0 mt-1.5 bg-popover border border-border rounded-lg popover-shadow z-50 max-h-80 overflow-y-auto overscroll-contain scrollbar-thin text-popover-foreground divide-y divide-border/60 animate-erp-modal">
               {loadingSearch ? (
                 <div className="p-3.5 text-xs text-muted-foreground flex items-center justify-center gap-2">
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" aria-hidden="true" />
-                  <span>Searching records...</span>
+                  <span>Searching records&hellip;</span>
                 </div>
               ) : searchResults.length > 0 ? (
                 searchResults.map((item, index) => (
@@ -224,14 +225,14 @@ function Navbar() {
       {/* Right: Branch Switcher, Theme, Notifications, Profile */}
       <div className="flex items-center gap-2 shrink-0">
         {branches.length > 0 && (
-          <div className="hidden md:flex items-center h-8 px-2.5 rounded-md border border-border bg-background/70 text-xs text-foreground gap-1.5">
+          <div className="hidden md:flex items-center h-8 px-2.5 rounded-md border border-border bg-input-bg text-xs text-foreground gap-1.5">
             <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" aria-hidden="true" />
             {canSwitchBranch ? (
               <select
                 aria-label="Active Branch"
                 value={activeBranchId || currentBranch?.id || ""}
                 onChange={(e) => setActiveBranch(Number(e.target.value))}
-                className="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer pr-1 max-w-[165px] truncate"
+                className="bg-transparent text-xs font-medium text-foreground erp-focus-ring rounded cursor-pointer pr-1 max-w-[165px] truncate"
               >
                 {branches.map((branch) => (
                   <option key={branch.id} value={branch.id} className="bg-card text-foreground">
@@ -250,7 +251,7 @@ function Navbar() {
         <button
           type="button"
           onClick={toggleTheme}
-          className="h-8 w-8 rounded-md border border-border bg-background/70 hover:bg-secondary transition-colors cursor-pointer text-muted-foreground hover:text-foreground flex items-center justify-center"
+          className="h-8 w-8 rounded-md border border-border bg-input-bg hover:bg-secondary erp-focus-ring transition-colors cursor-pointer text-muted-foreground hover:text-foreground flex items-center justify-center"
           title={theme === "light" ? "Switch to Dark Mode" : "Switch to Light Mode"}
           aria-label={theme === "light" ? "Switch to Dark Mode" : "Switch to Light Mode"}
         >
@@ -266,7 +267,7 @@ function Navbar() {
           <button
             type="button"
             onClick={() => setShowNotifications((prev) => !prev)}
-            className="relative h-8 w-8 rounded-md border border-border bg-background/70 hover:bg-secondary transition-colors cursor-pointer text-muted-foreground hover:text-foreground flex items-center justify-center"
+            className="relative h-8 w-8 rounded-md border border-border bg-input-bg hover:bg-secondary erp-focus-ring transition-colors cursor-pointer text-muted-foreground hover:text-foreground flex items-center justify-center"
             aria-label="Notifications"
           >
             <Bell className="w-4 h-4" aria-hidden="true" />
@@ -278,7 +279,7 @@ function Navbar() {
           </button>
 
           {showNotifications && (
-            <div className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] bg-card border border-border rounded-lg popover-shadow z-50 max-h-96 overflow-y-auto scrollbar-thin text-foreground">
+            <div className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] bg-popover border border-border rounded-lg popover-shadow z-50 max-h-96 overflow-y-auto overscroll-contain scrollbar-thin text-popover-foreground origin-top-right animate-erp-modal">
               <div className="px-4 py-3 border-b border-border flex justify-between items-center">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Notifications
@@ -343,7 +344,7 @@ function Navbar() {
           <button
             type="button"
             onClick={() => setShowProfile((prev) => !prev)}
-            className="h-8 pl-1.5 pr-2 rounded-md border border-border bg-background/70 hover:bg-secondary transition-colors cursor-pointer text-foreground flex items-center gap-2"
+            className="h-8 pl-1.5 pr-2 rounded-md border border-border bg-input-bg hover:bg-secondary erp-focus-ring transition-colors cursor-pointer text-foreground flex items-center gap-2"
           >
             <div className="w-5 h-5 bg-primary text-primary-foreground rounded text-[11px] font-semibold flex items-center justify-center">
               {user?.name?.charAt(0).toUpperCase() || "U"}
@@ -351,11 +352,11 @@ function Navbar() {
             <span className="text-xs font-medium hidden sm:inline max-w-[110px] truncate">
               {user?.name || "User"}
             </span>
-            <ChevronDown className="w-3.5 h-3.5 text-muted-foreground hidden sm:inline" />
+            <ChevronDown className="w-3.5 h-3.5 text-muted-foreground hidden sm:inline" aria-hidden="true" />
           </button>
 
           {showProfile && (
-            <div className="absolute right-0 mt-2 w-64 bg-card border border-border rounded-lg popover-shadow z-50 text-foreground overflow-hidden">
+            <div className="absolute right-0 mt-2 w-64 bg-popover border border-border rounded-lg popover-shadow z-50 text-popover-foreground overflow-hidden origin-top-right animate-erp-modal">
               <div className="px-4 py-3 border-b border-border bg-secondary/40">
                 <p className="font-semibold text-sm text-foreground truncate">
                   {user?.name || "User"}

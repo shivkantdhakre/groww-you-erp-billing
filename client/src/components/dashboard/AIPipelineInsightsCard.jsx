@@ -11,7 +11,7 @@ import {
   CheckCircle2,
   ThumbsUp,
   ThumbsDown,
-  ArrowRight,
+  ChevronRight,
   Clock,
   ShieldCheck,
   Zap,
@@ -318,17 +318,20 @@ export default function AIPipelineInsightsCard() {
       )}
 
       {metricsSnapshot && (
-        <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground bg-background/60 px-2.5 py-1.5 rounded-md border border-border/70 tabular-nums">
-          <span className="font-medium text-foreground">{metricsSnapshot.scopeLabel}</span>
-          <span>·</span>
-          <span>{metricsSnapshot.totalOrders || 0} orders</span>
-          <span>·</span>
-          <span>{metricsSnapshot.lowStockItemsCount || 0} low stock</span>
+        <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground tabular-nums">
+          <span className="font-medium text-foreground px-2 py-0.5 rounded bg-input-bg border border-border/70">
+            {metricsSnapshot.scopeLabel}
+          </span>
+          <span className="px-2 py-0.5 rounded bg-input-bg border border-border/70">
+            {metricsSnapshot.totalOrders || 0} orders
+          </span>
+          <span className="px-2 py-0.5 rounded bg-input-bg border border-border/70">
+            {metricsSnapshot.lowStockItemsCount || 0} low stock
+          </span>
           {metricsSnapshot.crmLeadsCount > 0 && (
-            <>
-              <span>·</span>
-              <span>{metricsSnapshot.crmLeadsCount} CRM leads</span>
-            </>
+            <span className="px-2 py-0.5 rounded bg-input-bg border border-border/70">
+              {metricsSnapshot.crmLeadsCount} CRM leads
+            </span>
           )}
         </div>
       )}
@@ -421,10 +424,10 @@ export default function AIPipelineInsightsCard() {
                   {targetRoute && (
                     <Link
                       to={targetRoute}
-                      className="self-end sm:self-center h-7 px-2.5 bg-card hover:bg-secondary text-primary-text border border-border text-xs font-medium rounded-md transition-colors flex items-center gap-1 shrink-0"
+                      className="self-end sm:self-center h-7 px-2.5 bg-card hover:bg-secondary text-primary-text border border-border text-xs font-medium rounded-md erp-focus-ring transition-colors flex items-center gap-1 shrink-0"
                     >
                       <span>Open</span>
-                      <ArrowRight className="w-3 h-3" />
+                      <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
                     </Link>
                   )}
                 </div>
@@ -447,22 +450,22 @@ export default function AIPipelineInsightsCard() {
                 onClick={() => handleFeedback(true)}
                 title="Helpful"
                 aria-label="Helpful"
-                className={`p-1.5 rounded-md hover:bg-success/10 hover:text-success transition-colors cursor-pointer ${
+                className={`p-1.5 rounded-md hover:bg-success/10 hover:text-success erp-focus-ring transition-colors cursor-pointer ${
                   feedbackGiven === "up" ? "text-success" : ""
                 }`}
               >
-                <ThumbsUp className="w-3.5 h-3.5" />
+                <ThumbsUp className="w-3.5 h-3.5" aria-hidden="true" />
               </button>
               <button
                 type="button"
                 onClick={() => handleFeedback(false)}
                 title="Needs Improvement"
                 aria-label="Needs Improvement"
-                className={`p-1.5 rounded-md hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer ${
+                className={`p-1.5 rounded-md hover:bg-destructive/10 hover:text-destructive erp-focus-ring transition-colors cursor-pointer ${
                   feedbackGiven === "down" ? "text-destructive" : ""
                 }`}
               >
-                <ThumbsDown className="w-3.5 h-3.5" />
+                <ThumbsDown className="w-3.5 h-3.5" aria-hidden="true" />
               </button>
             </>
           )}

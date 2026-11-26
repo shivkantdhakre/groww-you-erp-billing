@@ -9,6 +9,7 @@ import Autocomplete from "../../components/common/Autocomplete";
 import { useStore } from "../../store/useStore";
 import api from "../../utils/api";
 import { useBarcodeScanner } from "../../hooks/useBarcodeScanner";
+import { formatINR, formatCount } from "../../utils/formatters";
 import { Plus, Trash2, Printer, Barcode, Save, CheckCircle2 } from "lucide-react";
 
 const ITEM_GRID_COLS =
@@ -133,7 +134,7 @@ function InvoiceTable({
                         options={items}
                         labelKey="name"
                         valueKey="id"
-                        placeholder="Search item or SKU..."
+                        placeholder={"Search item or SKU\u2026"}
                         selectedId={item.itemId}
                         searchFields={["name", "sku"]}
                         customRender={(opt) => {
@@ -144,7 +145,7 @@ function InvoiceTable({
                             <div className="flex justify-between w-full gap-2 text-xs">
                               <span className="font-medium text-foreground truncate">{opt.name}</span>
                               <span className="text-muted-foreground font-mono tabular-nums shrink-0">
-                                Stock: {stock} · ₹{opt.salePrice}
+                                Stock: {stock} &mdash; {formatINR(opt.salePrice)}
                               </span>
                             </div>
                           );
@@ -191,12 +192,12 @@ function InvoiceTable({
                             }
                           }
                         }}
-                        className="h-9 pl-2 pr-1 rounded-md w-[70px] text-right border border-input bg-card text-foreground font-mono text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary"
+                        className="erp-input pl-2 pr-1 w-[70px] text-right font-mono text-sm tabular-nums"
                       />
                     </div>
 
                     <div className="text-right font-mono text-xs font-medium text-foreground tabular-nums whitespace-nowrap">
-                      {item.itemId ? `₹ ${item.rate.toFixed(2)}` : "-"}
+                      {item.itemId ? formatINR(item.rate) : "-"}
                     </div>
 
                     <div className="text-right font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap">
@@ -204,7 +205,7 @@ function InvoiceTable({
                     </div>
 
                     <div className="text-right font-mono text-xs sm:text-sm font-semibold text-foreground tabular-nums whitespace-nowrap">
-                      {item.itemId ? `₹ ${item.amount.toFixed(2)}` : "-"}
+                      {item.itemId ? formatINR(item.amount) : "-"}
                     </div>
 
                     <div className="flex justify-center">
@@ -213,9 +214,9 @@ function InvoiceTable({
                         onClick={() => deleteRow(item.id)}
                         title="Remove line item"
                         aria-label="Remove line item"
-                        className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                        className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 erp-focus-ring transition-colors cursor-pointer"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4" aria-hidden="true" />
                       </button>
                     </div>
                   </div>
@@ -255,32 +256,32 @@ function InvoiceSummaryCard({
 
       <div className="space-y-3.5">
         <div>
-          <label className="block mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+          <label className="erp-label">
             Invoice No
           </label>
           <input
             type="text"
             value="[Auto-Generated]"
             readOnly
-            className="h-9 px-3 rounded-md w-full border border-border bg-muted text-muted-foreground font-mono text-xs cursor-not-allowed focus:outline-none"
+            className="erp-readonly text-xs"
           />
         </div>
 
         <div>
-          <label className="block mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+          <label className="erp-label">
             Invoice Date
           </label>
           <input
             type="date"
             value={invoiceDate}
             onChange={(e) => setInvoiceDate(e.target.value)}
-            className="h-9 px-3 rounded-md w-full border border-input bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary"
+            className="erp-input"
           />
         </div>
 
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+            <label className="erp-label mb-0!">
               Customer
             </label>
             <kbd className="text-[10px] font-mono text-muted-foreground bg-secondary px-1.5 py-0.5 rounded border border-border">
@@ -292,7 +293,7 @@ function InvoiceSummaryCard({
             options={customers}
             labelKey="name"
             valueKey="id"
-            placeholder="Search customer..."
+            placeholder={"Search customer\u2026"}
             selectedId={customerId}
             searchFields={["name", "mobile"]}
             customRender={(opt) => (
@@ -318,19 +319,19 @@ function InvoiceSummaryCard({
         <div className="flex justify-between items-center text-muted-foreground">
           <span>Taxable Subtotal</span>
           <span className="font-mono font-medium text-foreground tabular-nums">
-            ₹ {subtotalAmount.toFixed(2)}
+            {formatINR(subtotalAmount)}
           </span>
         </div>
         <div className="flex justify-between items-center text-muted-foreground">
           <span>Total GST</span>
           <span className="font-mono font-medium text-foreground tabular-nums">
-            ₹ {gstAmount.toFixed(2)}
+            {formatINR(gstAmount)}
           </span>
         </div>
         <div className="border-t border-border pt-2.5 mt-2.5 flex justify-between items-baseline">
           <span className="font-semibold text-foreground">Grand Total</span>
           <span className="font-mono text-xl font-semibold text-success tabular-nums">
-            ₹ {grandTotal.toFixed(2)}
+            {formatINR(grandTotal)}
           </span>
         </div>
       </div>
@@ -338,9 +339,9 @@ function InvoiceSummaryCard({
       <button
         type="button"
         onClick={handleSaveInvoice}
-        className="w-full h-10 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md transition-colors font-medium text-sm cursor-pointer flex items-center justify-center gap-2"
+        className="w-full h-10 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md erp-focus-ring transition-colors font-medium text-sm cursor-pointer flex items-center justify-center gap-2"
       >
-        <Save className="w-4 h-4" />
+        <Save className="w-4 h-4" aria-hidden="true" />
         <span>Save Sales Invoice</span>
         <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary-foreground/15">
           F2
@@ -348,7 +349,7 @@ function InvoiceSummaryCard({
       </button>
 
       <p className="text-[11px] text-muted-foreground text-center">
-        Shortcuts: <span className="font-mono">Alt+N</span> row · <span className="font-mono">Ctrl+P</span> print last thermal
+        Shortcuts: <span className="font-mono">Alt+N</span> add row / <span className="font-mono">Ctrl+P</span> thermal print
       </p>
     </div>
   );
@@ -792,18 +793,18 @@ function SalesInvoice() {
         <div className="px-4 sm:px-5 py-3.5 border-b border-border flex items-center justify-between">
           <h2 className="text-sm font-semibold text-foreground">Saved Sales Invoices</h2>
           <span className="text-xs text-muted-foreground tabular-nums">
-            {savedInvoices.length} invoices
+            {formatCount(savedInvoices.length, "invoice")}
           </span>
         </div>
 
         {loadingInvoices ? (
-          <div className="text-center py-8 text-xs text-muted-foreground">Loading invoices...</div>
+          <div className="text-center py-8 text-xs text-muted-foreground">Loading invoices&hellip;</div>
         ) : savedInvoices.length > 0 ? (
           <TableWrapper className="!border-none !rounded-none !shadow-none !bg-transparent">
             <table className="w-full text-sm text-left border-collapse">
               <thead className="bg-secondary/70 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border">
                 <tr>
-                  <th className="px-4 py-2.5">Invoice No</th>
+                  <th className="px-4 py-2.5 whitespace-nowrap">Invoice No</th>
                   <th className="px-4 py-2.5">Date</th>
                   <th className="px-4 py-2.5">Customer</th>
                   <th className="px-4 py-2.5 text-right">Items</th>
@@ -815,10 +816,10 @@ function SalesInvoice() {
               <tbody className="divide-y divide-border/70">
                 {savedInvoices.map((invoice) => (
                   <tr key={invoice.id} className="elevated-table-row transition-colors">
-                    <td className="px-4 py-2.5 text-foreground font-mono text-xs font-semibold">
+                    <td className="px-4 py-2.5 text-foreground font-mono text-xs font-semibold whitespace-nowrap">
                       {invoice.invoiceNo}
                     </td>
-                    <td className="px-4 py-2.5 text-xs text-muted-foreground tabular-nums">
+                    <td className="px-4 py-2.5 text-xs text-muted-foreground tabular-nums whitespace-nowrap">
                       {new Date(invoice.invoiceDate).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-2.5 text-foreground font-medium">
@@ -831,7 +832,7 @@ function SalesInvoice() {
                       {invoice.totalQty}
                     </td>
                     <td className="px-4 py-2.5 text-right text-success font-mono font-semibold tabular-nums whitespace-nowrap">
-                      ₹ {Number(invoice.grandTotal || 0).toFixed(2)}
+                      {formatINR(invoice.grandTotal)}
                     </td>
                     <td className="px-4 py-2.5 text-right whitespace-nowrap">
                       <div className="inline-flex items-center gap-1.5">

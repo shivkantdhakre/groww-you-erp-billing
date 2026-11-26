@@ -2,6 +2,7 @@ import { useState } from "react";
 import CommonPageHeader from "../../components/common/CommonPageHeader";
 import TableWrapper from "../../components/common/TableWrapper";
 import ValidationMessage from "../../components/common/ValidationMessage";
+import { formatCount } from "../../utils/formatters";
 import { Download, HardDrive, Upload } from "lucide-react";
 
 const BACKUP_HISTORY = [
@@ -95,7 +96,7 @@ function BackupRestore() {
         <div className="px-4 sm:px-5 py-3.5 border-b border-border flex items-center justify-between">
           <h2 className="text-sm font-semibold text-foreground">Recent Snapshots</h2>
           <span className="text-xs text-muted-foreground tabular-nums">
-            {BACKUP_HISTORY.length} archives
+            {formatCount(BACKUP_HISTORY.length, "archive")}
           </span>
         </div>
 

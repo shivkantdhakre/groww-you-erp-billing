@@ -11,16 +11,16 @@ function CommonCard({ title, value, color = "text-foreground", subtitle, icon: I
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground leading-tight">
             {title}
           </p>
-          <h2 className={`text-lg sm:text-xl xl:text-[22px] font-semibold tracking-tight tabular-nums whitespace-nowrap mt-1.5 ${color}`}>
+          <p className={`text-lg sm:text-xl xl:text-[22px] font-semibold font-mono tracking-tight tabular-nums whitespace-nowrap mt-1.5 ${color}`}>
             {value}
-          </h2>
+          </p>
           {subtitle && (
             <p className="text-xs text-muted-foreground mt-1 leading-snug">{subtitle}</p>
           )}
         </div>
         {Icon && (
-          <div className="h-8 w-8 rounded-md bg-secondary/80 border border-border/70 flex items-center justify-center text-muted-foreground shrink-0">
-            <Icon className="w-4 h-4" />
+          <div className="h-8 w-8 rounded-md bg-secondary/75 border border-border/70 flex items-center justify-center text-muted-foreground shrink-0">
+            <Icon className="w-4 h-4" aria-hidden="true" />
           </div>
         )}
       </div>

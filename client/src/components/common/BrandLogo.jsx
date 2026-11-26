@@ -37,11 +37,12 @@ export default function BrandLogo({ size = 40, showText = true, className = "", 
   return (
     <div className={`flex items-center gap-3 select-none ${className}`} {...props}>
       <img
-        key={isDark ? "dark-logo" : "light-logo"}
         src={currentLogo}
         alt="Groww You ERP"
+        width={size}
+        height={size}
         style={{ width: size, height: size }}
-        className="shrink-0 object-contain rounded-lg border border-border/70 bg-card/60 transition-colors duration-200"
+        className="shrink-0 object-contain rounded-lg border border-border/80 bg-card transition-colors duration-200"
       />
 
       {showText && (

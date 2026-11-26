@@ -35,14 +35,14 @@ export default function ConfirmDialog({
     <div
       role="alertdialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-4 overscroll-contain"
       onClick={(e) => {
         if (!loading && onCancel && e.target === e.currentTarget) {
           onCancel();
         }
       }}
     >
-      <div className="bg-card text-foreground border border-border rounded-xl w-full max-w-sm popover-shadow p-5">
+      <div className="bg-card text-foreground border border-border rounded-xl w-full max-w-sm popover-shadow p-5 animate-erp-modal">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
             <div
@@ -52,7 +52,7 @@ export default function ConfirmDialog({
                   : "bg-warning/10 text-warning border-warning/20"
               }`}
             >
-              <AlertTriangle className="w-4 h-4" />
+              <AlertTriangle className="w-4 h-4" aria-hidden="true" />
             </div>
             <div>
               <h3 className="text-sm font-semibold text-foreground">{title}</h3>
@@ -67,9 +67,9 @@ export default function ConfirmDialog({
               disabled={loading}
               onClick={onCancel}
               aria-label="Close confirmation"
-              className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-secondary cursor-pointer"
+              className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-secondary erp-focus-ring cursor-pointer"
             >
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4" aria-hidden="true" />
             </button>
           )}
         </div>
@@ -79,7 +79,7 @@ export default function ConfirmDialog({
             type="button"
             disabled={loading}
             onClick={onCancel}
-            className="h-8 px-3 rounded-md text-xs font-medium bg-secondary text-secondary-foreground border border-border hover:bg-secondary/80 transition-colors cursor-pointer disabled:opacity-50"
+            className="h-8 px-3 rounded-md text-xs font-medium bg-secondary text-secondary-foreground border border-border hover:bg-secondary/80 erp-focus-ring transition-colors cursor-pointer disabled:opacity-50"
           >
             {cancelLabel}
           </button>
@@ -87,7 +87,7 @@ export default function ConfirmDialog({
             type="button"
             disabled={loading}
             onClick={onConfirm}
-            className={`h-8 px-3.5 rounded-md text-xs font-medium transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5 ${confirmClasses}`}
+            className={`h-8 px-3.5 rounded-md text-xs font-medium erp-focus-ring transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5 ${confirmClasses}`}
           >
             {loading && (
               <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />

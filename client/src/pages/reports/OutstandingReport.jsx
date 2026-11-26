@@ -5,6 +5,7 @@ import TableWrapper from "../../components/common/TableWrapper";
 import ValidationMessage from "../../components/common/ValidationMessage";
 import StatusBadge from "../../components/common/StatusBadge";
 import api from "../../utils/api";
+import { formatINR, formatCount } from "../../utils/formatters";
 import { AlertCircle, Loader2, Printer, Users, Truck } from "lucide-react";
 
 /**
@@ -71,23 +72,23 @@ function OutstandingReport() {
       {loading ? (
         <div className="flex items-center justify-center py-10 gap-2 text-xs text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin text-primary-text" />
-          <span>Loading outstanding balances...</span>
+          <span>Loading outstanding balances&hellip;</span>
         </div>
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <CommonCard
               title="Total Receivable (Customers)"
-              value={`₹ ${totalReceivable.toFixed(2)}`}
+              value={formatINR(totalReceivable)}
               color="text-success"
-              subtitle={`${customerData.length} customer accounts`}
+              subtitle={formatCount(customerData.length, "customer account")}
               icon={Users}
             />
             <CommonCard
               title="Total Payable (Vendors)"
-              value={`₹ ${totalPayable.toFixed(2)}`}
+              value={formatINR(totalPayable)}
               color="text-destructive"
-              subtitle={`${vendorData.length} supplier accounts`}
+              subtitle={formatCount(vendorData.length, "supplier account")}
               icon={Truck}
             />
           </div>
@@ -141,11 +142,11 @@ function OutstandingReport() {
                         {item.mobile || "-"}
                       </td>
                       <td
-                        className={`px-4 py-2.5 text-right font-mono font-semibold tabular-nums ${
+                        className={`px-4 py-2.5 text-right font-mono font-semibold tabular-nums whitespace-nowrap ${
                           activeTab === "customer" ? "text-success" : "text-destructive"
                         }`}
                       >
-                        ₹ {Number(item.outstanding || 0).toFixed(2)}
+                        {formatINR(item.outstanding)}
                       </td>
                     </tr>
                   ))}

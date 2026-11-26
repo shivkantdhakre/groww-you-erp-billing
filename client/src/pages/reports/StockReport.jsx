@@ -7,12 +7,11 @@ import TableWrapper from "../../components/common/TableWrapper";
 import ValidationMessage from "../../components/common/ValidationMessage";
 import StatusBadge from "../../components/common/StatusBadge";
 import api from "../../utils/api";
+import { formatINR } from "../../utils/formatters";
 import { Loader2, PackageSearch, Printer, RotateCcw, Search } from "lucide-react";
 
-const INPUT_CLASS =
-  "h-9 px-3 rounded-md w-full border border-input bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors";
-const LABEL_CLASS =
-  "block mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider";
+const INPUT_CLASS = "erp-input";
+const LABEL_CLASS = "erp-label";
 
 /**
  * Warehouse inventory valuation and low-stock status report.
@@ -162,7 +161,7 @@ function StockReport() {
       {loading ? (
         <div className="flex items-center justify-center py-10 gap-2 text-xs text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin text-primary-text" />
-          <span>Loading stock valuation...</span>
+          <span>Loading stock valuation&hellip;</span>
         </div>
       ) : (
         <>
@@ -171,7 +170,7 @@ function StockReport() {
             <CommonCard title="Total Units" value={String(totalStockQty)} color="text-success" />
             <CommonCard
               title="Stock Value (Cost)"
-              value={`₹ ${stockValue.toFixed(2)}`}
+              value={formatINR(stockValue)}
               color="text-primary-text"
             />
             <CommonCard
@@ -204,14 +203,14 @@ function StockReport() {
                     <td className="px-4 py-2.5 text-right font-mono font-semibold text-foreground tabular-nums">
                       {item.currentStock}
                     </td>
-                    <td className="px-4 py-2.5 text-right font-mono text-xs text-muted-foreground tabular-nums">
-                      ₹ {Number(item.purchaseRate || 0).toFixed(2)}
+                    <td className="px-4 py-2.5 text-right font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap">
+                      {formatINR(item.purchaseRate)}
                     </td>
-                    <td className="px-4 py-2.5 text-right font-mono text-xs text-muted-foreground tabular-nums">
-                      ₹ {Number(item.saleRate || 0).toFixed(2)}
+                    <td className="px-4 py-2.5 text-right font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap">
+                      {formatINR(item.saleRate)}
                     </td>
-                    <td className="px-4 py-2.5 text-right font-mono font-semibold text-foreground tabular-nums">
-                      ₹ {(item.currentStock * item.purchaseRate).toFixed(2)}
+                    <td className="px-4 py-2.5 text-right font-mono font-semibold text-foreground tabular-nums whitespace-nowrap">
+                      {formatINR(item.currentStock * item.purchaseRate)}
                     </td>
                     <td className="px-4 py-2.5">
                       {item.currentStock < 10 ? (

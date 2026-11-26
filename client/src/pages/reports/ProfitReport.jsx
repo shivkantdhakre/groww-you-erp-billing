@@ -7,12 +7,11 @@ import TableWrapper from "../../components/common/TableWrapper";
 import ValidationMessage from "../../components/common/ValidationMessage";
 import StatusBadge from "../../components/common/StatusBadge";
 import api from "../../utils/api";
+import { formatINR, formatCount } from "../../utils/formatters";
 import { BarChart3, Loader2, Printer, Search, ShieldCheck } from "lucide-react";
 
-const INPUT_CLASS =
-  "h-9 px-3 rounded-md w-full border border-input bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors";
-const LABEL_CLASS =
-  "block mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider";
+const INPUT_CLASS = "erp-input";
+const LABEL_CLASS = "erp-label";
 
 /**
  * Per-invoice gross profitability statement computed from cost snapshots.
@@ -188,20 +187,20 @@ function ProfitReport() {
       {loading ? (
         <div className="flex items-center justify-center py-10 gap-2 text-xs text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin text-primary-text" />
-          <span>Calculating profitability metrics...</span>
+          <span>Calculating profitability metrics&hellip;</span>
         </div>
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             <CommonCard
               title="Sales Revenue (Base)"
-              value={`₹ ${totalRevenue.toFixed(2)}`}
+              value={formatINR(totalRevenue)}
               icon={BarChart3}
             />
-            <CommonCard title="Cost of Goods Sold" value={`₹ ${totalCost.toFixed(2)}`} />
+            <CommonCard title="Cost of Goods Sold" value={formatINR(totalCost)} />
             <CommonCard
               title="Net Gross Profit"
-              value={`₹ ${totalProfit.toFixed(2)}`}
+              value={formatINR(totalProfit)}
               color={totalProfit >= 0 ? "text-success" : "text-destructive"}
             />
             <CommonCard
@@ -215,7 +214,7 @@ function ProfitReport() {
             <div className="px-4 sm:px-5 py-3.5 border-b border-border flex items-center justify-between">
               <h2 className="text-sm font-semibold text-foreground">Invoice Margin Breakdown</h2>
               <span className="text-xs text-muted-foreground tabular-nums">
-                {invoiceProfitability.length} invoices
+                {formatCount(invoiceProfitability.length, "invoice")}
               </span>
             </div>
             <TableWrapper className="!border-none !rounded-none !shadow-none !bg-transparent">
@@ -234,27 +233,27 @@ function ProfitReport() {
                 <tbody className="divide-y divide-border/70">
                   {invoiceProfitability.map((row) => (
                     <tr key={row.id} className="elevated-table-row transition-colors">
-                      <td className="px-4 py-2.5 font-mono text-xs font-semibold text-foreground">
+                      <td className="px-4 py-2.5 font-mono text-xs font-semibold text-foreground whitespace-nowrap">
                         {row.invoiceNo}
                       </td>
-                      <td className="px-4 py-2.5 text-xs text-muted-foreground tabular-nums">
+                      <td className="px-4 py-2.5 text-xs text-muted-foreground tabular-nums whitespace-nowrap">
                         {new Date(row.invoiceDate).toLocaleDateString()}
                       </td>
                       <td className="px-4 py-2.5 text-foreground font-medium">
                         {row.customerName}
                       </td>
-                      <td className="px-4 py-2.5 text-right font-mono text-xs text-muted-foreground tabular-nums">
-                        ₹ {row.cost.toFixed(2)}
+                      <td className="px-4 py-2.5 text-right font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap">
+                        {formatINR(row.cost)}
                       </td>
-                      <td className="px-4 py-2.5 text-right font-mono text-xs text-foreground tabular-nums">
-                        ₹ {row.revenue.toFixed(2)}
+                      <td className="px-4 py-2.5 text-right font-mono text-xs text-foreground tabular-nums whitespace-nowrap">
+                        {formatINR(row.revenue)}
                       </td>
                       <td
-                        className={`px-4 py-2.5 text-right font-mono font-semibold tabular-nums ${
+                        className={`px-4 py-2.5 text-right font-mono font-semibold tabular-nums whitespace-nowrap ${
                           row.profit >= 0 ? "text-success" : "text-destructive"
                         }`}
                       >
-                        ₹ {row.profit.toFixed(2)}
+                        {formatINR(row.profit)}
                       </td>
                       <td
                         className={`px-4 py-2.5 text-right font-mono text-xs font-semibold tabular-nums ${

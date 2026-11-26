@@ -43,7 +43,7 @@ export default function PrintSelectorCard({
             <span>{backLabel}</span>
           </button>
           <span className="text-xs text-[#5C5F58]">
-            {companyName || "Groww You ERP"} · {selectorTag}
+            {companyName || "Groww You ERP"} &mdash; {selectorTag}
           </span>
         </div>
 
@@ -60,7 +60,7 @@ export default function PrintSelectorCard({
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
                 placeholder={searchPlaceholder}
-                className="w-full h-8 pl-8 pr-3 rounded-md border border-[#D8D3C8] bg-[#FAF9F5] text-xs text-[#1C1F1C] placeholder:text-[#7A7D75] focus:outline-none focus:border-[#2D5A47]"
+                className="w-full h-8 pl-8 pr-3 rounded-md border border-[#D8D3C8] bg-[#FAF9F5] text-xs text-[#1C1F1C] placeholder:text-[#7A7D75] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2D5A47]/30 focus-visible:border-[#2D5A47]"
               />
             </div>
           </div>

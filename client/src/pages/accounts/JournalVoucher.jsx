@@ -5,12 +5,11 @@ import ValidationMessage from "../../components/common/ValidationMessage";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import StatusBadge from "../../components/common/StatusBadge";
 import api from "../../utils/api";
+import { formatINR, formatCount } from "../../utils/formatters";
 import { PenLine, Ban, RotateCcw, Save } from "lucide-react";
 
-const INPUT_CLASS =
-  "h-9 px-3 rounded-md w-full border border-input bg-card text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors";
-const LABEL_CLASS =
-  "block mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider";
+const INPUT_CLASS = "erp-input";
+const LABEL_CLASS = "erp-label";
 
 /**
  * Double-entry journal adjustment voucher register.
@@ -241,7 +240,7 @@ function JournalVoucher() {
             <PenLine className="w-4 h-4 text-primary-text" aria-hidden="true" />
             <h2 className="text-sm font-semibold text-foreground">Voucher Journal</h2>
           </div>
-          <span className="text-xs text-muted-foreground tabular-nums">{entries.length} records</span>
+          <span className="text-xs text-muted-foreground tabular-nums">{formatCount(entries.length, "record")}</span>
         </div>
 
         <TableWrapper className="!border-none !rounded-none !shadow-none !bg-transparent">
@@ -273,8 +272,8 @@ function JournalVoucher() {
                   </td>
                   <td className="px-4 py-2.5 text-foreground font-medium">{item.debitAccount}</td>
                   <td className="px-4 py-2.5 text-foreground font-medium">{item.creditAccount}</td>
-                  <td className="px-4 py-2.5 text-right font-mono font-semibold text-foreground tabular-nums">
-                    ₹ {Number(item.amount || 0).toFixed(2)}
+                  <td className="px-4 py-2.5 text-right font-mono font-semibold text-foreground tabular-nums whitespace-nowrap">
+                    {formatINR(item.amount)}
                   </td>
                   <td className="px-4 py-2.5">
                     {item.isCancelled ? (

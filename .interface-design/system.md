@@ -1,98 +1,76 @@
-# Groww You ERP — Design System Specification
+# Design System — Atelier Ledger (Skills-Refined Edition)
 
-> **Identity:** *Atelier Ledger* — an understated, precision-oriented enterprise financial and operations interface inspired by modern operational software (Linear, Stripe Dashboard, Ramp, Vercel). Built for long-hour desktop data entry, GST accounting, inventory control, and branch-isolated operations without visual noise.
-
----
-
-## 1. Visual Principles
-
-1. **Operational Clarity Over Decoration**: No gradient hero cards, neon accents, glowing blurs, or decorative glassmorphism. Every visual treatment signals hierarchy, state, or action.
-2. **Surface Discipline**: Warm limestone canvas (`#F5F3EE`) grounds elevated warm-paper cards (`#FDFCF9`) in light mode; deep obsidian slate (`#131614` / `#1B1F1C`) provides balanced low-glare contrast in dark mode without simply inverting light colors.
-3. **Tabular Precision**: All monetary values (`₹`), quantities, percentages, invoice numbers, and tax splits use `tabular-nums` alignment (`font-variant-numeric: tabular-nums`) and explicit directional indicators (`Dr` / `Cr`, `+` / `-`, icons) rather than relying on color alone.
-4. **High-Density Ergonomics**: Compact `36px` (`h-9`) filter/table controls and `40px` (`h-10`) primary form inputs keep operational matrices fast and scannable across 1440px, 1280px, 1024px, 768px, and 390px viewports.
+> **Product:** Groww You ERP (Indian GST Billing, Inventory, Ledgers, Statutory Compliance & CRM)  
+> **Direction:** Editorial precision meets tactile paper ledgers — calm warm neutral stone surfaces, deep Forest Trust (`#2D5A47`) primary authority, refined Copper (`#9F623B`) interactive warning/spotlight accents, `IBM Plex Sans` + `IBM Plex Mono` tabular typography, and subtle inset controls.  
+> **Benchmark Alignment:** Keyboard ergonomics of TallyPrime + structured invoicing of Zoho Books + ledger alignment & restraint of Stripe / Xero + canvas-unified rail of Linear.
 
 ---
 
-## 2. Color Tokens (HSL CSS Custom Properties)
+## 1. Surface & Depth Hierarchy (Four Deliberate Levels)
 
-### Brand & Accent
-| Token | Light Mode | Dark Mode | Usage |
+Rather than separating chrome with heavy borders or disparate shades, surfaces form an intentional light-to-dark hierarchy:
+
+1. **Canvas Ground (`--background`)**
+   - Light: `#F5F3EE` (`43 26% 95%`) — warm limestone / archival paper ground.
+   - Dark: `#131614` (`140 8% 8%`) — deep slate-obsidian ground.
+   - **Navigation Rail (`--sidebar`):** Shares the canvas ground (`--background`) and is separated strictly by a crisp hairline border (`--border`), removing two-tone chrome clutter while active items hold a warm neutral pill + vertical primary accent marker.
+2. **Primary Panel / Card Surface (`--card`)**
+   - Light: `#FDFCF9` (`40 40% 99%`) with `1px solid` hairline border (`#DCD7CA`) and micro ambient shadow.
+   - Dark: `#1A1E1B` (`135 7% 11%`) with `#292E2A` hairline border.
+3. **Interactive Control Inset (`--input-bg`)**
+   - Light: `#F5F2EA` (`42 27% 94%`) inside elevated cards/forms — perceptibly inset below `#FDFCF9` so editable fields invite entry without heavy stroke weights.
+   - Dark: `#121513` (`140 8% 7.5%`) — perceptibly recessed below `#1A1E1B`.
+4. **Read-Only / Derived Ledger Well (`--muted`)**
+   - Light: `#ECE8DF` (`42 20% 90%`) for auto-generated invoice numbers, derived tax sums, and disabled fields.
+   - Dark: `#212622` (`140 6% 14%`).
+
+---
+
+## 2. Color Palette & Accessibility Contrast
+
+| Role | Light Value | Dark Value | Intended Usage |
 | :--- | :--- | :--- | :--- |
-| `--primary` | `155 33% 26%` (`#2D5A47`) | `155 34% 33%` (`#377058`) | Primary actions, active nav indicator, primary focus |
-| `--primary-foreground` | `150 25% 98%` (`#F8FBF9`) | `150 25% 98%` (`#F8FBF9`) | Text/icons on `--primary` |
-| `--primary-text` | `155 33% 26%` (`#2D5A47`) | `155 38% 60%` (`#72BE9D`) | Links, interactive text accents, highlighted metrics |
-| `--accent` | `23 46% 43%` (`#9F623B`) | `26 52% 56%` (`#C88356`) | Restrained copper secondary highlight (brand mark, tags) |
-| `--accent-foreground` | `30 33% 98%` (`#FCF9F6`) | `24 25% 10%` (`#1F1813`) | Text on `--accent` |
+| Primary Authority (`--primary`) | `#2D5A47` | `#3D7A60` | Primary save/commit CTAs, active section emphasis, focus outlines |
+| Primary Accessible Text (`--primary-text`) | `#224737` | `#6DB898` | Inline links, active nav text, interactive icons (`>= 4.5:1`) |
+| Copper Accent (`--accent`) | `#9F623B` | `#C78052` | Pending approvals, high-attention operational states, secondary callouts |
+| Ledger Credit / Positive (`--success`) | `#206346` | `#4CA880` | Revenue figures, cleared GST statuses, healthy stock |
+| Ledger Debit / Risk (`--destructive`) | `#B63A32` | `#E06259` | Negative margins, overdue alerts, destructive confirmations |
+| Hairline Border (`--border`) | `#DCD7CA` | `#292E2A` | Table rules, section dividers, panel frames |
+| Control Border (`--input`) | `#CCC6B8` | `#343B36` | Editable input/select perimeter |
 
-### Surfaces & Text Hierarchy
-| Token | Light Mode | Dark Mode | Usage |
-| :--- | :--- | :--- | :--- |
-| `--background` | `43 26% 95%` (`#F5F3EE`) | `140 8% 8%` (`#131614`) | Application canvas |
-| `--sidebar` | `42 22% 92%` (`#EFECE4`) | `140 7% 9%` (`#161917`) | Persistent left navigation rail |
-| `--card` / `--popover` | `40 40% 99%` (`#FDFCF9`) | `135 7% 11%` (`#1B1F1C`) | Elevated surfaces, modals, drawers, dropdowns |
-| `--secondary` / `--muted` | `42 23% 90%` (`#ECE8DF`) | `132 7% 15%` (`#232824`) | Recessed wells, table headers, subtle pills |
-| `--foreground` | `120 6% 13%` (`#202420`) | `44 20% 90%` (`#EAE7DF`) | Primary headings, body text, amounts |
-| `--muted-foreground` | `83 4% 37%` (`#5E6159`) | `80 4% 60%` (`#9A9D94`) | Field labels, table headers, secondary metadata |
-
-### Borders & Semantic Colors
-| Token | Light Mode | Dark Mode | Usage |
-| :--- | :--- | :--- | :--- |
-| `--border` | `42 18% 84%` (`#DED9CD`) | `132 5% 19%` (`#2D322E`) | Hairline structural dividers |
-| `--input` | `41 16% 78%` (`#D0CABD`) | `132 5% 23%` (`#373D38`) | Input control borders |
-| `--success` | `151 50% 28%` (`#236B48`) | `150 38% 48%` (`#4CA97B`) | Posted invoices, healthy margin, Cr/receipts |
-| `--warning` | `32 78% 36%` (`#A36114`) | `36 68% 54%` (`#D99B3B`) | Stale cache, trial notice, low-priority alert |
-| `--destructive` | `4 57% 45%` (`#B63A32`) | `4 64% 63%` (`#DF6C64`) | Validation errors, voided records, low stock, Dr/dues |
+Native `<option>` elements inherit explicit `--card` background and `--foreground` text plus `color-scheme: light` / `dark` on `html` to prevent white-on-white or dark-on-light browser dropdown artifacts.
 
 ---
 
-## 3. Typography & Numeric Discipline
+## 3. Typography & Optical Numerals (`IBM Plex Sans` + `IBM Plex Mono`)
 
-- **Primary Sans**: `'IBM Plex Sans', system-ui, -apple-system, sans-serif`
-- **Monospace**: `'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace` (used for GSTIN, SKU, HSN, voucher numbers, invoice numbers, API codes)
-- **Numeric Class**: `.tabular-nums` (`font-variant-numeric: tabular-nums`) applied on all currency amounts, quantities, tax percentages, totals, and counts.
-- **Scale**:
-  - Page Title (`h1`): `1.375rem` / `22px`, `font-semibold`, `tracking-[-0.02em]`
-  - Section Heading (`h2`): `0.9375rem` / `15px`, `font-semibold`, `tracking-[-0.01em]`
-  - Table Header (`th`): `0.6875rem` / `11px`, `font-semibold`, `uppercase`, `tracking-[0.06em]`
-  - Body / Table Cell (`td`): `0.8125rem` / `13px`, `leading-[1.45]`
-  - Field Label: `0.75rem` / `12px`, `font-medium`, `text-muted-foreground`
+- **UI Sans:** `IBM Plex Sans` with crisp display tracking (`-0.022em` on `h1`/`h2`) and `text-wrap: balance` on page titles.
+- **Financial & Statutory Mono:** `IBM Plex Mono` paired with `font-variant-numeric: tabular-nums` on every currency figure, GSTIN, invoice ID, voucher number, HSN, date, and KPI counter.
+- **Universal INR Standard:** Format every rupee amount through `formatINR()` (`₹ 1,24,500.00` via `en-IN`, two decimals everywhere transactional/tabular; whole-rupee option only for high-level dashboard cards when explicitly uniform).
+- **Editorial restraint:** Never use middle-dot (`·`) joins for metadata rows or literal HTML arrows (`→`) in interactive UI buttons/links; pair clean labels with structural Lucide icons and semantic spacing.
 
 ---
 
-## 4. Layout, Spacing, Radius & Elevation
+## 4. Form & Control Standardization
 
-- **Border Radius**:
-  - `--radius`: `0.5rem` (`8px`) — panels, cards, modals
-  - `--radius-md`: `0.375rem` (`6px`) — inputs, buttons, select menus, dropdown items
-  - `--radius-sm`: `0.25rem` (`4px`) — status badges, keycaps, checkboxes
-- **Shadows**:
-  - Restrained structural border (`1px solid hsl(var(--border))`) with subtle elevation `--shadow-xs: 0 1px 2px rgba(24, 26, 22, 0.04)` and `--shadow-popover: 0 8px 24px -4px rgba(24, 26, 22, 0.10)`.
-- **Component Heights**:
-  - Compact Toolbar / Table Control: `36px` (`h-9`)
-  - Standard Form Input / Primary Button: `40px` (`h-10`)
-  - Top Navbar: `56px` (`h-14`)
-  - Sidebar Width: `248px` (`w-62`) desktop; `264px` slide-over drawer `< 1024px`
-- **Breakpoints**: Mobile `390px`, Tablet `768px`, Tablet Landscape `1024px`, Laptop `1280px`, Desktop `1440px`.
-- **Motion**: Crisp `150ms cubic-bezier(0.16, 1, 0.3, 1)` transitions for interactive states; `@media (prefers-reduced-motion: reduce)` disables non-essential transitions and animations.
+Shared semantic utility classes in `client/src/index.css` replace duplicated per-file `INPUT_CLASS` constants:
+- `.erp-input`: `h-9` (desktop) / `min-h-[44px]` or `16px` under `@media (pointer: coarse)`, `--input-bg` inset fill, `--input` border, smooth `border-color`/`background-color` transitions, `:focus-visible` ring (`2px` `--ring`), zero outline flash on mouse clicks.
+- `.erp-readonly`: Recessed `--muted` surface with `--border`, monospaced tabular output, clear non-editable cursor.
+- `.erp-label`: Balanced weight `11.5px` (`text-[11px] sm:text-xs font-medium text-muted-foreground`) avoiding shouty uppercase clutter where sentence/title labels scan faster.
 
 ---
 
-## 5. Shared Component Architecture
+## 5. Motion, Reduced Motion & Mobile-Native Rules
 
-All screens compose from consistent primitives under `client/src/components/common/`:
-- `CommonPageHeader`: Unified title, optional description, breadcrumb integration, and right-aligned action/shortcut/status slot.
-- `CommonButton`: Variants `primary | secondary | outline | ghost | danger | success`, sizes `sm | md | lg | icon`.
-- `CommonCard`: Clean metric/KPI block with label, tabular value, optional icon/meta, and semantic accent indicator.
-- `CommonFilter`: Compact horizontal filter bar with responsive grid/flex wrapping.
-- `CommonModal` & `ConfirmDialog`: Accessible dialogs (`role="dialog"`, `aria-modal="true"`, Escape and backdrop close) replacing browser `alert()`/`window.confirm()`.
-- `TableWrapper` & `CommonTable`: Unified table chrome (`border border-border rounded-lg bg-card overflow-x-auto`), loading skeleton state, and clean `EmptyState`.
-- `ValidationMessage`: Inline status banner (`error | success | warning | info`) with dismiss control and semantic accessible contrast.
-- `Autocomplete`: Portal-mounted combobox with keyboard navigation (`ArrowUp`/`ArrowDown`/`Enter`/`Escape`), clear action, and custom option rendering.
-- `Breadcrumb`: Inline compact navigation trail (`text-xs`) with clickable route hierarchy.
-- `Pagination`: Compact tabular page selector.
-
----
-
-## 6. Print Isolation Contract
-
-- All `/print/*` routes (`SalesInvoicePrint`, `PurchaseInvoicePrint`, `PaymentVoucherPrint`, `ReceiptVoucherPrint`, `ThermalInvoicePrint`) render outside the application shell (`App.jsx` `isPrintPage` check) with exact physical paper dimensions preserved (`210mm x 297mm` A4 sheets and `80mm` thermal cash memo with `@media print` `@page` rules).
+- **Custom Easing Curves:**
+  - `--ease-out`: `cubic-bezier(0.23, 1, 0.32, 1)` (fast response, calm settle).
+  - `--ease-drawer`: `cubic-bezier(0.32, 0.72, 0, 1)` (slide-over drawer / mobile sheet).
+- **Zero-Latency Rule for Transactional Speed:** POS shortcuts (`F2`, `Alt+N`, `Alt+C`, `Ctrl+P`), table sorting, and virtualized grid rows never wait on animation delays.
+- **Banned `transition-all`:** Transitions enumerate exact composited/color properties (`color`, `background-color`, `border-color`, `opacity`, `transform`, `width`).
+- **Gentle Reduced Motion:** Under `@media (prefers-reduced-motion: reduce)`, disable translational/scale movement while allowing gentle `120ms` opacity fades instead of `0.01ms` snapping.
+- **Mobile-Native Guarantees:**
+  - `min-h-dvh` instead of `min-h-screen` on shell & Auth.
+  - `@media (pointer: coarse)` enforces `font-size: 16px` on editable form inputs/selects/textareas in screen media (eliminating mobile browser auto-zoom without breaking accessibility zoom).
+  - `overscroll-behavior: contain` on scrollable drawers, modals, and autocomplete popovers.
+  - `@media (hover: hover) and (pointer: fine)` gates interactive hover elevation.
+  - `-webkit-tap-highlight-color: transparent` and `touch-action: manipulation` on all interactive controls.

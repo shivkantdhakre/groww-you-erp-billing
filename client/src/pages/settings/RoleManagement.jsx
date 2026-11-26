@@ -54,16 +54,17 @@ function RoleManagement() {
       />
 
       <div className="bg-card text-foreground p-5 rounded-lg border border-border surface-shadow">
-        <label className="block mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+        <label className="erp-label">
           Target Workspace Role
         </label>
         <select
+          aria-label="Target Workspace Role"
           value={role}
           onChange={(e) => {
             setRole(e.target.value);
             setMessage("");
           }}
-          className="h-9 px-3 rounded-md w-full sm:w-72 bg-card text-foreground border border-input text-sm focus:ring-2 focus:ring-ring focus:border-primary focus:outline-none cursor-pointer"
+          className="erp-input sm:w-72 cursor-pointer"
         >
           <option>Admin</option>
           <option>Manager</option>

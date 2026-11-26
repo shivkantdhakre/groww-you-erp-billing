@@ -136,7 +136,7 @@ export default function A4InvoiceTemplate({ invoiceType = "SALE" }) {
       <div style={styles.page} className="flex items-center justify-center">
         <div className="flex items-center gap-2 text-sm text-[#1C1F1C]">
           <Loader2 className="w-4 h-4 animate-spin" />
-          <span>{requestedId ? "Loading A4 invoice sheet..." : `Loading ${docLabel.toLowerCase()}s...`}</span>
+          <span>{requestedId ? "Loading A4 invoice sheet\u2026" : `Loading ${docLabel.toLowerCase()}s\u2026`}</span>
         </div>
       </div>
     );
@@ -164,7 +164,7 @@ export default function A4InvoiceTemplate({ invoiceType = "SALE" }) {
         subtitle="No invoice ID was specified. Choose an explicit record below to preview, print, or download PDF."
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        searchPlaceholder="Filter by invoice no or party..."
+        searchPlaceholder={"Filter by invoice no or party\u2026"}
         error={error}
         items={filteredInvoices}
         totalFetchedCount={invoiceList.length}
@@ -328,7 +328,7 @@ export default function A4InvoiceTemplate({ invoiceType = "SALE" }) {
           {company?.address && <p style={styles.address}>{company.address}</p>}
           <p style={styles.metaLine}>
             {company?.gstNumber ? `GSTIN: ${company.gstNumber}` : ""}
-            {company?.gstNumber && company?.mobileNumber ? "  ·  " : ""}
+            {company?.gstNumber && company?.mobileNumber ? "  |  " : ""}
             {company?.mobileNumber ? `Ph: ${company.mobileNumber}` : ""}
           </p>
         </div>

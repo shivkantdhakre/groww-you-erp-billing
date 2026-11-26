@@ -18,10 +18,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-const INPUT_CLASS =
-  "h-9 px-3 rounded-md w-full border border-input bg-card text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors";
-const LABEL_CLASS =
-  "block mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider";
+const INPUT_CLASS = "erp-input";
+const LABEL_CLASS = "erp-label";
 
 const STAGE_OPTIONS = [
   { id: "ALL", label: "All Stages" },
@@ -234,13 +232,14 @@ export default function Leads() {
       {/* Filter & Stage Strip */}
       <div className="p-4 rounded-lg bg-card border border-border surface-shadow flex flex-col xl:flex-row gap-3 xl:items-center justify-between">
         <div className="relative w-full xl:w-80">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" aria-hidden="true" />
           <input
             type="text"
-            placeholder="Search company, contact, mobile, or email..."
+            aria-label="Search leads"
+            placeholder={"Search company, contact, mobile, or email\u2026"}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-9 pl-9 pr-3 w-full text-xs sm:text-sm rounded-md border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            className="erp-input pl-9 text-xs sm:text-sm"
           />
         </div>
 
@@ -285,13 +284,22 @@ export default function Leads() {
                   className="elevated-table-row cursor-pointer transition-colors group"
                 >
                   <td className="px-4 py-3">
-                    <div className="font-medium text-foreground flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-primary-text shrink-0" />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenDrawer(lead.id);
+                      }}
+                      className="text-left font-medium text-foreground flex items-center gap-2 hover:text-primary-text rounded erp-focus-ring cursor-pointer"
+                    >
+                      <Building2 className="w-4 h-4 text-primary-text shrink-0" aria-hidden="true" />
                       <span>{lead.companyName}</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-0.5">
-                      {lead.contactName || "No contact"}
-                      {lead.mobile ? ` · ${lead.mobile}` : ""}
+                    </button>
+                    <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                      <span>{lead.contactName || "No contact"}</span>
+                      {lead.mobile && (
+                        <span className="font-mono tabular-nums text-[11px]">{lead.mobile}</span>
+                      )}
                     </div>
                   </td>
 
@@ -345,10 +353,10 @@ export default function Leads() {
                         e.stopPropagation();
                         handleOpenDrawer(lead.id);
                       }}
-                      className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md border border-border bg-background hover:bg-secondary text-xs font-medium text-primary-text cursor-pointer transition-colors"
+                      className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md border border-border bg-input-bg hover:bg-secondary text-xs font-medium text-primary-text erp-focus-ring cursor-pointer transition-colors"
                     >
                       <span>Details</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
+                      <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
                     </button>
                   </td>
                 </tr>
@@ -468,10 +476,10 @@ export default function Leads() {
             <label className={LABEL_CLASS}>Initial Account Notes</label>
             <textarea
               rows={3}
-              placeholder="Enter discovery notes, requirements, and budget scope..."
+              placeholder={"Enter discovery notes, requirements, and budget scope\u2026"}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full p-3 text-sm rounded-md border border-input bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              className="erp-input h-auto py-2.5"
             />
           </div>
 
@@ -479,16 +487,16 @@ export default function Leads() {
             <button
               type="button"
               onClick={() => setShowAddModal(false)}
-              className="h-8 px-3.5 rounded-md border border-border bg-secondary text-secondary-foreground text-xs font-medium cursor-pointer"
+              className="h-8 px-3.5 rounded-md border border-border bg-secondary text-secondary-foreground text-xs font-medium erp-focus-ring cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="h-8 px-4 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 cursor-pointer"
+              className="h-8 px-4 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 erp-focus-ring transition-colors disabled:opacity-50 cursor-pointer"
             >
-              {submitting ? "Saving..." : "Save Lead & Open Details"}
+              {submitting ? "Saving\u2026" : "Save Lead & Open Details"}
             </button>
           </div>
         </form>

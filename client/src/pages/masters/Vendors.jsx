@@ -5,12 +5,11 @@ import TableWrapper from "../../components/common/TableWrapper";
 import ValidationMessage from "../../components/common/ValidationMessage";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import StatusBadge from "../../components/common/StatusBadge";
+import { formatINR, formatCount } from "../../utils/formatters";
 import { Loader2, Search, Pencil, Trash2, Truck, RotateCcw } from "lucide-react";
 
-const INPUT_CLASS =
-  "h-9 px-3 rounded-md w-full border border-input bg-card text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors";
-const LABEL_CLASS =
-  "block mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider";
+const INPUT_CLASS = "erp-input";
+const LABEL_CLASS = "erp-label";
 
 /**
  * Vendor directory & supplier GST master form with payment terms and delete confirmation.
@@ -208,7 +207,7 @@ function Vendors() {
       <CommonPageHeader
         title="Vendor Master"
         subtitle="Manage supplier profiles, GSTIN credentials, credit terms, and opening payable balances"
-        badge={<StatusBadge variant="neutral tabular-nums">{vendors.length} vendors</StatusBadge>}
+        badge={<StatusBadge variant="neutral tabular-nums">{formatCount(vendors.length, "vendor")}</StatusBadge>}
       />
 
       <ValidationMessage
@@ -354,25 +353,26 @@ function Vendors() {
           <div>
             <h2 className="text-sm font-semibold text-foreground">Supplier Directory</h2>
             <p className="text-xs text-muted-foreground tabular-nums">
-              Showing {filteredVendors.length} of {vendors.length} vendors
+              Showing {filteredVendors.length} of {formatCount(vendors.length, "vendor")}
             </p>
           </div>
           <div className="relative w-full sm:w-72">
-            <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true" />
             <input
               type="text"
-              placeholder="Filter name, mobile or GSTIN..."
+              aria-label="Filter vendors"
+              placeholder={"Filter name, mobile or GSTIN\u2026"}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-8 pl-9 pr-3 rounded-md w-full border border-input bg-background text-foreground text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              className="erp-input h-8 pl-9 text-xs"
             />
           </div>
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-10 gap-2 text-xs text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin text-primary-text" />
-            <span>Loading vendors...</span>
+            <Loader2 className="h-4 w-4 animate-spin text-primary-text" aria-hidden="true" />
+            <span>Loading vendors&hellip;</span>
           </div>
         ) : filteredVendors.length > 0 ? (
           <TableWrapper className="!border-none !rounded-none !shadow-none !bg-transparent">
@@ -411,10 +411,10 @@ function Vendors() {
                       {vendor.pincode || "-"}
                     </td>
                     <td className="px-4 py-2.5 text-right font-mono text-xs text-foreground tabular-nums whitespace-nowrap">
-                      ₹ {Number(vendor.openingBalance || 0).toFixed(2)}
+                      {formatINR(vendor.openingBalance)}
                     </td>
                     <td className="px-4 py-2.5 text-right font-mono text-xs text-foreground tabular-nums whitespace-nowrap">
-                      ₹ {Number(vendor.creditLimit || 0).toFixed(2)}
+                      {formatINR(vendor.creditLimit)}
                     </td>
                     <td className="px-4 py-2.5 text-right text-xs text-muted-foreground hidden sm:table-cell tabular-nums">
                       {vendor.creditDays || "-"}

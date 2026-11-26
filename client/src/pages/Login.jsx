@@ -5,10 +5,8 @@ import BrandLogo from "../components/common/BrandLogo";
 import ValidationMessage from "../components/common/ValidationMessage";
 import { Mail, Lock, Building, Phone, Eye, EyeOff, Sun, Moon, ShieldCheck } from "lucide-react";
 
-const INPUT_CLASS =
-  "h-10 px-3.5 rounded-md w-full border border-input bg-background text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors";
-const LABEL_CLASS =
-  "flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5";
+const INPUT_CLASS = "erp-input h-10 px-3.5";
+const LABEL_CLASS = "erp-label flex items-center gap-1.5";
 
 /**
  * Multi-tenant authentication & GSTIN/mobile-verified password recovery portal.
@@ -126,16 +124,20 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col justify-between p-4 sm:p-6">
+    <div className="min-h-dvh bg-background text-foreground flex flex-col justify-between p-4 sm:p-6">
       <div className="flex items-center justify-between max-w-5xl w-full mx-auto">
         <BrandLogo size={36} showText={true} />
         <button
           type="button"
           onClick={() => setTheme((prev) => (prev === "light" ? "dark" : "light"))}
           aria-label={theme === "light" ? "Switch to Dark Mode" : "Switch to Light Mode"}
-          className="h-8 w-8 rounded-md border border-border bg-card hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+          className="h-8 w-8 rounded-md border border-border bg-card hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground erp-focus-ring transition-colors cursor-pointer"
         >
-          {theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+          {theme === "light" ? (
+            <Moon className="w-4 h-4" aria-hidden="true" />
+          ) : (
+            <Sun className="w-4 h-4" aria-hidden="true" />
+          )}
         </button>
       </div>
 
@@ -220,13 +222,13 @@ export default function Login() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer focus:outline-none"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer rounded erp-focus-ring"
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? (
-                      <EyeOff className="w-4 h-4" strokeWidth={1.6} />
+                      <EyeOff className="w-4 h-4" strokeWidth={1.6} aria-hidden="true" />
                     ) : (
-                      <Eye className="w-4 h-4" strokeWidth={1.6} />
+                      <Eye className="w-4 h-4" strokeWidth={1.6} aria-hidden="true" />
                     )}
                   </button>
                 </div>
@@ -235,9 +237,9 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full h-10 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-sm rounded-md focus:outline-none focus:ring-2 focus:ring-ring transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                className="w-full h-10 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-sm rounded-md erp-focus-ring transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed mt-2"
               >
-                {loading ? "Signing In..." : "Sign In"}
+                {loading ? "Signing In\u2026" : "Sign In"}
               </button>
             </form>
           ) : (
@@ -380,9 +382,9 @@ export default function Login() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex-1 h-9 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-sm rounded-md cursor-pointer disabled:opacity-50 transition-colors"
+                  className="flex-1 h-9 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-sm rounded-md erp-focus-ring cursor-pointer disabled:opacity-50 transition-colors"
                 >
-                  {loading ? "Resetting..." : "Reset Password"}
+                  {loading ? "Resetting\u2026" : "Reset Password"}
                 </button>
                 <button
                   type="button"

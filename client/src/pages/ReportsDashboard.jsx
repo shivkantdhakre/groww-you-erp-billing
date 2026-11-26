@@ -4,6 +4,7 @@ import TableWrapper from "../components/common/TableWrapper";
 import CommonPageHeader from "../components/common/CommonPageHeader";
 import CommonCard from "../components/common/CommonCard";
 import api from "../utils/api";
+import { formatINR } from "../utils/formatters";
 import {
   Loader2,
   TrendingUp,
@@ -12,7 +13,7 @@ import {
   BarChart3,
   AlertCircle,
   Shield,
-  ArrowRight,
+  ChevronRight,
   Users,
   Truck,
 } from "lucide-react";
@@ -89,19 +90,22 @@ function ReportsDashboard() {
     return () => clearTimeout(timer);
   }, [loadSummary]);
 
-  const cards = [
+  const financeCards = [
     {
       title: "Total Sales",
-      value: summary ? `₹ ${summary.totalSales.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "₹ 0.00",
+      value: summary ? formatINR(summary.totalSales) : formatINR(0),
       color: "text-success",
       icon: TrendingUp,
     },
     {
       title: "Total Purchases",
-      value: summary ? `₹ ${summary.totalPurchases.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "₹ 0.00",
+      value: summary ? formatINR(summary.totalPurchases) : formatINR(0),
       color: "text-foreground",
       icon: ShoppingCart,
     },
+  ];
+
+  const operationalCards = [
     {
       title: "Active Customers",
       value: summary ? String(summary.activeCustomersCount) : "0",
@@ -156,22 +160,35 @@ function ReportsDashboard() {
 
       {loading && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin text-primary-text" />
-          <span>Refreshing report summary...</span>
+          <Loader2 className="h-4 w-4 animate-spin text-primary-text" aria-hidden="true" />
+          <span>Refreshing report summary&hellip;</span>
         </div>
       )}
 
-      {/* KPI Strip */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-4">
-        {cards.map((card, index) => (
-          <CommonCard
-            key={index}
-            title={card.title}
-            value={card.value}
-            color={card.color}
-            icon={card.icon}
-          />
-        ))}
+      {/* Balanced KPI Strip: Financial Aggregates + Operational Volume */}
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {financeCards.map((card, index) => (
+            <CommonCard
+              key={index}
+              title={card.title}
+              value={card.value}
+              color={card.color}
+              icon={card.icon}
+            />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {operationalCards.map((card, index) => (
+            <CommonCard
+              key={index}
+              title={card.title}
+              value={card.value}
+              color={card.color}
+              icon={card.icon}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Report Directory Table */}
@@ -219,10 +236,10 @@ function ReportsDashboard() {
                       <button
                         type="button"
                         onClick={() => navigate(report.path)}
-                        className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md border border-border bg-background hover:bg-secondary text-xs font-medium text-primary-text cursor-pointer transition-colors"
+                        className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md border border-border bg-input-bg hover:bg-secondary text-xs font-medium text-primary-text erp-focus-ring cursor-pointer transition-colors"
                       >
                         <span>Open</span>
-                        <ArrowRight className="w-3 h-3" />
+                        <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
                       </button>
                     </td>
                   </tr>

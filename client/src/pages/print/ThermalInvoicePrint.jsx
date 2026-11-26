@@ -61,7 +61,7 @@ function ThermalInvoicePrint() {
   }, [invoice, company, loading, error]);
 
   if (loading) {
-    return <div className="p-4 text-center font-mono text-xs">Loading receipt...</div>;
+    return <div className="p-4 text-center font-mono text-xs">Loading receipt&hellip;</div>;
   }
 
   if (error || !invoice) {

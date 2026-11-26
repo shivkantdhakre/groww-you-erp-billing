@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Link } from "react-router-dom";
+import { ArrowRight } from "lucide-react";
 import { useStore } from "./store/useStore";
 
 import Navbar from "./components/Navbar";
@@ -118,21 +119,30 @@ function AppContent() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground transition-colors duration-200">
+    <div className="flex min-h-dvh bg-background text-foreground transition-colors duration-200">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:px-3.5 focus:py-2 focus:rounded-md focus:bg-primary focus:text-primary-foreground focus:text-xs focus:font-semibold popover-shadow"
+      >
+        Skip to main content
+      </a>
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
         {subscription?.status === "PAST_DUE" && (
           <div className="bg-warning/15 text-warning border-b border-warning/30 px-4 sm:px-6 py-2 text-center text-xs sm:text-sm font-medium flex flex-wrap justify-center items-center gap-2 no-print shrink-0">
             <span>Subscription payment renewal is past due. Update billing to avoid service interruption.</span>
-            <Link to="/pricing" className="underline hover:opacity-80 transition font-semibold">
-              Update Payment Details &rarr;
+            <Link to="/pricing" className="inline-flex items-center gap-1 underline hover:opacity-80 transition font-semibold rounded erp-focus-ring">
+              <span>Update Payment Details</span>
+              <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
             </Link>
           </div>
         )}
         <Navbar />
         <main
+          id="main-content"
+          tabIndex={-1}
           key={activeBranchId || "default"}
-          className="p-4 sm:p-6 flex-1 overflow-y-auto w-full max-w-[1600px] mx-auto"
+          className="p-4 sm:p-6 flex-1 overflow-y-auto w-full max-w-[1600px] mx-auto focus:outline-none"
         >
           <Breadcrumb />
           {routes}
