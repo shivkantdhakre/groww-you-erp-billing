@@ -95,8 +95,10 @@ function Autocomplete({
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("focusin", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("focusin", handleClickOutside);
     };
   }, [selectedOption, labelKey, value]);
 

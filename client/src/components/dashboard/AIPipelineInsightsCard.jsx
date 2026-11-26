@@ -201,8 +201,8 @@ export default function AIPipelineInsightsCard() {
         </div>
 
         <p className="text-xs text-muted-foreground font-medium flex items-center justify-center gap-2 pt-1">
-          <Zap className="w-3.5 h-3.5 text-accent" />
-          <span>Evaluating receivables, sales velocity & stock turnover...</span>
+          <Zap className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
+          <span>Evaluating receivables, sales velocity &amp; stock turnover&hellip;</span>
         </p>
       </div>
     );

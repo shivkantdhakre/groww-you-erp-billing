@@ -54,13 +54,14 @@ The existing **Atelier Ledger** visual direction (`#F5F3EE` warm neutral paper c
 
 ---
 
-## 5. Verification Results (Observed After Final Edit)
+## 5. Verification Results (Final)
 
 | Check | Outcome | Exact Metrics Observed |
 | :--- | :--- | :--- |
 | **Static Audit Scan (`client/src/`)** | **Passed** | `STATIC AUDIT ISSUES: 0` across `.jsx` / `.css` targets |
-| **ESLint (`cd client && npm run lint`)** | **Passed** | Exit `0`, zero warnings/errors (`task-2284`) |
-| **Production Build (`cd client && npm run build`)** | **Passed** | Exit `0` (`vite v8.0.14`, 1,871 modules transformed cleanly in `13.64s`) |
+| **ESLint (`cd client && npm run lint`)** | **Passed** | Exit `0`, zero warnings/errors |
+| **Production Build (`cd client && npm run build`)** | **Passed** | Exit `0` (`vite v8.0.14`, 1,871 modules transformed cleanly in `2.27s`) |
+| **End-to-End ERP Functionality (`verify_erp_functionality.mjs`)** | **Passed** | `ALL_E2E_CHECKS_PASSED` (`0` pageErrors): auth redirect & login, theme switcher, Navbar search (`"Steel"`), live Sales Invoice (`₹ 1,800.00` + GST `₹ 324.00` = `₹ 2,124.00`), `Alt+C`/`Alt+N`, Customer/Vendor Autocomplete keyboard close on `focusin`, Purchase Invoice + GSTIN + OCR dropzone, Customers Edit/Reset/`ConfirmDialog`, CRM filter, textarea heights (`72px`/`86px`), Customer Ledger, and live A4 & 80mm print sheets |
 | **Chromium Browser & `break-ui` Suite (`verify_refined_ui.mjs`)** | **Passed** | `48` AFTER screenshots (`0` horizontal overflow at `1440px`/`1280px`/`1024px`/`768px`/`390px`), `0` pageErrors, `0` `/favicon.ico` 404 errors (only expected HTTP 401 notice for unauthenticated GST OTP session), verified `Alt+N`/`Alt+C`/`F2`, verified `IBM Plex Sans`/`Mono` loaded, verified inset `inputBg` token (`rgb(246, 244, 239)` vs `cardBg: rgb(253, 253, 251)`), verified `LeadDetailDrawer` `transitionProperty: "width"` and `breakUiStress` (`overflowPx: 0` at `1440px` & `390px`) |
 | **`server/scratch/test-branch-isolation.js`** | **Passed** | `11 PASSED, 0 FAILED` (zero backend edits) |
 | **`server/scratch/test-compliance.js`** | **Passed** | `21 PASSED, 0 FAILED` |
@@ -73,6 +74,5 @@ The existing **Atelier Ledger** visual direction (`#F5F3EE` warm neutral paper c
 
 ## 6. Git & Release Safety Confirmation
 
-- All modifications stay isolated on branch `uiux/skills-driven-refinement`.
+- All modifications committed and pushed on branch `uiux/skills-driven-refinement` (`origin/uiux/skills-driven-refinement`).
 - No backend routes, Prisma models, services, or controllers were edited.
-- No remote push (`git push`) or merge into `main` was executed.
