@@ -1,9 +1,21 @@
 import { useState, useEffect } from "react";
 import { useStore } from "../../store/useStore";
+import CommonPageHeader from "../../components/common/CommonPageHeader";
 import TableWrapper from "../../components/common/TableWrapper";
+import ValidationMessage from "../../components/common/ValidationMessage";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
+import StatusBadge from "../../components/common/StatusBadge";
+import { Loader2, Search, Pencil, Trash2, PackagePlus, RotateCcw } from "lucide-react";
 
+const INPUT_CLASS =
+  "h-9 px-3 rounded-md w-full border border-input bg-card text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors";
+const LABEL_CLASS =
+  "block mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider";
+
+/**
+ * Product & HSN catalog manager with branch-aware stock status and delete confirmation.
+ */
 function Inventory() {
-  // Bind to global Zustand store
   const items = useStore((state) => state.items);
   const loading = useStore((state) => state.loadingItems);
   const fetchItems = useStore((state) => state.fetchItems);
@@ -11,6 +23,7 @@ function Inventory() {
   const updateItemStore = useStore((state) => state.updateItem);
   const deleteItemStore = useStore((state) => state.deleteItem);
   const user = useStore((state) => state.user);
+  const activeBranchId = useStore((state) => state.activeBranchId);
 
   const [name, setName] = useState("");
   const [sku, setSku] = useState("");
@@ -27,8 +40,9 @@ function Inventory() {
   const [editId, setEditId] = useState(null);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
-  // Fetch/refresh on component mount (no-op if already cached)
   useEffect(() => {
     fetchItems().catch((err) => {
       console.error("Failed to load items:", err);
@@ -36,6 +50,20 @@ function Inventory() {
       setMessageType("error");
     });
   }, [fetchItems]);
+
+  const resetForm = () => {
+    setEditId(null);
+    setName("");
+    setSku("");
+    setCategory("");
+    setHsnCode("");
+    setGstPercentage("");
+    setUnit("");
+    setPurchasePrice("");
+    setSalePrice("");
+    setOpeningStock("");
+    setMinStockAlert("10");
+  };
 
   const addItem = async () => {
     if (!name || !sku) {
@@ -59,10 +87,7 @@ function Inventory() {
       return;
     }
 
-    const itemExists = items.some(
-      (item) => item.sku === sku && item.id !== editId,
-    );
-
+    const itemExists = items.some((item) => item.sku === sku && item.id !== editId);
     if (itemExists) {
       setMessage("Item SKU/Code already exists");
       setMessageType("warning");
@@ -85,22 +110,12 @@ function Inventory() {
           purchasePrice: parseFloat(purchasePrice) || 0.0,
           salePrice: parseFloat(salePrice) || 0.0,
           gstPercentage: parseFloat(gstPercentage) || 0.0,
-          openingStock: parseInt(openingStock) || 0,
-          minStockAlert: parseInt(minStockAlert) || 0,
+          openingStock: parseInt(openingStock, 10) || 0,
+          minStockAlert: parseInt(minStockAlert, 10) || 0,
           hsnCode,
         });
-        setEditId(null);
-        setName("");
-        setSku("");
-        setCategory("");
-        setHsnCode("");
-        setGstPercentage("");
-        setUnit("");
-        setPurchasePrice("");
-        setSalePrice("");
-        setOpeningStock("");
-        setMinStockAlert("10");
-        setMessage("Item Updated Successfully");
+        resetForm();
+        setMessage("Item updated successfully.");
         setMessageType("success");
       } catch (err) {
         console.error("Failed to update item:", err);
@@ -108,7 +123,9 @@ function Inventory() {
         let errMsg = "Failed to update item in database.";
         if (serverError) {
           if (serverError.error === "Validation failed" && Array.isArray(serverError.details)) {
-            errMsg = `Validation failed: ${serverError.details.map(d => `${d.field}: ${d.message}`).join(", ")}`;
+            errMsg = `Validation failed: ${serverError.details
+              .map((d) => `${d.field}: ${d.message}`)
+              .join(", ")}`;
           } else {
             errMsg = serverError.message || serverError.error || errMsg;
           }
@@ -128,22 +145,13 @@ function Inventory() {
         purchasePrice: parseFloat(purchasePrice) || 0.0,
         salePrice: parseFloat(salePrice) || 0.0,
         gstPercentage: parseFloat(gstPercentage) || 0.0,
-        openingStock: parseInt(openingStock) || 0,
-        minStockAlert: parseInt(minStockAlert) || 10,
+        openingStock: parseInt(openingStock, 10) || 0,
+        minStockAlert: parseInt(minStockAlert, 10) || 10,
         hsnCode,
       });
 
-      setName("");
-      setSku("");
-      setCategory("");
-      setHsnCode("");
-      setGstPercentage("");
-      setUnit("");
-      setPurchasePrice("");
-      setSalePrice("");
-      setOpeningStock("");
-      setMinStockAlert("10");
-      setMessage("Item Saved Successfully");
+      resetForm();
+      setMessage("Item saved successfully.");
       setMessageType("success");
     } catch (err) {
       console.error("Failed to save item:", err);
@@ -151,7 +159,9 @@ function Inventory() {
       let errMsg = "Failed to save item to database.";
       if (serverError) {
         if (serverError.error === "Validation failed" && Array.isArray(serverError.details)) {
-          errMsg = `Validation failed: ${serverError.details.map(d => `${d.field}: ${d.message}`).join(", ")}`;
+          errMsg = `Validation failed: ${serverError.details
+            .map((d) => `${d.field}: ${d.message}`)
+            .join(", ")}`;
         } else {
           errMsg = serverError.message || serverError.error || errMsg;
         }
@@ -161,248 +171,302 @@ function Inventory() {
     }
   };
 
-  const deleteItem = async (id) => {
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this item?",
-    );
-
-    if (!confirmDelete) {
-      return;
-    }
-
+  const confirmDeleteItem = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await deleteItemStore(id);
-      setMessage("Item Deleted Successfully");
+      await deleteItemStore(deleteTarget.id);
+      setMessage("Item deleted successfully.");
       setMessageType("success");
+      setDeleteTarget(null);
     } catch (err) {
       console.error("Failed to delete item:", err);
       setMessage("Failed to delete item from database.");
       setMessageType("error");
+    } finally {
+      setDeleting(false);
     }
   };
 
+  const getBranchStock = (item) => {
+    const branchId = activeBranchId || user?.branchId;
+    if (branchId) {
+      return item.branchStocks?.find((b) => Number(b.branchId) === Number(branchId))?.stock ?? 0;
+    }
+    return item.branchStocks?.reduce((sum, b) => sum + b.stock, 0) ?? 0;
+  };
+
+  const filteredItems = items.filter((item) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      item.name.toLowerCase().includes(q) ||
+      (item.sku || "").toLowerCase().includes(q) ||
+      (item.category || "").toLowerCase().includes(q)
+    );
+  });
+
+  const lowStockCount = items.filter(
+    (item) => Number(getBranchStock(item)) < (item.minStockAlert || 10)
+  ).length;
 
   return (
-    <div className="text-foreground">
-      <h1 className="text-3xl font-bold">Inventory</h1>
-      <div className="bg-card text-foreground p-5 rounded-xl border border-border shadow-sm mt-6">
-        <h2 className="text-xl font-bold mb-4 text-foreground">
-          {editId !== null ? "Edit Item Master" : "Add Item Master"}
-        </h2>
+    <div className="space-y-5 text-foreground">
+      <CommonPageHeader
+        title="Item Master & Inventory"
+        subtitle="Manage SKUs, HSN tax slabs, purchase vs sale pricing, and reorder thresholds"
+        badge={
+          <div className="flex items-center gap-2">
+            <StatusBadge variant="neutral tabular-nums">{items.length} SKUs</StatusBadge>
+            {lowStockCount > 0 && (
+              <StatusBadge variant="warning tabular-nums">{lowStockCount} low stock</StatusBadge>
+            )}
+          </div>
+        }
+      />
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <input
-            type="text"
-            placeholder="Item Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
-          />
+      <ValidationMessage
+        type={messageType}
+        message={message}
+        onDismiss={() => setMessage("")}
+        className="mt-0!"
+      />
 
-          <input
-            type="text"
-            placeholder="SKU / Item Code"
-            value={sku}
-            onChange={(e) => setSku(e.target.value)}
-            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
-          />
-
-          <input
-            type="text"
-            placeholder="Category"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
-          />
-
-          <input
-            type="text"
-            placeholder="HSN Code"
-            value={hsnCode}
-            onChange={(e) => setHsnCode(e.target.value)}
-            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
-          />
-
-          <input
-            type="number"
-            placeholder="GST %"
-            value={gstPercentage}
-            onChange={(e) => setGstPercentage(e.target.value)}
-            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
-          />
-
-          <input
-            type="text"
-            placeholder="Unit (e.g. Pcs, Box, Kg)"
-            value={unit}
-            onChange={(e) => setUnit(e.target.value)}
-            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
-          />
-
-          <input
-            type="number"
-            placeholder="Purchase Price"
-            value={purchasePrice}
-            onChange={(e) => setPurchasePrice(e.target.value)}
-            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
-          />
-
-          <input
-            type="number"
-            placeholder="Sale Price"
-            value={salePrice}
-            onChange={(e) => setSalePrice(e.target.value)}
-            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
-          />
-
-          <input
-            type="number"
-            placeholder="Opening Stock"
-            value={openingStock}
-            onChange={(e) => setOpeningStock(e.target.value)}
-            disabled={editId !== null}
-            className={`bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition ${
-              editId !== null ? "opacity-50 cursor-not-allowed" : ""
-            }`}
-          />
-
-          <input
-            type="number"
-            placeholder="Min Stock Alert"
-            value={minStockAlert}
-            onChange={(e) => setMinStockAlert(e.target.value)}
-            className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
-          />
+      {/* Entry / Edit Card */}
+      <div className="bg-card text-foreground p-5 rounded-lg border border-border surface-shadow">
+        <div className="flex items-center justify-between pb-3 mb-4 border-b border-border/70">
+          <h2 className="text-sm font-semibold text-foreground">
+            {editId !== null ? "Edit Product Specification" : "Add New Inventory Item"}
+          </h2>
+          {editId !== null && <StatusBadge variant="warning">Editing ID #{editId}</StatusBadge>}
         </div>
 
-        <div className="mt-4 flex gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="lg:col-span-2">
+            <label className={LABEL_CLASS}>Item Name *</label>
+            <input
+              type="text"
+              placeholder="e.g. Copper Coil 12mm"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className={INPUT_CLASS}
+            />
+          </div>
+
+          <div>
+            <label className={LABEL_CLASS}>SKU / Barcode *</label>
+            <input
+              type="text"
+              placeholder="e.g. SKU-1042"
+              value={sku}
+              onChange={(e) => setSku(e.target.value)}
+              className={`${INPUT_CLASS} font-mono`}
+            />
+          </div>
+
+          <div>
+            <label className={LABEL_CLASS}>Category</label>
+            <input
+              type="text"
+              placeholder="e.g. Electrical"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className={INPUT_CLASS}
+            />
+          </div>
+
+          <div>
+            <label className={LABEL_CLASS}>HSN Code</label>
+            <input
+              type="text"
+              placeholder="e.g. 8544"
+              value={hsnCode}
+              onChange={(e) => setHsnCode(e.target.value)}
+              className={`${INPUT_CLASS} font-mono`}
+            />
+          </div>
+
+          <div>
+            <label className={LABEL_CLASS}>GST Slab (%)</label>
+            <input
+              type="number"
+              placeholder="0, 5, 12, 18, 28"
+              value={gstPercentage}
+              onChange={(e) => setGstPercentage(e.target.value)}
+              className={`${INPUT_CLASS} font-mono tabular-nums`}
+            />
+          </div>
+
+          <div>
+            <label className={LABEL_CLASS}>Unit</label>
+            <input
+              type="text"
+              placeholder="Pcs, Box, Kg"
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+              className={INPUT_CLASS}
+            />
+          </div>
+
+          <div>
+            <label className={LABEL_CLASS}>Purchase Price (₹)</label>
+            <input
+              type="number"
+              placeholder="0.00"
+              value={purchasePrice}
+              onChange={(e) => setPurchasePrice(e.target.value)}
+              className={`${INPUT_CLASS} font-mono tabular-nums`}
+            />
+          </div>
+
+          <div>
+            <label className={LABEL_CLASS}>Sale Price (₹)</label>
+            <input
+              type="number"
+              placeholder="0.00"
+              value={salePrice}
+              onChange={(e) => setSalePrice(e.target.value)}
+              className={`${INPUT_CLASS} font-mono tabular-nums`}
+            />
+          </div>
+
+          <div>
+            <label className={LABEL_CLASS}>Opening Stock / Alert</label>
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="number"
+                placeholder="Open"
+                title="Opening Stock"
+                value={openingStock}
+                onChange={(e) => setOpeningStock(e.target.value)}
+                disabled={editId !== null}
+                className={`${INPUT_CLASS} font-mono tabular-nums ${
+                  editId !== null ? "opacity-50 cursor-not-allowed bg-muted" : ""
+                }`}
+              />
+              <input
+                type="number"
+                placeholder="Min"
+                title="Minimum Stock Alert"
+                value={minStockAlert}
+                onChange={(e) => setMinStockAlert(e.target.value)}
+                className={`${INPUT_CLASS} font-mono tabular-nums`}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-5 pt-4 border-t border-border/70 flex flex-wrap justify-end gap-2">
           <button
-            onClick={addItem}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 px-5 py-3 rounded-lg font-semibold transition cursor-pointer shadow-sm"
+            type="button"
+            onClick={resetForm}
+            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-md border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80 text-xs font-medium transition-colors cursor-pointer"
           >
-            {editId !== null ? "Update Item" : "Add Item"}
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Reset</span>
           </button>
           <button
-            onClick={() => {
-              setEditId(null);
-              setName("");
-              setSku("");
-              setCategory("");
-              setHsnCode("");
-              setGstPercentage("");
-              setUnit("");
-              setPurchasePrice("");
-              setSalePrice("");
-              setOpeningStock("");
-              setMinStockAlert("10");
-            }}
-            className="bg-secondary text-secondary-foreground hover:bg-secondary/80 px-5 py-3 rounded-lg font-semibold transition cursor-pointer"
+            type="button"
+            onClick={addItem}
+            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 text-xs sm:text-sm font-medium transition-colors cursor-pointer"
           >
-            Clear
+            <PackagePlus className="w-4 h-4" />
+            <span>{editId !== null ? "Update Item" : "Save Item"}</span>
           </button>
         </div>
       </div>
 
-      {message && (
-        <div
-          className={`p-3 rounded-lg mb-4 text-white mt-4 font-medium shadow-sm transition ${
-            messageType === "success"
-              ? "bg-emerald-600"
-              : messageType === "warning"
-              ? "bg-amber-500"
-              : "bg-destructive"
-          }`}
-        >
-          {message}
-        </div>
-      )}
-
-      {loading ? (
-        <div className="flex items-center justify-center p-8 bg-card border border-border text-foreground rounded-xl shadow-sm mt-4">
-          <svg className="animate-spin h-8 w-8 text-primary mr-3" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-          </svg>
-          <span className="text-muted-foreground font-medium">Loading inventory...</span>
-        </div>
-      ) : (
-        <>
-          {/* Inventory Count Card */}
-          <div className="bg-card text-foreground p-4 rounded-xl border border-border shadow-sm mb-4 mt-4 w-72">
-            <h3 className="text-muted-foreground text-sm font-semibold">Total Items</h3>
-            <p className="text-3xl font-extrabold text-primary">{items.length}</p>
+      {/* Inventory Catalog Table */}
+      <div className="bg-card text-foreground rounded-lg border border-border surface-shadow overflow-hidden">
+        <div className="px-4 sm:px-5 py-3.5 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Inventory Catalog</h2>
+            <p className="text-xs text-muted-foreground tabular-nums">
+              Showing {filteredItems.length} of {items.length} products
+            </p>
           </div>
+          <div className="relative w-full sm:w-72">
+            <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Filter name, SKU or category..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 pl-9 pr-3 rounded-md w-full border border-input bg-background text-foreground text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+        </div>
 
-          {/* Search */}
-          <input
-            type="text"
-            placeholder="Search Item"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="bg-card text-foreground border border-border p-3 rounded-lg mb-4 w-full focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
-          />
-
-          <TableWrapper>
-            <table className="w-full">
-              <thead className="bg-secondary text-secondary-foreground border-b border-border">
+        {loading ? (
+          <div className="flex items-center justify-center py-10 gap-2 text-xs text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin text-primary-text" />
+            <span>Loading inventory...</span>
+          </div>
+        ) : filteredItems.length > 0 ? (
+          <TableWrapper className="!border-none !rounded-none !shadow-none !bg-transparent">
+            <table className="w-full text-sm text-left border-collapse">
+              <thead className="bg-secondary/70 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border">
                 <tr>
-                  <th className="text-left p-4 font-semibold text-sm">Sr No</th>
-                  <th className="text-left p-4 font-semibold text-sm">Item Name</th>
-                  <th className="text-left p-4 font-semibold text-sm">SKU / Code</th>
-                  <th className="text-left p-4 font-semibold text-sm">Category</th>
-                  <th className="text-left p-4 font-semibold text-sm">HSN</th>
-                  <th className="text-left p-4 font-semibold text-sm">GST %</th>
-                  <th className="text-left p-4 font-semibold text-sm">Unit</th>
-                  <th className="text-left p-4 font-semibold text-sm">Purchase Price</th>
-                  <th className="text-left p-4 font-semibold text-sm">Sale Price</th>
-                  <th className="text-left p-4 font-semibold text-sm">Opening Stock</th>
-                  <th className="text-left p-4 font-semibold text-sm">Available Stock</th>
-                  <th className="text-left p-4 font-semibold text-sm">Stock Status</th>
-                  <th className="text-left p-4 font-semibold text-sm">Action</th>
+                  <th className="px-4 py-2.5 w-12">#</th>
+                  <th className="px-4 py-2.5">Item Name</th>
+                  <th className="px-4 py-2.5">SKU</th>
+                  <th className="px-4 py-2.5 hidden lg:table-cell">Category</th>
+                  <th className="px-4 py-2.5 hidden xl:table-cell">HSN</th>
+                  <th className="px-4 py-2.5 text-right">GST</th>
+                  <th className="px-4 py-2.5 hidden sm:table-cell">Unit</th>
+                  <th className="px-4 py-2.5 text-right">Purchase</th>
+                  <th className="px-4 py-2.5 text-right">Sale</th>
+                  <th className="px-4 py-2.5 text-right">Stock</th>
+                  <th className="px-4 py-2.5">Status</th>
+                  <th className="px-4 py-2.5 text-right">Actions</th>
                 </tr>
               </thead>
+              <tbody className="divide-y divide-border/70">
+                {filteredItems.map((item, index) => {
+                  const activeBranchStock = getBranchStock(item);
+                  const isLow = Number(activeBranchStock) < (item.minStockAlert || 10);
 
-              <tbody>
-                {items
-                  .filter((item) =>
-                    item.name.toLowerCase().includes(search.toLowerCase())
-                  )
-                  .map((item, index) => {
-                    const activeBranchStock = user?.branchId
-                      ? (item.branchStocks?.find((b) => b.branchId === user.branchId)?.stock ?? 0)
-                      : (item.branchStocks?.reduce((sum, b) => sum + b.stock, 0) ?? 0);
-
-                    return (
-                      <tr
-                        key={item.id}
-                        className="border-t border-border hover:bg-muted/30 transition"
-                      >
-                        <td className="p-4 text-foreground">{index + 1}</td>
-                        <td className="p-4 text-foreground font-semibold">{item.name}</td>
-                        <td className="p-4 text-muted-foreground font-mono">{item.sku || "N/A"}</td>
-                        <td className="p-4 text-foreground">{item.category || "N/A"}</td>
-                        <td className="p-4 text-muted-foreground font-mono">{item.hsnCode || "N/A"}</td>
-                        <td className="p-4 text-foreground">{item.gstPercentage || 0}%</td>
-                        <td className="p-4 text-foreground">{item.unit}</td>
-                        <td className="p-4 text-foreground">₹ {item.purchasePrice}</td>
-                        <td className="p-4 text-foreground">₹ {item.salePrice}</td>
-                        <td className="p-4 text-foreground">{item.openingStock}</td>
-                        <td className="p-4 text-foreground font-semibold font-mono">{activeBranchStock}</td>
-                        <td className="p-4">
-                          {Number(activeBranchStock) < (item.minStockAlert || 10) ? (
-                            <span className="bg-destructive/10 text-destructive px-3 py-1 rounded-full text-xs font-bold">
-                              Low Stock
-                            </span>
-                          ) : (
-                            <span className="bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full text-xs font-bold">
-                              In Stock
-                            </span>
-                          )}
-                        </td>
-
-                      <td className="p-4">
-                        <div className="flex gap-2">
+                  return (
+                    <tr key={item.id} className="elevated-table-row transition-colors">
+                      <td className="px-4 py-2.5 text-xs text-muted-foreground tabular-nums">
+                        {index + 1}
+                      </td>
+                      <td className="px-4 py-2.5 text-foreground font-medium">{item.name}</td>
+                      <td className="px-4 py-2.5 text-xs text-muted-foreground font-mono">
+                        {item.sku || "-"}
+                      </td>
+                      <td className="px-4 py-2.5 text-xs text-muted-foreground hidden lg:table-cell">
+                        {item.category || "-"}
+                      </td>
+                      <td className="px-4 py-2.5 text-xs text-muted-foreground font-mono hidden xl:table-cell">
+                        {item.hsnCode || "-"}
+                      </td>
+                      <td className="px-4 py-2.5 text-right font-mono text-xs text-muted-foreground tabular-nums">
+                        {item.gstPercentage || 0}%
+                      </td>
+                      <td className="px-4 py-2.5 text-xs text-muted-foreground hidden sm:table-cell">
+                        {item.unit || "-"}
+                      </td>
+                      <td className="px-4 py-2.5 text-right font-mono text-xs text-foreground tabular-nums whitespace-nowrap">
+                        ₹ {Number(item.purchasePrice || 0).toFixed(2)}
+                      </td>
+                      <td className="px-4 py-2.5 text-right font-mono text-xs font-medium text-foreground tabular-nums whitespace-nowrap">
+                        ₹ {Number(item.salePrice || 0).toFixed(2)}
+                      </td>
+                      <td className="px-4 py-2.5 text-right font-mono text-xs font-semibold text-foreground tabular-nums">
+                        {activeBranchStock}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        {isLow ? (
+                          <StatusBadge variant="destructive">Low Stock</StatusBadge>
+                        ) : (
+                          <StatusBadge variant="success">In Stock</StatusBadge>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                        <div className="inline-flex items-center gap-1.5">
                           <button
+                            type="button"
                             onClick={() => {
                               setEditId(item.id);
                               setName(item.name);
@@ -416,30 +480,49 @@ function Inventory() {
                               setOpeningStock(item.openingStock || "");
                               setMinStockAlert(item.minStockAlert || "10");
                             }}
-                            className="bg-amber-500 text-white px-3 py-1 rounded mr-2 hover:bg-amber-600 transition cursor-pointer text-sm font-semibold shadow-sm"
+                            className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md border border-border bg-background hover:bg-secondary text-xs font-medium text-foreground transition-colors cursor-pointer"
                           >
-                            Edit
+                            <Pencil className="w-3 h-3" />
+                            <span>Edit</span>
                           </button>
-
                           <button
-                            onClick={() => deleteItem(item.id)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 px-3 py-1 rounded transition cursor-pointer text-sm font-semibold shadow-sm"
+                            type="button"
+                            onClick={() => setDeleteTarget(item)}
+                            className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md border border-border bg-background hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 text-xs font-medium text-muted-foreground transition-colors cursor-pointer"
                           >
-                            Delete
+                            <Trash2 className="w-3 h-3" />
+                            <span>Delete</span>
                           </button>
                         </div>
                       </td>
                     </tr>
-                    );
-                  })}`
+                  );
+                })}
               </tbody>
             </table>
           </TableWrapper>
-        </>
-      )}
+        ) : (
+          <div className="text-center py-8 text-xs text-muted-foreground">
+            No items matching your search
+          </div>
+        )}
+      </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        title="Delete Item"
+        message={
+          deleteTarget
+            ? `Are you sure you want to delete "${deleteTarget.name}" (${deleteTarget.sku})?`
+            : ""
+        }
+        confirmLabel="Delete Item"
+        loading={deleting}
+        onConfirm={confirmDeleteItem}
+        onCancel={() => !deleting && setDeleteTarget(null)}
+      />
     </div>
   );
 }
 
 export default Inventory;
-

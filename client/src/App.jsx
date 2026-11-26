@@ -55,6 +55,7 @@ function AppContent() {
   const location = useLocation();
   const isPrintPage = location.pathname.startsWith("/print");
   const user = useStore((state) => state.user);
+  const activeBranchId = useStore((state) => state.activeBranchId);
   const subscription = user?.subscription;
 
   const routes = (
@@ -113,24 +114,25 @@ function AppContent() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground transition-colors duration-300">
-      {/* Sidebar */}
+    <div className="flex min-h-screen bg-background text-foreground transition-colors duration-200">
       <Sidebar />
-      {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {subscription?.status === "PAST_DUE" && (
-          <div className="bg-amber-500 text-white px-6 py-2.5 text-center text-sm font-bold flex justify-center items-center gap-2 animate-pulse no-print shrink-0">
-            <span>⚠️ Subscription payment renewal is past due! ERP operations will lock soon.</span>
-            <Link to="/pricing" className="underline ml-2 hover:text-amber-100 transition font-extrabold">
+          <div className="bg-warning/15 text-warning border-b border-warning/30 px-4 sm:px-6 py-2 text-center text-xs sm:text-sm font-medium flex flex-wrap justify-center items-center gap-2 no-print shrink-0">
+            <span>Subscription payment renewal is past due. Update billing to avoid service interruption.</span>
+            <Link to="/pricing" className="underline hover:opacity-80 transition font-semibold">
               Update Payment Details &rarr;
             </Link>
           </div>
         )}
         <Navbar />
-        <div className="p-4 sm:p-6 flex-1 overflow-y-auto">
+        <main
+          key={activeBranchId || "default"}
+          className="p-4 sm:p-6 flex-1 overflow-y-auto w-full max-w-[1600px] mx-auto"
+        >
           <Breadcrumb />
           {routes}
-        </div>
+        </main>
       </div>
     </div>
   );

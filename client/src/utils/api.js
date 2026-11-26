@@ -11,11 +11,14 @@ const api = axios.create({
 // The Interceptor: Automatically attach the token before sending any request
 api.interceptors.request.use(
   (config) => {
-    // Grab the token from LocalStorage
     const token = localStorage.getItem('token');
-    
+    const activeBranchId = localStorage.getItem('activeBranchId');
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    if (activeBranchId) {
+      config.headers['x-branch-id'] = activeBranchId;
     }
     return config;
   },
@@ -34,7 +37,10 @@ export const registerLogoutHandler = (handler) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
+    const isGstnSessionExpired =
+      error.response?.data?.error === "GSTN_SESSION_EXPIRED";
+
+    if (error.response && error.response.status === 401 && !isGstnSessionExpired) {
       console.error('Session expired. Please log in again.');
       if (logoutHandler) {
         logoutHandler();

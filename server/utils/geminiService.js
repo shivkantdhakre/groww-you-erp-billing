@@ -1,12 +1,12 @@
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 
 const DEFAULT_GEMINI_MODELS = [
-  "gemini-3.6-flash",
   "gemini-3.1-flash-lite",
-  "gemini-flash-lite-latest",
   "gemini-3.8-flash",
   "gemini-3.5-flash-lite",
   "gemini-3.5-flash",
+  "gemini-flash-lite-latest",
+  "gemini-3.6-flash",
 ];
 
 /**
@@ -71,6 +71,7 @@ async function generateStructuredJson({
   contents,
   temperature = 0.2,
   timeoutMs = 20000,
+  errorMessages = {},
 }) {
   const genAI = new GoogleGenerativeAI(apiKey);
   const candidateModels = getCandidateModels();
@@ -119,7 +120,7 @@ async function generateStructuredJson({
     throw new GeminiServiceError(lastError?.message || "Gemini AI service temporarily unavailable.", {
       code: "GEMINI_UNAVAILABLE",
       statusCode: 503,
-      userMessage: "Gemini AI OCR service is temporarily busy or rate-limited. Please try again in a moment.",
+      userMessage: errorMessages.transient || "Gemini AI service is temporarily busy or rate-limited. Please try again in a moment.",
     });
   }
 
@@ -127,14 +128,14 @@ async function generateStructuredJson({
     throw new GeminiServiceError(lastError?.message || "Configured Gemini AI models are unavailable.", {
       code: "GEMINI_MODEL_UNAVAILABLE",
       statusCode: 502,
-      userMessage: "Configured Gemini AI vision models are unavailable. Please contact an administrator.",
+      userMessage: errorMessages.modelUnavailable || "Configured Gemini AI models are unavailable. Please contact an administrator.",
     });
   }
 
-  throw new GeminiServiceError(lastError?.message || "Failed to extract structured data via Gemini AI.", {
+  throw new GeminiServiceError(lastError?.message || "Failed to generate structured data via Gemini AI.", {
     code: "GEMINI_EXTRACTION_FAILED",
     statusCode: 422,
-    userMessage: "Failed to extract invoice data using Gemini AI. Please ensure the document is clear and legible.",
+    userMessage: errorMessages.failed || "Failed to generate AI analysis from Gemini AI. Please try again.",
   });
 }
 
@@ -220,167 +221,173 @@ const pipelineInsightsSchema = {
   required: ["healthScore", "headline", "insights", "recommendations"],
 };
 
-const systemInstruction = `You are an expert Revenue Operations Advisor for an ERP system. 
-Analyze the provided financial and pipeline data. 
-Focus strictly on cash flow health, outstanding receivables, customer concentration, and sales velocity. 
-Do not provide generic advice; base all insights strictly on the numbers provided. 
-Provide recommendations that are immediately actionable.
-Valid frontend routes for suggestedRoute are: '/sales-invoice', '/customers', '/inventory', '/outstanding-report', '/sales-report', '/purchase-invoice'.`;
+const systemInstruction = `You are an expert Revenue Operations & CFO Advisor for Groww You ERP.
+Analyze the provided real database aggregations across sales, purchases, returns, receivables, inventory stock levels, and CRM leads.
+Strict grounding rules:
+1. Base every insight, number, entity name, and recommendation strictly on the metrics and named records supplied in the prompt.
+2. NEVER invent percentages, customer counts, product names, or trends not explicitly present in the input.
+3. Highlight the exact branch or consolidated scope being analyzed when referencing figures.
+4. Valid frontend routes for suggestedRoute are: '/sales-invoice', '/customers', '/inventory', '/outstanding-report', '/sales-report', '/purchase-invoice', '/leads'.`;
 
 /**
- * Generates AI Sales Pipeline Insights using Gemini API with strict responseSchema.
- * @param {object} metrics 
+ * Formats INR values cleanly for AI prompts.
+ */
+const formatINR = (val) => `₹${Number(val || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+
+/**
+ * Generates AI Sales Pipeline Insights using live Gemini API with strict responseSchema.
+ * Throws GeminiServiceError if Gemini is unconfigured or unavailable (never returns mock fallback data).
+ * @param {object} metrics
  * @returns {Promise<object>}
  */
-export const generatePipelineInsights = async (metrics) => {
-  if ((metrics?.totalSales || 0) === 0 && (metrics?.activeCustomersCount || 0) === 0) {
-    return generateHeuristicFallback(metrics || {});
-  }
-
-  const apiKey = process.env.GEMINI_API_KEY?.trim();
-
-  if (!apiKey) {
-    console.warn("[GeminiService] GEMINI_API_KEY missing. Generating heuristic fallback pipeline insights.");
-    return generateHeuristicFallback(metrics);
-  }
-
-  try {
-    const promptData = `
-Analyze the following pipeline & financial metrics for this enterprise tenant:
-- Total Pipeline Value (Total Sales Volume): ₹${metrics.totalSales?.toLocaleString() || 0}
-- Total Outstanding Receivables (Unpaid Customer Invoices): ₹${metrics.outstandingAmount?.toLocaleString() || 0}
-- Total Purchase Expenses: ₹${metrics.totalPurchases?.toLocaleString() || 0}
-- Net Profitability: ₹${metrics.totalProfit?.toLocaleString() || 0}
-- Monthly Sales: ₹${metrics.monthlySales?.toLocaleString() || 0}
-- Monthly Purchases: ₹${metrics.monthlyPurchases?.toLocaleString() || 0}
-- Active Customer Count: ${metrics.activeCustomersCount || 0}
-- Top Customer Concentration: ${metrics.topCustomerShare || 0}% of total sales generated by top 3 customers.
-- Total Orders Processed: ${metrics.totalOrders || 0}
-- Low Stock Items Alert Count: ${metrics.lowStockItemsCount || 0}
-`;
-
-    const { data: parsedJSON } = await generateStructuredJson({
-      apiKey,
-      systemInstruction,
-      responseSchema: pipelineInsightsSchema,
-      contents: promptData,
-      temperature: 0.2,
-      timeoutMs: 15000,
-    });
-
-    return {
-      healthScore: Math.min(100, Math.max(0, parsedJSON.healthScore || 75)),
-      headline: parsedJSON.headline || "Revenue Pipeline Analysis Complete",
-      insights: Array.isArray(parsedJSON.insights) ? parsedJSON.insights : [],
-      recommendations: Array.isArray(parsedJSON.recommendations) ? parsedJSON.recommendations : [],
-      source: "gemini-ai",
-      generatedAt: new Date().toISOString()
-    };
-  } catch (error) {
-    console.error("[GeminiService] Error calling Gemini API:", error?.message || error);
-    return generateHeuristicFallback(metrics);
-  }
-};
-
-/**
- * Fallback generator when Gemini API is unconfigured, rate limited, or model unavailable.
- * Ensures 100% uptime with intelligent rule-based metrics analysis.
- */
-function generateHeuristicFallback(metrics) {
+export const generatePipelineInsights = async (metrics = {}) => {
   const {
+    scopeLabel = "Consolidated (All Branches)",
     totalSales = 0,
+    totalPurchases = 0,
+    salesReturnsTotal = 0,
+    purchaseReturnsTotal = 0,
+    totalProfit = 0,
     outstandingAmount = 0,
+    monthlySales = 0,
+    monthlyPurchases = 0,
+    recent30dSales = 0,
+    recent30dOrdersCount = 0,
     activeCustomersCount = 0,
+    activeVendorsCount = 0,
     topCustomerShare = 0,
-    lowStockItemsCount = 0
+    topCustomers = [],
+    overdueCustomers = [],
+    lowStockItemsCount = 0,
+    lowStockItems = [],
+    totalOrders = 0,
+    crmPipeline = null,
+    metricsSnapshot = null,
   } = metrics;
 
-  // Zero-data empty tenant guard
-  if (totalSales === 0 && activeCustomersCount === 0) {
+  const crmLeadsCount = crmPipeline?.totalLeads || 0;
+  const hasAnyErpActivity =
+    totalSales > 0 ||
+    totalPurchases > 0 ||
+    totalOrders > 0 ||
+    activeCustomersCount > 0 ||
+    activeVendorsCount > 0 ||
+    crmLeadsCount > 0;
+
+  if (!hasAnyErpActivity) {
     return {
       healthScore: 100,
       headline: "Welcome to Groww You ERP! Create your first sales invoice to activate AI pipeline analytics.",
       insights: [
-        "No historical sales invoices or customer transactions recorded yet.",
-        "System is initialized and ready to track real-time sales velocity and cashflow."
+        "No historical sales invoices, purchases, or customer accounts are recorded yet for this scope.",
+        "Record customers, inventory, or invoices to unlock live Gemini AI financial diagnostics.",
       ],
       recommendations: [
         {
           priority: "HIGH",
           actionText: "Add your first customer account to begin building your sales pipeline.",
-          suggestedRoute: "/customers"
+          suggestedRoute: "/customers",
         },
         {
           priority: "HIGH",
           actionText: "Create your first sales invoice to track revenue and receivables.",
-          suggestedRoute: "/sales-invoice"
-        }
+          suggestedRoute: "/sales-invoice",
+        },
       ],
-      source: "heuristic-engine",
-      generatedAt: new Date().toISOString()
+      source: "onboarding-empty",
+      model: null,
+      metricsSnapshot: metricsSnapshot || undefined,
+      generatedAt: new Date().toISOString(),
     };
   }
 
-  let score = 85;
-  const insights = [];
-  const recommendations = [];
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
 
-  // Evaluate Receivables Risk
-  if (totalSales > 0 && (outstandingAmount / totalSales) > 0.3) {
-    score -= 20;
-    insights.push(`Outstanding receivables represent ${((outstandingAmount / totalSales) * 100).toFixed(1)}% of total sales revenue.`);
-    recommendations.push({
-      priority: "HIGH",
-      actionText: `Follow up on outstanding customer payments totaling ₹${outstandingAmount.toLocaleString()}.`,
-      suggestedRoute: "/outstanding-report"
-    });
-  } else {
-    insights.push(`Receivables are well controlled at ₹${outstandingAmount.toLocaleString()} relative to overall revenue.`);
-  }
-
-  // Customer Concentration
-  if (topCustomerShare > 40) {
-    score -= 15;
-    insights.push(`High customer concentration: top key accounts represent ${topCustomerShare.toFixed(1)}% of overall sales volume.`);
-    recommendations.push({
-      priority: "MEDIUM",
-      actionText: "Diversify lead pipeline to mitigate revenue reliance on top customer accounts.",
-      suggestedRoute: "/customers"
-    });
-  } else {
-    insights.push(`Customer distribution is healthy across ${activeCustomersCount} active accounts.`);
-  }
-
-  // Stock Risk
-  if (lowStockItemsCount > 0) {
-    score -= 10;
-    insights.push(`${lowStockItemsCount} products are currently below minimum stock threshold, risking order fulfillment bottlenecks.`);
-    recommendations.push({
-      priority: "HIGH",
-      actionText: `Reorder low-stock items to prevent delivery delays.`,
-      suggestedRoute: "/inventory"
+  if (!apiKey) {
+    throw new GeminiServiceError("GEMINI_API_KEY is missing in server environment.", {
+      code: "GEMINI_UNCONFIGURED",
+      statusCode: 503,
+      userMessage: "GEMINI_API_KEY is not configured on the server. Live Gemini AI pipeline analysis cannot run.",
     });
   }
 
-  if (recommendations.length === 0) {
-    recommendations.push({
-      priority: "LOW",
-      actionText: "Maintain current sales velocity and monitor weekly cash collections.",
-      suggestedRoute: "/sales-invoice"
+  const avgOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;
+  const topCustomersText =
+    Array.isArray(topCustomers) && topCustomers.length > 0
+      ? topCustomers
+          .map((c) => `${c.name}: ${formatINR(c.amount)} (${c.sharePct}% of sales)`)
+          .join("; ")
+      : "No billed customers in this scope";
+
+  const overdueDebtorsText =
+    Array.isArray(overdueCustomers) && overdueCustomers.length > 0
+      ? overdueCustomers.map((c) => `${c.name}: ${formatINR(c.outstandingBalance)}`).join("; ")
+      : "None";
+
+  const lowStockText =
+    Array.isArray(lowStockItems) && lowStockItems.length > 0
+      ? lowStockItems.map((i) => `${i.name} (${i.stock} in stock)`).join("; ")
+      : "None";
+
+  const crmText = crmPipeline
+    ? `Total Leads: ${crmPipeline.totalLeads}, Open Active Deals: ${crmPipeline.openLeadsCount} (Value: ${formatINR(crmPipeline.openPipelineValue)}), Closed Won Value: ${formatINR(crmPipeline.wonPipelineValue)}, Stage Breakdown: ${crmPipeline.stageBreakdownText || "None"}`
+    : "No CRM leads data";
+
+  const promptData = `
+Analyze the following live PostgreSQL ERP data snapshot (${scopeLabel}, Date: ${new Date().toISOString().split("T")[0]}):
+- Analysis Scope: ${scopeLabel}
+- Total Sales Volume: ${formatINR(totalSales)} across ${totalOrders} sale invoice(s) (Avg Order Value: ${formatINR(avgOrderValue)})
+- Sales Returns Total: ${formatINR(salesReturnsTotal)}
+- Total Purchase Expenses: ${formatINR(totalPurchases)} (Purchase Returns: ${formatINR(purchaseReturnsTotal)})
+- Net Sales Minus Purchases Spread: ${formatINR(totalProfit)}
+- Current Calendar Month Sales / Purchases: ${formatINR(monthlySales)} / ${formatINR(monthlyPurchases)}
+- Rolling Last 30 Days Sales: ${formatINR(recent30dSales)} across ${recent30dOrdersCount} order(s)
+- Active Customers / Active Vendors in Tenant: ${activeCustomersCount} / ${activeVendorsCount}
+- Total Outstanding Customer Receivables (Tenant-wide): ${formatINR(outstandingAmount)}
+- Top Overdue Debtors: ${overdueDebtorsText}
+- Top ${topCustomers.length || 3} Customer Revenue Concentration in Scope: ${Number(topCustomerShare || 0).toFixed(1)}% (${topCustomersText})
+- Low Stock SKUs in Scope (${lowStockItemsCount} total flagged): ${lowStockText}
+- CRM Sales Pipeline: ${crmText}
+`;
+
+  const { data: parsedJSON, modelName } = await generateStructuredJson({
+    apiKey,
+    systemInstruction,
+    responseSchema: pipelineInsightsSchema,
+    contents: promptData,
+    temperature: 0.2,
+    timeoutMs: 20000,
+    errorMessages: {
+      transient: "Gemini AI service is temporarily busy or rate-limited while analyzing pipeline data. Please retry shortly.",
+      modelUnavailable: "Configured Gemini AI models are unavailable for pipeline insights.",
+      failed: "Gemini AI failed to produce valid structured pipeline insights.",
+    },
+  });
+
+  if (
+    !parsedJSON ||
+    typeof parsedJSON.headline !== "string" ||
+    !Array.isArray(parsedJSON.insights) ||
+    parsedJSON.insights.length === 0
+  ) {
+    throw new GeminiServiceError("Gemini AI returned incomplete pipeline insights structure.", {
+      code: "GEMINI_INVALID_OUTPUT",
+      statusCode: 502,
+      userMessage: "Gemini AI returned an incomplete analysis response. Please refresh to try again.",
     });
   }
-
-  score = Math.max(10, Math.min(100, score));
 
   return {
-    healthScore: score,
-    headline: score >= 80 ? "Robust Pipeline Health & Strong Cash Collection" : score >= 50 ? "Moderate Pipeline Velocity with Actionable Bottlenecks" : "Attention Required: High Outstanding Receivables & Inventory Bottlenecks",
-    insights,
-    recommendations,
-    source: "heuristic-engine",
-    generatedAt: new Date().toISOString()
+    healthScore: Math.min(100, Math.max(0, Number.isFinite(Number(parsedJSON.healthScore)) ? Math.round(Number(parsedJSON.healthScore)) : 75)),
+    headline: parsedJSON.headline.trim(),
+    insights: parsedJSON.insights.filter((item) => typeof item === "string" && item.trim()),
+    recommendations: Array.isArray(parsedJSON.recommendations) ? parsedJSON.recommendations : [],
+    source: "gemini-ai",
+    model: modelName,
+    metricsSnapshot: metricsSnapshot || undefined,
+    generatedAt: new Date().toISOString(),
   };
-}
+};
 
 // ==========================================
 // AI LEAD EXECUTIVE SUMMARY & RISK PROFILER
@@ -413,123 +420,116 @@ const leadAnalysisSchema = {
   required: ["aiSummary", "aiRiskScore", "aiPriority", "aiActionType", "aiNextBestAction"]
 };
 
-const leadSystemInstruction = `You are an expert B2B Sales Analyst for an enterprise ERP system. Review the provided lead metadata, deal value, stage, notes, and recent interaction history.
-1. Provide a concise 2-3 sentence executive summary emphasizing deal momentum, key decision-maker context, and primary blockers.
-2. Calculate a Deal Risk Score from 0 to 100. (0-30 = Low risk/High momentum, 31-65 = Medium risk/Stalling, 66-100 = High risk/Likely to churn). Factor in the deal stage, time elapsed since last interaction, and sentiment of notes/interactions.
-3. Assign a Priority ('LOW', 'MEDIUM', 'HIGH').
-4. Categorize the Next Best Action ('CALL', 'EMAIL', 'MEETING', 'PROPOSAL', 'RESEARCH') and specify the exact action text for the sales rep.`;
+const leadSystemInstruction = `You are an expert B2B Sales Analyst for Groww You ERP. Review the provided lead metadata, deal value, stage, timestamps, notes, linked ERP customer ledger (if any), and chronological interaction history.
+Strict grounding rules:
+1. Base every claim strictly on the lead record, dates, notes, customer billing data, and interactions provided. Do NOT fabricate facts or contacts.
+2. Provide a concise 2-3 sentence executive summary emphasizing real deal momentum, stakeholder status, and any timeline staleness or stage mismatches (e.g., if interactions suggest deal closed/stalled while stage is unchanged).
+3. Calculate a Deal Risk Score from 0 to 100 (0-30 = Low risk/High momentum, 31-65 = Medium risk/Stalling, 66-100 = High risk/Likely to churn). Factor in stage, days elapsed since last update/interaction, and sentiment of notes/interactions.
+4. Assign a Priority ('LOW', 'MEDIUM', 'HIGH').
+5. Categorize the Next Best Action ('CALL', 'EMAIL', 'MEETING', 'PROPOSAL', 'RESEARCH') and specify one concrete action for the sales rep.`;
 
 /**
- * Generates AI Executive Summary & Risk Profiler for a specific B2B Lead.
- * @param {object} lead 
+ * Generates AI Executive Summary & Risk Profiler for a specific B2B Lead via live Gemini API.
+ * Throws GeminiServiceError if Gemini is unconfigured or unavailable (never returns fake fallback text).
+ * @param {object} lead
  * @returns {Promise<object>}
  */
 export const analyzeLeadExecutiveSummary = async (lead) => {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
 
   if (!apiKey) {
-    console.warn("[GeminiService] GEMINI_API_KEY missing. Generating heuristic fallback for lead analysis.");
-    return generateLeadHeuristicFallback(lead);
+    throw new GeminiServiceError("GEMINI_API_KEY is missing in server environment.", {
+      code: "GEMINI_UNCONFIGURED",
+      statusCode: 503,
+      userMessage: "GEMINI_API_KEY is not configured on the server. Live Gemini AI lead profiling cannot run.",
+    });
   }
 
-  try {
-    const interactionsText = Array.isArray(lead.interactions) && lead.interactions.length > 0
-      ? lead.interactions.map((item, idx) => {
-          const text = item.summary && item.summary.length > 500
-            ? item.summary.substring(0, 500) + "..."
-            : (item.summary || "");
-          return `  ${idx + 1}. [${item.type}] on ${new Date(item.date).toLocaleDateString()} by ${item.author || "Rep"}: "${text}"`;
-        }).join("\n")
+  const nowMs = Date.now();
+  const updatedMs = lead.updatedAt ? new Date(lead.updatedAt).getTime() : nowMs;
+  const daysSinceUpdate = Math.max(0, Math.floor((nowMs - updatedMs) / (1000 * 60 * 60 * 24)));
+  const lastInteraction = Array.isArray(lead.interactions) && lead.interactions.length > 0 ? lead.interactions[0] : null;
+  const daysSinceLastInteraction = lastInteraction?.date
+    ? Math.max(0, Math.floor((nowMs - new Date(lastInteraction.date).getTime()) / (1000 * 60 * 60 * 24)))
+    : null;
+
+  const interactionsText =
+    Array.isArray(lead.interactions) && lead.interactions.length > 0
+      ? lead.interactions
+          .map((item, idx) => {
+            const text =
+              item.summary && item.summary.length > 500
+                ? item.summary.substring(0, 500) + "..."
+                : item.summary || "";
+            const isoDate = item.date ? new Date(item.date).toISOString().split("T")[0] : "Unknown date";
+            return `  ${idx + 1}. [${item.type}] on ${isoDate} by ${item.author || "Rep"}: "${text}"`;
+          })
+          .join("\n")
       : "  No recorded interactions yet.";
 
-    const promptData = `
-Analyze the following B2B Lead Context:
+  let linkedCustomerText = "Not linked to an existing billed ERP customer yet.";
+  if (lead.customer) {
+    const recentInvs = Array.isArray(lead.customer.invoices) && lead.customer.invoices.length > 0
+      ? lead.customer.invoices
+          .map((inv) => `${inv.invoiceNo} (${formatINR(inv.grandTotal)} on ${new Date(inv.invoiceDate).toISOString().split("T")[0]})`)
+          .join(", ")
+      : "None";
+    linkedCustomerText = `Customer "${lead.customer.name}" | Outstanding Balance: ${formatINR(lead.customer.outstandingBalance)} | Recent Invoices: ${recentInvs}`;
+  }
+
+  const promptData = `
+Analyze the following live PostgreSQL B2B Lead Context (Today's Date: ${new Date().toISOString().split("T")[0]}):
 - Company Name: ${lead.companyName}
 - Contact Person: ${lead.contactName || "Not specified"} (${lead.email || "No email"}, ${lead.mobile || "No phone"})
 - Current Deal Stage: ${lead.stage}
-- Deal Value: ₹${Number(lead.dealValue || 0).toLocaleString('en-IN')}
+- Deal Value: ₹${Number(lead.dealValue || 0).toLocaleString("en-IN")}
+- Record Created: ${lead.createdAt ? new Date(lead.createdAt).toISOString().split("T")[0] : "Unknown"} | Days Since Last Update: ${daysSinceUpdate} day(s) | Days Since Last Interaction: ${daysSinceLastInteraction !== null ? `${daysSinceLastInteraction} day(s)` : "Never"}
+- Linked ERP Customer Ledger: ${linkedCustomerText}
 - Internal Notes: ${lead.notes || "No notes entered."}
 - Last 20 Interactions (Most Recent First):
 ${interactionsText}
 `;
 
-    const { data: parsedJSON, modelName } = await generateStructuredJson({
-      apiKey,
-      systemInstruction: leadSystemInstruction,
-      responseSchema: leadAnalysisSchema,
-      contents: promptData,
-      temperature: 0.2,
-      timeoutMs: 15000,
+  const { data: parsedJSON, modelName } = await generateStructuredJson({
+    apiKey,
+    systemInstruction: leadSystemInstruction,
+    responseSchema: leadAnalysisSchema,
+    contents: promptData,
+    temperature: 0.2,
+    timeoutMs: 20000,
+    errorMessages: {
+      transient: "Gemini AI service is temporarily busy or rate-limited while profiling this lead. Please retry shortly.",
+      modelUnavailable: "Configured Gemini AI models are unavailable for lead analysis.",
+      failed: "Gemini AI failed to produce a valid structured lead analysis.",
+    },
+  });
+
+  if (!parsedJSON || typeof parsedJSON.aiSummary !== "string" || !parsedJSON.aiSummary.trim()) {
+    throw new GeminiServiceError("Gemini AI returned an empty lead executive summary.", {
+      code: "GEMINI_INVALID_OUTPUT",
+      statusCode: 502,
+      userMessage: "Gemini AI returned an incomplete lead brief. Please try analyzing again.",
     });
-
-    const validPriorities = ["LOW", "MEDIUM", "HIGH"];
-    const validActionTypes = ["CALL", "EMAIL", "MEETING", "PROPOSAL", "RESEARCH"];
-
-    const rawPriority = (parsedJSON.aiPriority || "MEDIUM").toUpperCase();
-    const rawActionType = (parsedJSON.aiActionType || "CALL").toUpperCase();
-
-    return {
-      aiSummary: parsedJSON.aiSummary || `${lead.companyName} is currently in the ${lead.stage} stage with a deal value of ₹${Number(lead.dealValue || 0).toLocaleString('en-IN')}. Consistent follow-ups are recommended to maintain pipeline velocity.`,
-      aiRiskScore: Math.min(100, Math.max(0, parseInt(parsedJSON.aiRiskScore) || 45)),
-      aiPriority: validPriorities.includes(rawPriority) ? rawPriority : "MEDIUM",
-      aiActionType: validActionTypes.includes(rawActionType) ? rawActionType : "CALL",
-      aiNextBestAction: parsedJSON.aiNextBestAction || "Reach out to key decision maker to clarify immediate requirements.",
-      source: modelName
-    };
-  } catch (error) {
-    console.error("[GeminiService] Error generating lead analysis via Gemini:", error.message);
-    return generateLeadHeuristicFallback(lead);
-  }
-};
-
-/**
- * Fallback heuristic generator when Gemini API is unavailable.
- */
-function generateLeadHeuristicFallback(lead) {
-  let score = 40;
-  let priority = "MEDIUM";
-  let actionType = "CALL";
-  let actionText = "Schedule a discovery call with the lead contact.";
-
-  if (lead.stage === "CLOSED_WON") {
-    score = 5;
-    priority = "LOW";
-    actionType = "RESEARCH";
-    actionText = "Review onboarding requirements and initiate account billing.";
-  } else if (lead.stage === "CLOSED_LOST") {
-    score = 95;
-    priority = "LOW";
-    actionType = "RESEARCH";
-    actionText = "Log win/loss feedback and schedule win-back check-in for next quarter.";
-  } else if (lead.stage === "NEGOTIATION") {
-    score = 25;
-    priority = "HIGH";
-    actionType = "PROPOSAL";
-    actionText = "Finalize contract terms and send revised proposal for sign-off.";
-  } else if (lead.stage === "PROPOSAL_SENT") {
-    score = 35;
-    priority = "HIGH";
-    actionType = "EMAIL";
-    actionText = "Send follow-up email regarding the proposed commercial proposal.";
-  } else if (lead.stage === "QUALIFIED") {
-    score = 50;
-    priority = "MEDIUM";
-    actionType = "MEETING";
-    actionText = "Schedule product demonstration with primary stakeholders.";
   }
 
-  const interactionCount = Array.isArray(lead.interactions) ? lead.interactions.length : 0;
-  const summary = `${lead.companyName} is actively engaged in the ${lead.stage} pipeline stage with an estimated deal value of ₹${Number(lead.dealValue || 0).toLocaleString('en-IN')}. ${interactionCount} interaction(s) logged to date.`;
+  const validPriorities = ["LOW", "MEDIUM", "HIGH"];
+  const validActionTypes = ["CALL", "EMAIL", "MEETING", "PROPOSAL", "RESEARCH"];
+
+  const rawPriority = (parsedJSON.aiPriority || "MEDIUM").toUpperCase();
+  const rawActionType = (parsedJSON.aiActionType || "CALL").toUpperCase();
+  const parsedScore = parseInt(parsedJSON.aiRiskScore, 10);
 
   return {
-    aiSummary: summary,
-    aiRiskScore: score,
-    aiPriority: priority,
-    aiActionType: actionType,
-    aiNextBestAction: actionText,
-    source: "heuristic-fallback"
+    aiSummary: parsedJSON.aiSummary.trim(),
+    aiRiskScore: Math.min(100, Math.max(0, Number.isFinite(parsedScore) ? parsedScore : 45)),
+    aiPriority: validPriorities.includes(rawPriority) ? rawPriority : "MEDIUM",
+    aiActionType: validActionTypes.includes(rawActionType) ? rawActionType : "CALL",
+    aiNextBestAction:
+      (typeof parsedJSON.aiNextBestAction === "string" && parsedJSON.aiNextBestAction.trim()) ||
+      "Reach out to the primary decision maker to confirm next commercial milestones.",
+    source: modelName,
   };
-}
+};
 
 // ==========================================
 // AI MULTIMODAL INVOICE & RECEIPT OCR PARSER
@@ -665,6 +665,11 @@ export const parseInvoiceOCR = async (fileBuffer, mimeType) => {
     contents: [prompt, inlineData],
     temperature: 0.1,
     timeoutMs: 25000,
+    errorMessages: {
+      transient: "Gemini AI OCR service is temporarily busy or rate-limited. Please try again in a moment.",
+      modelUnavailable: "Configured Gemini AI vision models are unavailable. Please contact an administrator.",
+      failed: "Failed to extract invoice data using Gemini AI. Please ensure the document is clear and legible.",
+    },
   });
 
   if (!data || typeof data !== "object") {

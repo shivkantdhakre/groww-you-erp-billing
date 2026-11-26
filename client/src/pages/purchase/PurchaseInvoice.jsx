@@ -1,12 +1,32 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import CommonModal from "../../components/common/CommonModal";
+import CommonPageHeader from "../../components/common/CommonPageHeader";
+import TableWrapper from "../../components/common/TableWrapper";
+import ValidationMessage from "../../components/common/ValidationMessage";
 import Autocomplete from "../../components/common/Autocomplete";
 import InvoiceOcrUpload from "../../components/purchase/InvoiceOcrUpload";
 import { useStore } from "../../store/useStore";
 import api from "../../utils/api";
+import {
+  Plus,
+  Trash2,
+  Printer,
+  Save,
+  CheckCircle2,
+  AlertTriangle,
+  Eye,
+  ExternalLink,
+  Sparkles,
+  X,
+} from "lucide-react";
 
-// Sub-component for Purchase Items Table (Virtualized)
+const ITEM_GRID_COLS =
+  "grid grid-cols-[minmax(170px,1.6fr)_56px_74px_86px_54px_96px_48px] items-center gap-2";
+
+/**
+ * Virtualized purchase line-item table with synchronized CSS grid columns.
+ */
 function InvoiceTable({
   purchaseItems,
   items,
@@ -16,10 +36,10 @@ function InvoiceTable({
   removeRow,
   addRow,
   itemSearchRefs,
-  quantityRefs
+  quantityRefs,
 }) {
   const user = useStore((state) => state.user);
-  const ROW_HEIGHT = 60;
+  const ROW_HEIGHT = 56;
   const MAX_VISIBLE_ROWS = 8;
   const parentRef = useRef(null);
   const shouldVirtualize = purchaseItems.length > MAX_VISIBLE_ROWS;
@@ -32,169 +52,195 @@ function InvoiceTable({
     overscan: 3,
   });
 
+  const virtualRows = shouldVirtualize
+    ? virtualizer.getVirtualItems()
+    : purchaseItems.map((_, index) => ({
+        index,
+        start: index * ROW_HEIGHT,
+        size: ROW_HEIGHT,
+      }));
+
   return (
-    <div className="bg-card p-6 rounded-2xl border border-border shadow-sm overflow-x-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold text-foreground">Purchase Items</h2>
+    <div className="bg-card rounded-lg border border-border surface-shadow overflow-hidden">
+      <div className="px-4 sm:px-5 py-3.5 border-b border-border flex flex-wrap justify-between items-center gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">Purchase Line Items</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Verify OCR-extracted line items or search catalog by item / SKU
+          </p>
+        </div>
         <button
+          type="button"
           onClick={addRow}
-          className="bg-primary hover:bg-primary/95 text-primary-foreground px-4 py-2 rounded-xl transition duration-200 font-semibold shadow-md shadow-primary/15 flex items-center gap-1.5 cursor-pointer text-sm"
+          className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-medium transition-colors cursor-pointer"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
-          </svg>
-          Add Item
+          <Plus className="w-3.5 h-3.5" aria-hidden="true" />
+          <span>Add Row</span>
+          <kbd className="hidden sm:inline ml-1 px-1 py-0.5 text-[10px] rounded bg-primary-foreground/15 font-mono">
+            Alt+N
+          </kbd>
         </button>
       </div>
 
-      {/* Sticky header table */}
-      <table className="w-full min-w-[700px] text-sm">
-        <thead className="bg-secondary/40 text-muted-foreground border-b border-border">
-          <tr>
-            <th className="p-3 text-left font-semibold">Item</th>
-            <th className="p-3 text-right font-semibold w-32">Current Stock</th>
-            <th className="p-3 text-right font-semibold w-28">Qty</th>
-            <th className="p-3 text-right font-semibold w-36">Purchase Rate</th>
-            <th className="p-3 text-right font-semibold w-24">GST %</th>
-            <th className="p-3 text-right font-semibold w-36">Total (incl. GST)</th>
-            <th className="p-3 text-center font-semibold w-24">Action</th>
-          </tr>
-        </thead>
-      </table>
+      <div className="overflow-x-auto scrollbar-thin">
+        <div className="min-w-[630px]">
+          <div
+            className={`${ITEM_GRID_COLS} px-3.5 py-2.5 bg-secondary/70 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border`}
+          >
+            <div>Item / SKU</div>
+            <div className="text-right">Stock</div>
+            <div className="text-right">Qty</div>
+            <div className="text-right">Cost Rate</div>
+            <div className="text-right">GST %</div>
+            <div className="text-right">Line Total</div>
+            <div className="text-center">Act</div>
+          </div>
 
-      {/* Virtualized scrollable body */}
-      <div
-        ref={parentRef}
-        className="overflow-y-auto"
-        style={{
-          maxHeight: shouldVirtualize ? `${MAX_VISIBLE_ROWS * ROW_HEIGHT}px` : undefined,
-        }}
-      >
-        <table className="w-full min-w-[700px] mb-4 text-sm">
-          <tbody
-            className="divide-y divide-border"
+          <div
+            ref={parentRef}
+            className="overflow-y-auto scrollbar-thin divide-y divide-border/70"
             style={{
-              height: shouldVirtualize ? `${virtualizer.getTotalSize()}px` : undefined,
-              width: "100%",
-              position: "relative",
+              maxHeight: shouldVirtualize ? `${MAX_VISIBLE_ROWS * ROW_HEIGHT}px` : undefined,
             }}
           >
-            {(shouldVirtualize ? virtualizer.getVirtualItems() : purchaseItems.map((item, index) => ({ index, start: index * ROW_HEIGHT, size: ROW_HEIGHT }))).map((virtualRow) => {
-              const item = purchaseItems[virtualRow.index];
-              return (
-                <tr
-                  key={item.id}
-                  className="elevated-table-row transition-colors duration-150"
-                  style={shouldVirtualize ? {
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    height: `${virtualRow.size}px`,
-                    transform: `translateY(${virtualRow.start}px)`,
-                    display: "table-row",
-                  } : undefined}
-                >
-                <td className="p-3 align-top min-w-[200px]">
-                  <Autocomplete
-                    inputRef={(el) => {
-                      if (el) {
-                        itemSearchRefs.current[item.id] = el;
-                      } else {
-                        delete itemSearchRefs.current[item.id];
-                      }
-                    }}
-                    options={items}
-                    labelKey="name"
-                    valueKey="id"
-                    placeholder="Search Item..."
-                    selectedId={item.itemId}
-                    value={item.itemName}
-                    searchFields={["name", "sku"]}
-                    customRender={(opt) => {
-                      const stock = user?.branchId
-                        ? (opt.branchStocks?.find((b) => b.branchId === user.branchId)?.stock ?? 0)
-                        : (opt.branchStocks?.reduce((sum, b) => sum + b.stock, 0) ?? 0);
-                      return (
-                        <div className="flex justify-between w-full text-xs">
-                          <span className="font-semibold text-foreground">{opt.name}</span>
-                          <span className="text-muted-foreground font-mono">
-                            Stock: {stock} | Cost: ₹{opt.purchasePrice}
-                          </span>
-                        </div>
-                      );
-                    }}
-                    onSelect={(opt) => updateItemDetails(item.id, opt)}
-                    onClear={() => clearItemDetails(item.id)}
-                  />
-                </td>
-
-                <td className="p-3 text-right align-middle font-mono font-semibold text-foreground">
-                  {item.itemId ? item.currentStock : "-"}
-                </td>
-
-                <td className="p-3 text-right align-middle">
-                  <input
-                    ref={(el) => {
-                      if (el) {
-                        quantityRefs.current[item.id] = el;
-                      } else {
-                        delete quantityRefs.current[item.id];
-                      }
-                    }}
-                    type="number"
-                    min="1"
-                    value={item.qty}
-                    onChange={(e) => updateItemQty(item.id, e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        const idx = virtualRow.index;
-                        if (idx === purchaseItems.length - 1) {
-                          addRow();
-                        } else {
-                          const nextRow = purchaseItems[idx + 1];
-                          if (nextRow && itemSearchRefs.current[nextRow.id]) {
-                            itemSearchRefs.current[nextRow.id].focus();
+            <div
+              style={{
+                height: shouldVirtualize ? `${virtualizer.getTotalSize()}px` : undefined,
+                position: shouldVirtualize ? "relative" : undefined,
+              }}
+              className="divide-y divide-border/70"
+            >
+              {virtualRows.map((virtualRow) => {
+                const item = purchaseItems[virtualRow.index];
+                return (
+                  <div
+                    key={item.id}
+                    className={`${ITEM_GRID_COLS} px-3.5 py-2 elevated-table-row transition-colors text-sm`}
+                    style={
+                      shouldVirtualize
+                        ? {
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            width: "100%",
+                            height: `${virtualRow.size}px`,
+                            transform: `translateY(${virtualRow.start}px)`,
                           }
-                        }
-                      }
-                    }}
-                    className="border border-border p-2 rounded-lg w-20 text-right bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent font-mono"
-                  />
-                </td>
-
-                <td className="p-3 text-right align-middle font-mono font-semibold text-foreground">
-                  {(item.itemId || item.itemName || item.rate > 0) ? `₹ ${Number(item.rate || 0).toFixed(2)}` : "-"}
-                </td>
-
-                <td className="p-3 text-right align-middle font-mono font-semibold text-muted-foreground">
-                  {(item.itemId || item.itemName || item.gstPercentage > 0) ? `${Number(item.gstPercentage || 0)}%` : "-"}
-                </td>
-
-                <td className="p-3 text-right align-middle font-mono font-bold text-foreground">
-                  {(item.itemId || item.itemName || item.amount > 0) ? `₹ ${Number(item.amount || 0).toFixed(2)}` : "-"}
-                </td>
-
-                <td className="p-3 text-center align-middle">
-                  <button
-                    onClick={() => removeRow(item.id)}
-                    className="bg-destructive/10 text-destructive px-3 py-1.5 rounded-lg hover:bg-destructive hover:text-destructive-foreground transition-all duration-200 text-xs font-semibold cursor-pointer"
+                        : undefined
+                    }
                   >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    <div className="min-w-0">
+                      <Autocomplete
+                        inputRef={(el) => {
+                          if (el) {
+                            itemSearchRefs.current[item.id] = el;
+                          } else {
+                            delete itemSearchRefs.current[item.id];
+                          }
+                        }}
+                        options={items}
+                        labelKey="name"
+                        valueKey="id"
+                        placeholder="Search item or SKU..."
+                        selectedId={item.itemId}
+                        value={item.itemName}
+                        searchFields={["name", "sku"]}
+                        customRender={(opt) => {
+                          const stock = user?.branchId
+                            ? opt.branchStocks?.find((b) => b.branchId === user.branchId)?.stock ?? 0
+                            : opt.branchStocks?.reduce((sum, b) => sum + b.stock, 0) ?? 0;
+                          return (
+                            <div className="flex justify-between w-full gap-2 text-xs">
+                              <span className="font-medium text-foreground truncate">{opt.name}</span>
+                              <span className="text-muted-foreground font-mono tabular-nums shrink-0">
+                                Stock: {stock} · ₹{opt.purchasePrice}
+                              </span>
+                            </div>
+                          );
+                        }}
+                        onSelect={(opt) => updateItemDetails(item.id, opt)}
+                        onClear={() => clearItemDetails(item.id)}
+                      />
+                    </div>
+
+                    <div className="text-right font-mono text-xs font-semibold tabular-nums text-foreground">
+                      {item.itemId ? item.currentStock : "-"}
+                    </div>
+
+                    <div className="flex justify-end">
+                      <input
+                        ref={(el) => {
+                          if (el) {
+                            quantityRefs.current[item.id] = el;
+                          } else {
+                            delete quantityRefs.current[item.id];
+                          }
+                        }}
+                        type="number"
+                        min="1"
+                        value={item.qty}
+                        onChange={(e) => updateItemQty(item.id, e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            const idx = virtualRow.index;
+                            if (idx === purchaseItems.length - 1) {
+                              addRow();
+                            } else {
+                              const nextRow = purchaseItems[idx + 1];
+                              if (nextRow && itemSearchRefs.current[nextRow.id]) {
+                                itemSearchRefs.current[nextRow.id].focus();
+                              }
+                            }
+                          }
+                        }}
+                        className="h-9 px-2 rounded-md w-16 text-right border border-input bg-card text-foreground font-mono text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary"
+                      />
+                    </div>
+
+                    <div className="text-right font-mono text-xs font-medium text-foreground tabular-nums whitespace-nowrap">
+                      {item.itemId || item.itemName || item.rate > 0
+                        ? `₹ ${Number(item.rate || 0).toFixed(2)}`
+                        : "-"}
+                    </div>
+
+                    <div className="text-right font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap">
+                      {item.itemId || item.itemName || item.gstPercentage > 0
+                        ? `${Number(item.gstPercentage || 0)}%`
+                        : "-"}
+                    </div>
+
+                    <div className="text-right font-mono text-xs sm:text-sm font-semibold text-foreground tabular-nums whitespace-nowrap">
+                      {item.itemId || item.itemName || item.amount > 0
+                        ? `₹ ${Number(item.amount || 0).toFixed(2)}`
+                        : "-"}
+                    </div>
+
+                    <div className="flex justify-center">
+                      <button
+                        type="button"
+                        onClick={() => removeRow(item.id)}
+                        title="Remove line item"
+                        aria-label="Remove line item"
+                        className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-// Sub-component for Invoice Summary Panel
+/**
+ * Vendor details and tax total summary panel for Purchase Invoice entry.
+ */
 function InvoiceSummaryCard({
   purchaseDate,
   setPurchaseDate,
@@ -206,57 +252,66 @@ function InvoiceSummaryCard({
   selectedVendor,
   totalItems,
   totalQty,
+  subtotalAmount,
+  gstAmount,
   grandTotal,
   savePurchase,
-  vendorSearchRef
+  vendorSearchRef,
 }) {
   return (
-    <div className="bg-card p-6 rounded-2xl border border-border shadow-sm space-y-6 text-foreground">
-      <h2 className="text-xl font-bold border-b border-border pb-3">Invoice Details</h2>
+    <div className="bg-card p-5 rounded-lg border border-border surface-shadow space-y-5 text-foreground">
+      <div className="border-b border-border pb-3 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-foreground">Supplier Bill Summary</h2>
+        <span className="text-[11px] font-mono text-muted-foreground">ITC Eligible</span>
+      </div>
 
-      {/* Invoice Meta */}
-      <div className="space-y-4">
+      <div className="space-y-3.5">
         <div>
-          <label className="block mb-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-            Invoice Number (Ref)
+          <label className="block mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+            Vendor Invoice Ref
           </label>
           <input
             type="text"
             placeholder="e.g. VEN-9871 (Optional)"
             value={customInvoiceNo}
             onChange={(e) => setCustomInvoiceNo(e.target.value)}
-            className="border border-border p-3 rounded-lg w-full bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent font-mono text-sm"
+            className="h-9 px-3 rounded-md w-full border border-input bg-card text-foreground font-mono text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary"
           />
         </div>
 
         <div>
-          <label className="block mb-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+          <label className="block mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
             Purchase Date
           </label>
           <input
             type="date"
             value={purchaseDate}
             onChange={(e) => setPurchaseDate(e.target.value)}
-            className="border border-border p-3 rounded-lg w-full bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition text-sm"
+            className="h-9 px-3 rounded-md w-full border border-input bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary"
           />
         </div>
 
         <div>
-          <label className="block mb-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-            Vendor Name
-          </label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+              Vendor Name
+            </label>
+            <kbd className="text-[10px] font-mono text-muted-foreground bg-secondary px-1.5 py-0.5 rounded border border-border">
+              Alt+C
+            </kbd>
+          </div>
           <Autocomplete
             inputRef={vendorSearchRef}
             options={vendors}
             labelKey="name"
             valueKey="id"
-            placeholder="Select Vendor..."
+            placeholder="Select vendor..."
             selectedId={vendorId}
             searchFields={["name", "mobile"]}
             customRender={(opt) => (
-              <div className="flex justify-between w-full text-xs">
-                <span className="font-semibold text-foreground">{opt.name}</span>
-                <span className="text-muted-foreground">{opt.mobile}</span>
+              <div className="flex justify-between w-full gap-2 text-xs">
+                <span className="font-medium text-foreground truncate">{opt.name}</span>
+                <span className="text-muted-foreground tabular-nums shrink-0">{opt.mobile}</span>
               </div>
             )}
             onSelect={(opt) => setVendorId(opt.id)}
@@ -265,53 +320,70 @@ function InvoiceSummaryCard({
         </div>
 
         <div>
-          <label className="block mb-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+          <label className="block mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
             Vendor GSTIN
           </label>
           <input
             type="text"
             value={selectedVendor?.gstin || "N/A"}
             readOnly
-            className="border border-border p-3 rounded-lg w-full bg-secondary/30 text-muted-foreground font-mono text-sm cursor-not-allowed"
+            className="h-9 px-3 rounded-md w-full border border-border bg-muted text-muted-foreground font-mono text-xs cursor-not-allowed focus:outline-none"
           />
         </div>
       </div>
 
-      {/* Total Calculations */}
-      <div className="bg-secondary/25 p-4 rounded-xl border border-border space-y-3 shadow-inner">
-        <div className="flex justify-between items-center text-sm">
-          <span className="text-muted-foreground font-medium">Total Items:</span>
-          <span className="font-mono font-bold">{totalItems}</span>
+      {/* Breakdown */}
+      <div className="bg-secondary/40 p-4 rounded-md border border-border space-y-2 text-xs sm:text-sm">
+        <div className="flex justify-between items-center text-muted-foreground">
+          <span>Line Items / Qty</span>
+          <span className="font-mono font-medium text-foreground tabular-nums">
+            {totalItems} / {totalQty}
+          </span>
         </div>
-        <div className="flex justify-between items-center text-sm">
-          <span className="text-muted-foreground font-medium">Total Quantity:</span>
-          <span className="font-mono font-bold">{totalQty}</span>
+        <div className="flex justify-between items-center text-muted-foreground">
+          <span>Taxable Subtotal</span>
+          <span className="font-mono font-medium text-foreground tabular-nums">
+            ₹ {subtotalAmount.toFixed(2)}
+          </span>
         </div>
-        <div className="border-t border-border pt-3 flex justify-between items-center">
-          <span className="font-bold">Grand Total:</span>
-          <span className="font-mono text-xl font-extrabold text-emerald-600 dark:text-emerald-500">
+        <div className="flex justify-between items-center text-muted-foreground">
+          <span>Input GST</span>
+          <span className="font-mono font-medium text-foreground tabular-nums">
+            ₹ {gstAmount.toFixed(2)}
+          </span>
+        </div>
+        <div className="border-t border-border pt-2.5 mt-2.5 flex justify-between items-baseline">
+          <span className="font-semibold text-foreground">Grand Total</span>
+          <span className="font-mono text-xl font-semibold text-success tabular-nums">
             ₹ {grandTotal.toFixed(2)}
           </span>
         </div>
       </div>
 
       <button
+        type="button"
         onClick={savePurchase}
-        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl transition font-bold shadow-lg shadow-emerald-600/10 cursor-pointer active:scale-98"
+        className="w-full h-10 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md transition-colors font-medium text-sm cursor-pointer flex items-center justify-center gap-2"
       >
-        Save Purchase Invoice
+        <Save className="w-4 h-4" />
+        <span>Save Purchase Invoice</span>
+        <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary-foreground/15">
+          F2
+        </kbd>
       </button>
+
+      <p className="text-[11px] text-muted-foreground text-center">
+        Shortcuts: <span className="font-mono">Alt+N</span> row · <span className="font-mono">Ctrl+P</span> print last thermal
+      </p>
     </div>
   );
 }
 
 function PurchaseInvoice() {
-  const [purchaseDate, setPurchaseDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().split("T")[0]);
   const [customInvoiceNo, setCustomInvoiceNo] = useState("");
   const [vendorId, setVendorId] = useState(null);
-  
+
   const [purchaseItems, setPurchaseItems] = useState(() => [
     {
       id: Date.now(),
@@ -321,11 +393,10 @@ function PurchaseInvoice() {
       rate: 0,
       gstPercentage: 0,
       amount: 0,
-      currentStock: 0
+      currentStock: 0,
     },
   ]);
 
-  // Multimodal Vision AI OCR State
   const [ocrResult, setOcrResult] = useState(null);
   const [scannedFileUrl, setScannedFileUrl] = useState(null);
   const [ocrConfidenceScore, setOcrConfidenceScore] = useState(null);
@@ -340,13 +411,11 @@ function PurchaseInvoice() {
   const [messageType, setMessageType] = useState("");
   const [showSaveModal, setShowSaveModal] = useState(false);
 
-  // Focus & Progression Refs
   const vendorSearchRef = useRef(null);
   const itemSearchRefs = useRef({});
   const quantityRefs = useRef({});
   const [focusTarget, setFocusTarget] = useState(null);
 
-  // Zustand Master Data Cache
   const vendors = useStore((state) => state.vendors);
   const items = useStore((state) => state.items);
   const fetchVendors = useStore((state) => state.fetchVendors);
@@ -357,7 +426,7 @@ function PurchaseInvoice() {
     setLoadingPurchases(true);
     try {
       const res = await api.get("/transactions/purchase-invoices");
-      setSavedPurchases(res.data.data);
+      setSavedPurchases(res.data.data || []);
     } catch (err) {
       console.error("Failed to fetch purchase invoices:", err);
     } finally {
@@ -381,7 +450,7 @@ function PurchaseInvoice() {
     try {
       const res = await api.get(`/pdf/invoices/${invoiceId}?layout=${layout}`);
       if (res.data.pdfUrl) {
-        window.open(res.data.pdfUrl, '_blank');
+        window.open(res.data.pdfUrl, "_blank");
       } else {
         setMessage("Failed to retrieve PDF invoice link.");
         setMessageType("error");
@@ -422,12 +491,12 @@ function PurchaseInvoice() {
       setPurchaseItems(extractedItems);
     }
 
-    setMessage("AI OCR extraction successful! Please review auto-populated values before saving.");
+    setMessage("AI OCR extraction successful. Review prefilled fields against the source bill before saving.");
     setMessageType("success");
     setTimeout(() => setMessage(""), 5000);
   };
 
-  const handleClearOcr = () => {
+  const handleClearOcr = useCallback(() => {
     setOcrResult(null);
     setScannedFileUrl(null);
     setOcrConfidenceScore(null);
@@ -438,7 +507,6 @@ function PurchaseInvoice() {
     setLocalFileType(null);
     setS3WarningMsg("");
 
-    // Reset pre-filled form fields back to clean defaults
     setVendorId(null);
     setCustomInvoiceNo("");
     setPurchaseDate(new Date().toISOString().split("T")[0]);
@@ -451,10 +519,10 @@ function PurchaseInvoice() {
         rate: 0,
         gstPercentage: 0,
         amount: 0,
-        currentStock: 0
-      }
+        currentStock: 0,
+      },
     ]);
-  };
+  }, [localFilePreviewUrl]);
 
   const selectedVendor = vendors.find((v) => v.id === vendorId);
 
@@ -490,15 +558,14 @@ function PurchaseInvoice() {
         ocrConfidenceScore: ocrConfidenceScore || undefined,
         items: purchaseItems.map((item) => ({
           itemId: item.itemId,
-          qty: item.qty
-        }))
+          qty: item.qty,
+        })),
       };
 
       await api.post("/transactions/purchase-invoices", payload);
 
       await fetchItems(true);
       await fetchVendors(true);
-
       fetchPurchaseInvoices();
 
       setVendorId(null);
@@ -513,11 +580,11 @@ function PurchaseInvoice() {
           rate: 0,
           gstPercentage: 0,
           amount: 0,
-          currentStock: 0
+          currentStock: 0,
         },
       ]);
 
-      setMessage("Purchase Invoice saved successfully!");
+      setMessage("Purchase Invoice saved successfully.");
       setMessageType("success");
       setShowSaveModal(true);
 
@@ -533,7 +600,18 @@ function PurchaseInvoice() {
       setMessage(errorMsg);
       setMessageType("error");
     }
-  }, [purchaseDate, vendorId, customInvoiceNo, purchaseItems, scannedFileUrl, ocrConfidenceScore, fetchItems, fetchVendors, fetchPurchaseInvoices]);
+  }, [
+    purchaseDate,
+    vendorId,
+    customInvoiceNo,
+    purchaseItems,
+    scannedFileUrl,
+    ocrConfidenceScore,
+    fetchItems,
+    fetchVendors,
+    fetchPurchaseInvoices,
+    handleClearOcr,
+  ]);
 
   const addRow = useCallback(() => {
     const newId = Date.now();
@@ -545,13 +623,12 @@ function PurchaseInvoice() {
       rate: 0,
       gstPercentage: 0,
       amount: 0,
-      currentStock: 0
+      currentStock: 0,
     };
     setPurchaseItems((prev) => [...prev, newRow]);
     setFocusTarget({ id: newId, type: "item" });
   }, []);
 
-  // Fetch Masters and Purchases on Mount
   useEffect(() => {
     fetchVendors();
     fetchItems();
@@ -561,7 +638,6 @@ function PurchaseInvoice() {
     return () => clearTimeout(timer);
   }, [fetchVendors, fetchItems, fetchPurchaseInvoices]);
 
-  // Focus target useEffect
   useEffect(() => {
     if (focusTarget) {
       const { id, type } = focusTarget;
@@ -577,7 +653,6 @@ function PurchaseInvoice() {
     }
   }, [focusTarget]);
 
-  // Global keydown listeners (F2, Ctrl+P, Alt+N, Alt+C)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.altKey && e.key.toLowerCase() === "n") {
@@ -617,8 +692,7 @@ function PurchaseInvoice() {
       setMessageType("warning");
       return;
     }
-    const updatedItems = purchaseItems.filter((item) => item.id !== id);
-    setPurchaseItems(updatedItems);
+    setPurchaseItems(purchaseItems.filter((item) => item.id !== id));
   };
 
   const updateItemDetails = (id, dbItem) => {
@@ -628,10 +702,10 @@ function PurchaseInvoice() {
         const rate = Number(dbItem.purchasePrice) || 0;
         const gstPct = Number(dbItem.gstPercentage) || 0;
         const subtotal = rate * qty;
-        const gstAmount = Math.round((subtotal * gstPct / 100) * 100) / 100;
+        const gstAmount = Math.round(((subtotal * gstPct) / 100) * 100) / 100;
         const stock = user?.branchId
-          ? (dbItem.branchStocks?.find((b) => b.branchId === user.branchId)?.stock ?? 0)
-          : (dbItem.branchStocks?.reduce((sum, b) => sum + b.stock, 0) ?? 0);
+          ? dbItem.branchStocks?.find((b) => b.branchId === user.branchId)?.stock ?? 0
+          : dbItem.branchStocks?.reduce((sum, b) => sum + b.stock, 0) ?? 0;
         return {
           ...item,
           itemId: dbItem.id,
@@ -639,186 +713,181 @@ function PurchaseInvoice() {
           rate,
           gstPercentage: gstPct,
           amount: Math.round((subtotal + gstAmount) * 100) / 100,
-          currentStock: stock
+          currentStock: stock,
         };
       }
       return item;
     });
     setPurchaseItems(updatedItems);
-
     setFocusTarget({ id, type: "qty" });
   };
 
   const clearItemDetails = (id) => {
-    const updatedItems = purchaseItems.map((item) => {
-      if (item.id === id) {
-        return {
-          ...item,
-          itemId: "",
-          itemName: "",
-          rate: 0,
-          gstPercentage: 0,
-          amount: 0,
-          currentStock: 0
-        };
-      }
-      return item;
-    });
-    setPurchaseItems(updatedItems);
+    setPurchaseItems(
+      purchaseItems.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              itemId: "",
+              itemName: "",
+              rate: 0,
+              gstPercentage: 0,
+              amount: 0,
+              currentStock: 0,
+            }
+          : item
+      )
+    );
   };
 
   const updateItemQty = (id, qtyValue) => {
-    const updatedItems = purchaseItems.map((item) => {
-      if (item.id === id) {
-        const qty = parseInt(qtyValue) || 0;
-        const rate = Number(item.rate) || 0;
-        const gstPct = Number(item.gstPercentage) || 0;
-        const subtotal = rate * qty;
-        const gstAmount = Math.round((subtotal * gstPct / 100) * 100) / 100;
-        return {
-          ...item,
-          qty,
-          amount: Math.round((subtotal + gstAmount) * 100) / 100
-        };
-      }
-      return item;
-    });
-    setPurchaseItems(updatedItems);
+    setPurchaseItems(
+      purchaseItems.map((item) => {
+        if (item.id === id) {
+          const qty = parseInt(qtyValue, 10) || 0;
+          const rate = Number(item.rate) || 0;
+          const gstPct = Number(item.gstPercentage) || 0;
+          const subtotal = rate * qty;
+          const gstAmount = Math.round(((subtotal * gstPct) / 100) * 100) / 100;
+          return {
+            ...item,
+            qty,
+            amount: Math.round((subtotal + gstAmount) * 100) / 100,
+          };
+        }
+        return item;
+      })
+    );
   };
 
-  const grandTotal = Math.round(
-    purchaseItems.reduce((total, item) => total + Number(item.amount), 0) * 100
-  ) / 100;
-
+  const subtotalAmount =
+    Math.round(
+      purchaseItems.reduce(
+        (total, item) => total + (Number(item.rate) || 0) * (Number(item.qty) || 0),
+        0
+      ) * 100
+    ) / 100;
+  const grandTotal =
+    Math.round(purchaseItems.reduce((total, item) => total + Number(item.amount), 0) * 100) / 100;
+  const gstAmount = Math.max(0, Math.round((grandTotal - subtotalAmount) * 100) / 100);
   const totalItems = purchaseItems.length;
-
-  const totalQty = purchaseItems.reduce(
-    (total, item) => total + (Number(item.qty) || 0),
-    0
-  );
-
+  const totalQty = purchaseItems.reduce((total, item) => total + (Number(item.qty) || 0), 0);
 
   const activeDocumentUrl = localFilePreviewUrl || scannedFileUrl;
-  const isPdf = 
-    (localFileType && localFileType.includes("pdf")) || 
-    (activeDocumentUrl && (activeDocumentUrl.toLowerCase().includes(".pdf") || activeDocumentUrl.startsWith("data:application/pdf")));
+  const isPdf =
+    (localFileType && localFileType.includes("pdf")) ||
+    (activeDocumentUrl &&
+      (activeDocumentUrl.toLowerCase().includes(".pdf") ||
+        activeDocumentUrl.startsWith("data:application/pdf")));
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Create Purchase Invoice</h1>
-          <p className="text-sm text-muted-foreground mt-1">Record vendor bills, update inventory stock, and track accounts payable.</p>
-        </div>
-      </div>
+    <div className="space-y-5 text-foreground">
+      <CommonPageHeader
+        title="Purchase Invoice"
+        subtitle="Record supplier bills with AI OCR extraction, branch stock replenishment, and GST input credit tracking"
+      />
 
-      {/* Multimodal AI OCR Scanner Zone */}
+      {/* AI OCR Upload Zone */}
       <InvoiceOcrUpload
         onOcrSuccess={handleOcrSuccess}
         onClearOcr={handleClearOcr}
-        hasOcrData={!!ocrResult}
+        hasOcrData={Boolean(ocrResult)}
         ocrConfidenceScore={ocrConfidenceScore}
       />
 
-      {/* S3 Upload Warning Banner (Partial failure fallback handling) */}
+      {/* S3 Warning */}
       {s3WarningMsg && (
-        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-sm flex items-center justify-between shadow-sm">
+        <div className="px-4 py-3 rounded-lg bg-warning/10 border border-warning/30 text-warning text-xs sm:text-sm flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <svg className="w-5 h-5 shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
+            <AlertTriangle className="w-4 h-4 shrink-0" />
             <span>{s3WarningMsg}</span>
           </div>
-          <button onClick={() => setS3WarningMsg("")} className="text-amber-500 hover:text-amber-600 text-xs font-bold cursor-pointer underline">Dismiss</button>
+          <button
+            type="button"
+            onClick={() => setS3WarningMsg("")}
+            aria-label="Dismiss warning"
+            className="text-warning hover:opacity-80 p-1 cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
-      {/* Human-in-the-Loop AI Verification Alert Banner */}
+      {/* Human-in-the-Loop Banner */}
       {ocrResult && (
-        <div className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-foreground text-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm animate-fade-in">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500 text-white flex items-center justify-center font-bold text-sm shrink-0">
-              AI
+        <div className="px-4 py-3 rounded-lg bg-primary/10 border border-primary/25 text-foreground text-xs sm:text-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-2.5">
+            <div className="w-7 h-7 rounded-md bg-primary text-primary-foreground flex items-center justify-center shrink-0">
+              <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <p className="font-bold text-indigo-500">Human-in-the-Loop Review Mode Active</p>
+              <p className="font-semibold text-primary-text">OCR Verification Active</p>
               <p className="text-xs text-muted-foreground">
-                Gemini Vision extracted vendor, line items, and totals. Please review auto-filled fields against the source document before clicking Save.
+                Verify supplier name, line quantities, and GST rates against the uploaded document before posting.
               </p>
             </div>
           </div>
           {activeDocumentUrl && (
             <button
+              type="button"
               onClick={() => setShowMobilePreviewModal(true)}
-              className="lg:hidden bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition shrink-0 cursor-pointer"
+              className="lg:hidden inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-medium shrink-0 cursor-pointer"
             >
-              👁️ View Source Document
+              <Eye className="w-3.5 h-3.5" />
+              <span>Preview Source Bill</span>
             </button>
           )}
         </div>
       )}
 
-      {message && (
-        <div
-          className={`p-4 rounded-xl mb-4 text-white font-medium shadow-lg transition-all duration-300 animate-fade-in-up ${
-            messageType === "success"
-              ? "bg-emerald-600 shadow-emerald-600/10"
-              : messageType === "warning"
-              ? "bg-amber-500 shadow-amber-500/10"
-              : "bg-rose-600 shadow-rose-600/10"
-          }`}
-        >
-          {message}
-        </div>
-      )}
+      <ValidationMessage
+        type={messageType}
+        message={message}
+        onDismiss={() => setMessage("")}
+        className="mt-0!"
+      />
 
-      {/* Main Grid Layout: Split-Screen View when OCR Document Active */}
+      {/* Entry Workspace: Split-Screen when OCR document active */}
       {activeDocumentUrl ? (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Column: Embedded Source Document Viewer */}
-          <div className="hidden lg:flex lg:col-span-5 sticky top-6 bg-card p-4 rounded-2xl border border-border shadow-sm h-[750px] flex-col">
-            <div className="flex justify-between items-center mb-3 pb-3 border-b border-border shrink-0">
-              <span className="text-sm font-bold text-foreground flex items-center gap-2">
-                <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                Original Document
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          {/* Source Document Viewer */}
+          <div className="hidden lg:flex lg:col-span-5 sticky top-16 bg-card p-4 rounded-lg border border-border surface-shadow h-[720px] flex-col">
+            <div className="flex justify-between items-center mb-3 pb-2.5 border-b border-border shrink-0">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <Eye className="w-4 h-4 text-primary-text" />
+                Source Document
               </span>
               <a
                 href={activeDocumentUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="text-xs text-indigo-500 hover:text-indigo-600 font-semibold flex items-center gap-1 cursor-pointer"
+                className="text-xs text-primary-text hover:underline font-medium inline-flex items-center gap-1 cursor-pointer"
               >
-                Open New Tab
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
+                <span>Open tab</span>
+                <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>
 
-            <div className="flex-1 w-full h-full min-h-0 overflow-hidden rounded-xl border border-border bg-slate-950/5 dark:bg-slate-950/40 relative">
+            <div className="flex-1 w-full h-full min-h-0 overflow-hidden rounded-md border border-border bg-secondary/30 relative">
               {isPdf ? (
                 <iframe
                   src={activeDocumentUrl}
                   title="Source PDF Document"
-                  className="w-full h-full min-h-[660px] rounded-lg border-0"
+                  className="w-full h-full min-h-[640px] border-0"
                 />
               ) : (
-                <div className="w-full h-full overflow-y-auto p-2 flex flex-col items-center justify-start bg-black/5 dark:bg-black/20">
+                <div className="w-full h-full overflow-y-auto p-2 flex flex-col items-center justify-start">
                   <img
                     src={activeDocumentUrl}
                     alt="Source Invoice"
-                    className="w-full h-auto max-w-full object-contain rounded-lg shadow-md"
+                    className="w-full h-auto max-w-full object-contain rounded"
                   />
                 </div>
               )}
             </div>
           </div>
 
-          {/* Right Column: Pre-filled Purchase Invoice Form */}
-          <div className="lg:col-span-7 space-y-6">
+          <div className="lg:col-span-7 space-y-5">
             <InvoiceTable
               purchaseItems={purchaseItems}
               items={items}
@@ -842,6 +911,8 @@ function PurchaseInvoice() {
               selectedVendor={selectedVendor}
               totalItems={totalItems}
               totalQty={totalQty}
+              subtotalAmount={subtotalAmount}
+              gstAmount={gstAmount}
               grandTotal={grandTotal}
               savePurchase={savePurchase}
               vendorSearchRef={vendorSearchRef}
@@ -849,9 +920,8 @@ function PurchaseInvoice() {
           </div>
         </div>
       ) : (
-        /* Standard View when no OCR Document Active */
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 items-start">
+          <div className="xl:col-span-2">
             <InvoiceTable
               purchaseItems={purchaseItems}
               items={items}
@@ -865,7 +935,7 @@ function PurchaseInvoice() {
             />
           </div>
 
-          <div className="lg:col-span-1">
+          <div className="xl:col-span-1">
             <InvoiceSummaryCard
               purchaseDate={purchaseDate}
               setPurchaseDate={setPurchaseDate}
@@ -877,6 +947,8 @@ function PurchaseInvoice() {
               selectedVendor={selectedVendor}
               totalItems={totalItems}
               totalQty={totalQty}
+              subtotalAmount={subtotalAmount}
+              gstAmount={gstAmount}
               grandTotal={grandTotal}
               savePurchase={savePurchase}
               vendorSearchRef={vendorSearchRef}
@@ -885,120 +957,151 @@ function PurchaseInvoice() {
         </div>
       )}
 
-      {/* Mobile Floating Document Peek Modal */}
+      {/* Mobile Document Preview Modal */}
       <CommonModal
         isOpen={showMobilePreviewModal}
         title="Source Document Preview"
+        size="xl"
         onClose={() => setShowMobilePreviewModal(false)}
       >
-        <div className="h-[500px] flex flex-col space-y-4">
-          <div className="flex-1 overflow-hidden rounded-xl border border-border bg-slate-900/5">
+        <div className="h-[460px] flex flex-col space-y-3">
+          <div className="flex-1 overflow-hidden rounded-md border border-border bg-secondary/30">
             {isPdf ? (
               <iframe
                 src={activeDocumentUrl}
                 title="Mobile PDF Preview"
-                className="w-full h-full rounded-lg border-0"
+                className="w-full h-full border-0"
               />
             ) : (
               <div className="w-full h-full overflow-auto flex items-center justify-center p-2">
                 <img
                   src={activeDocumentUrl}
                   alt="Source Invoice"
-                  className="max-w-full max-h-full object-contain rounded-lg"
+                  className="max-w-full max-h-full object-contain rounded"
                 />
               </div>
             )}
           </div>
-          <div className="flex justify-between items-center pt-2">
+          <div className="flex justify-between items-center pt-1">
             <a
               href={activeDocumentUrl}
               target="_blank"
               rel="noreferrer"
-              className="text-xs text-indigo-500 font-semibold underline"
+              className="text-xs text-primary-text font-medium underline inline-flex items-center gap-1"
             >
-              Open in New Tab
+              <span>Open in New Tab</span>
+              <ExternalLink className="w-3 h-3" />
             </a>
             <button
+              type="button"
               onClick={() => setShowMobilePreviewModal(false)}
-              className="bg-secondary text-foreground text-xs font-semibold px-4 py-2 rounded-xl border border-border cursor-pointer"
+              className="h-8 px-3.5 rounded-md bg-secondary text-foreground text-xs font-medium border border-border cursor-pointer"
             >
-              Close Preview
+              Close
             </button>
           </div>
         </div>
       </CommonModal>
 
-      {/* Purchase History Table */}
-      <div className="bg-card p-6 rounded-2xl border border-border shadow-sm">
-        <h2 className="text-xl font-bold mb-6 text-foreground">Purchase History</h2>
+      {/* Saved Purchase History Register */}
+      <div className="bg-card rounded-lg border border-border surface-shadow overflow-hidden">
+        <div className="px-4 sm:px-5 py-3.5 border-b border-border flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-foreground">Purchase History</h2>
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {savedPurchases.length} bills
+          </span>
+        </div>
+
         {loadingPurchases ? (
-          <div className="text-center py-6 text-muted-foreground">Loading purchase history...</div>
+          <div className="text-center py-8 text-xs text-muted-foreground">
+            Loading purchase history...
+          </div>
         ) : savedPurchases.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-secondary/40 text-muted-foreground border-b border-border">
+          <TableWrapper className="!border-none !rounded-none !shadow-none !bg-transparent">
+            <table className="w-full text-sm text-left border-collapse">
+              <thead className="bg-secondary/70 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border">
                 <tr>
-                  <th className="p-3 text-left font-semibold">Purchase No</th>
-                  <th className="p-3 text-left font-semibold">Date</th>
-                  <th className="p-3 text-left font-semibold">Vendor</th>
-                  <th className="p-3 text-right font-semibold">Items count</th>
-                  <th className="p-3 text-right font-semibold">Qty</th>
-                  <th className="p-3 text-right font-semibold">Grand Total</th>
-                  <th className="p-3 text-center font-semibold w-48">Actions</th>
+                  <th className="px-4 py-2.5">Purchase No</th>
+                  <th className="px-4 py-2.5">Date</th>
+                  <th className="px-4 py-2.5">Vendor</th>
+                  <th className="px-4 py-2.5 text-right">Items</th>
+                  <th className="px-4 py-2.5 text-right">Qty</th>
+                  <th className="px-4 py-2.5 text-right">Grand Total</th>
+                  <th className="px-4 py-2.5 text-right">Print</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-border/70">
                 {savedPurchases.map((purchase) => (
-                  <tr key={purchase.id} className="elevated-table-row transition-colors duration-150">
-                    <td className="p-3 text-foreground font-mono font-semibold">
+                  <tr key={purchase.id} className="elevated-table-row transition-colors">
+                    <td className="px-4 py-2.5 text-foreground font-mono text-xs font-semibold">
                       {purchase.invoiceNo}
                     </td>
-                    <td className="p-3 text-muted-foreground">
+                    <td className="px-4 py-2.5 text-xs text-muted-foreground tabular-nums">
                       {new Date(purchase.invoiceDate).toLocaleDateString()}
                     </td>
-                    <td className="p-3 text-foreground font-medium">
+                    <td className="px-4 py-2.5 text-foreground font-medium">
                       {purchase.vendor?.name || "-"}
                     </td>
-                    <td className="p-3 text-right font-mono text-muted-foreground">{purchase.totalItems}</td>
-                    <td className="p-3 text-right font-mono text-muted-foreground">{purchase.totalQty}</td>
-                    <td className="p-3 text-right text-emerald-600 dark:text-emerald-500 font-mono font-bold">
-                      ₹ {purchase.grandTotal.toFixed(2)}
+                    <td className="px-4 py-2.5 text-right font-mono text-xs text-muted-foreground tabular-nums">
+                      {purchase.totalItems}
                     </td>
-                    <td className="p-3 text-center flex justify-center gap-2">
-                      <button
-                        onClick={() => handlePrintInvoice(purchase.id, 'A4')}
-                        className="bg-primary/10 text-primary px-3 py-1.5 rounded-lg hover:bg-primary hover:text-primary-foreground transition-all duration-200 text-xs font-semibold cursor-pointer"
-                      >
-                        Print A4
-                      </button>
-                      <button
-                        onClick={() => handlePrintInvoice(purchase.id, 'Thermal')}
-                        className="bg-accent/10 text-accent px-3 py-1.5 rounded-lg hover:bg-accent hover:text-accent-foreground transition-all duration-200 text-xs font-semibold cursor-pointer"
-                      >
-                        Thermal
-                      </button>
+                    <td className="px-4 py-2.5 text-right font-mono text-xs text-muted-foreground tabular-nums">
+                      {purchase.totalQty}
+                    </td>
+                    <td className="px-4 py-2.5 text-right text-success font-mono font-semibold tabular-nums">
+                      ₹ {Number(purchase.grandTotal || 0).toFixed(2)}
+                    </td>
+                    <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                      <div className="inline-flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handlePrintInvoice(purchase.id, "A4")}
+                          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md border border-border bg-background hover:bg-secondary text-xs font-medium text-primary-text transition-colors cursor-pointer"
+                        >
+                          <Printer className="w-3 h-3" />
+                          <span>A4</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handlePrintInvoice(purchase.id, "Thermal")}
+                          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md border border-border bg-background hover:bg-secondary text-xs font-medium text-accent transition-colors cursor-pointer"
+                        >
+                          <Printer className="w-3 h-3" />
+                          <span>80mm</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableWrapper>
         ) : (
-          <div className="text-center py-6 text-muted-foreground text-sm">No purchases saved yet</div>
+          <div className="text-center py-8 text-xs text-muted-foreground">
+            No purchase invoices recorded yet
+          </div>
         )}
       </div>
 
-      <CommonModal isOpen={showSaveModal} title="Purchase Invoice Saved">
+      <CommonModal
+        isOpen={showSaveModal}
+        onClose={() => setShowSaveModal(false)}
+        title="Purchase Invoice Saved"
+      >
         <div className="space-y-4">
-          <p className="text-muted-foreground text-sm">
-            The Purchase Invoice has been successfully recorded. Stock levels have been incremented.
-          </p>
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 text-success shrink-0 mt-0.5" />
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              The Purchase Invoice has been posted and inventory quantities have been incremented.
+            </p>
+          </div>
           <div className="flex justify-end">
             <button
+              type="button"
               onClick={() => setShowSaveModal(false)}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl font-semibold transition cursor-pointer"
+              className="h-8 px-4 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-medium transition-colors cursor-pointer"
             >
-              OK
+              Done
             </button>
           </div>
         </div>

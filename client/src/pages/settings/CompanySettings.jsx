@@ -1,6 +1,17 @@
 import { useState, useEffect } from "react";
 import { useStore } from "../../store/useStore";
+import CommonPageHeader from "../../components/common/CommonPageHeader";
+import ValidationMessage from "../../components/common/ValidationMessage";
+import { Building, Loader2, Save, Lock } from "lucide-react";
 
+const INPUT_CLASS =
+  "h-9 px-3 rounded-md w-full border border-input bg-card text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors";
+const LABEL_CLASS =
+  "block mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider";
+
+/**
+ * Organization legal entity, GSTIN, invoice numbering prefix, and financial year lock controls.
+ */
 function CompanySettings() {
   const fetchCompany = useStore((state) => state.fetchCompany);
   const updateCompany = useStore((state) => state.updateCompany);
@@ -30,9 +41,7 @@ function CompanySettings() {
           setInvoicePrefix(data.invoicePrefix || "");
           setFinancialYearLocked(data.financialYearLocked || false);
           setCurrentFinancialYearStart(
-            data.currentFinancialYearStart
-              ? data.currentFinancialYearStart.split("T")[0]
-              : ""
+            data.currentFinancialYearStart ? data.currentFinancialYearStart.split("T")[0] : ""
           );
         }
       })
@@ -59,7 +68,9 @@ function CompanySettings() {
       }
       const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
       if (!gstinRegex.test(trimmedGst)) {
-        setMessage("Invalid GST Number Format (e.g. 07ABCDE1234F2Z5). The 14th character must be 'Z'.");
+        setMessage(
+          "Invalid GST Number Format (e.g. 07ABCDE1234F2Z5). The 14th character must be 'Z'."
+        );
         setMessageType("error");
         return;
       }
@@ -80,9 +91,11 @@ function CompanySettings() {
         financialYear,
         invoicePrefix,
         financialYearLocked,
-        currentFinancialYearStart: currentFinancialYearStart ? new Date(currentFinancialYearStart).toISOString() : null,
+        currentFinancialYearStart: currentFinancialYearStart
+          ? new Date(currentFinancialYearStart).toISOString()
+          : null,
       });
-      setMessage("Company Settings Saved Successfully");
+      setMessage("Company settings saved successfully.");
       setMessageType("success");
     } catch (err) {
       console.error("Failed to save company settings:", err);
@@ -90,7 +103,9 @@ function CompanySettings() {
       let errMsg = "Failed to save settings. Please try again.";
       if (serverError) {
         if (serverError.error === "Validation failed" && Array.isArray(serverError.details)) {
-          errMsg = `Validation failed: ${serverError.details.map(d => `${d.field}: ${d.message}`).join(", ")}`;
+          errMsg = `Validation failed: ${serverError.details
+            .map((d) => `${d.field}: ${d.message}`)
+            .join(", ")}`;
         } else {
           errMsg = serverError.message || serverError.error || errMsg;
         }
@@ -102,113 +117,156 @@ function CompanySettings() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8 bg-card border border-border text-foreground rounded-xl shadow-sm">
-        <svg className="animate-spin h-8 w-8 text-primary mr-3" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-        </svg>
-        <span className="text-muted-foreground font-medium">Loading settings...</span>
+      <div className="flex items-center justify-center py-12 gap-2 text-xs text-muted-foreground bg-card border border-border rounded-lg">
+        <Loader2 className="h-4 w-4 animate-spin text-primary-text" />
+        <span>Loading company configuration...</span>
       </div>
     );
   }
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold text-foreground">Company Settings</h1>
-      <p className="text-muted-foreground mb-6">Manage company setup information and locks</p>
+    <div className="max-w-4xl space-y-5 text-foreground">
+      <CommonPageHeader
+        title="Company Settings"
+        subtitle="Configure legal organization profile, GST registration, invoice prefixes, and period locks"
+      />
 
-      {message && (
-        <div
-          className={`p-3 rounded-lg mb-6 text-white font-medium shadow-sm transition ${
-            messageType === "success" ? "bg-emerald-600" : "bg-destructive"
-          }`}
-        >
-          {message}
-        </div>
-      )}
+      <ValidationMessage
+        type={messageType}
+        message={message}
+        onDismiss={() => setMessage("")}
+        className="mt-0!"
+      />
 
-      <div className="bg-card text-foreground p-6 rounded-xl border border-border shadow-sm space-y-6">
-        <div>
-          <h2 className="text-xl font-semibold mb-4 text-foreground">Company Details</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input
-              type="text"
-              placeholder="Company Name"
-              value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
-              className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
-            />
-            <input
-              type="text"
-              placeholder="GST Number"
-              value={gstNumber}
-              onChange={(e) => setGstNumber(e.target.value.toUpperCase())}
-              className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
-            />
-            <input
-              type="text"
-              placeholder="Mobile Number"
-              value={mobile}
-              onChange={(e) => setMobile(e.target.value)}
-              className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
-            />
-            <input
-              type="text"
-              placeholder="Invoice Prefix (e.g. GY-)"
-              value={invoicePrefix}
-              onChange={(e) => setInvoicePrefix(e.target.value)}
-              className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
-            />
+      <div className="bg-card text-foreground rounded-lg border border-border surface-shadow divide-y divide-border">
+        {/* Section 1: Legal Details */}
+        <div className="p-5 sm:p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <Building className="w-4 h-4 text-primary-text" aria-hidden="true" />
+            <h2 className="text-sm font-semibold text-foreground">Organization & GST Details</h2>
           </div>
-          <textarea
-            placeholder="Address"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            className="bg-card text-foreground border border-border p-3 rounded-lg w-full mt-4 focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
-            rows="3"
-          />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={LABEL_CLASS}>Company Name *</label>
+              <input
+                type="text"
+                placeholder="Legal entity name"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                className={INPUT_CLASS}
+              />
+            </div>
+
+            <div>
+              <label className={LABEL_CLASS}>GSTIN Number</label>
+              <input
+                type="text"
+                placeholder="15-character GSTIN"
+                value={gstNumber}
+                onChange={(e) => setGstNumber(e.target.value.toUpperCase())}
+                className={`${INPUT_CLASS} font-mono uppercase`}
+              />
+            </div>
+
+            <div>
+              <label className={LABEL_CLASS}>Registered Mobile</label>
+              <input
+                type="text"
+                placeholder="10-digit contact number"
+                value={mobile}
+                onChange={(e) => setMobile(e.target.value)}
+                className={`${INPUT_CLASS} font-mono tabular-nums`}
+              />
+            </div>
+
+            <div>
+              <label className={LABEL_CLASS}>Invoice Series Prefix</label>
+              <input
+                type="text"
+                placeholder="e.g. GY-"
+                value={invoicePrefix}
+                onChange={(e) => setInvoicePrefix(e.target.value)}
+                className={`${INPUT_CLASS} font-mono`}
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className={LABEL_CLASS}>Registered Address</label>
+              <textarea
+                placeholder="Registered office street, city, state and pincode"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                className="p-3 rounded-md w-full border border-input bg-card text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors"
+                rows="3"
+              />
+            </div>
+          </div>
         </div>
 
-        <div>
-          <h2 className="text-xl font-semibold mb-4 text-foreground">Financial Year Settings</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input
-              type="text"
-              placeholder="Financial Year (e.g. 2026-27)"
-              value={financialYear}
-              onChange={(e) => setFinancialYear(e.target.value)}
-              className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
-            />
-            <div className="flex flex-col">
-              <label className="text-xs text-muted-foreground mb-1 ml-1 font-semibold">FY Start Date</label>
+        {/* Section 2: Financial Year */}
+        <div className="p-5 sm:p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <Lock className="w-4 h-4 text-primary-text" aria-hidden="true" />
+            <h2 className="text-sm font-semibold text-foreground">Financial Year & Lock Control</h2>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={LABEL_CLASS}>Financial Year Label</label>
+              <input
+                type="text"
+                placeholder="e.g. 2026-27"
+                value={financialYear}
+                onChange={(e) => setFinancialYear(e.target.value)}
+                className={`${INPUT_CLASS} font-mono`}
+              />
+            </div>
+
+            <div>
+              <label className={LABEL_CLASS}>FY Start Date</label>
               <input
                 type="date"
                 value={currentFinancialYearStart}
                 onChange={(e) => setCurrentFinancialYearStart(e.target.value)}
-                className="bg-card text-foreground border border-border p-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-none transition"
+                className={INPUT_CLASS}
               />
             </div>
           </div>
-          <div className="flex items-center gap-2 mt-4 ml-1">
+
+          <label
+            htmlFor="fyLocked"
+            className="flex items-start gap-2.5 p-3 rounded-md bg-secondary/40 border border-border cursor-pointer select-none"
+          >
             <input
               type="checkbox"
               id="fyLocked"
               checked={financialYearLocked}
               onChange={(e) => setFinancialYearLocked(e.target.checked)}
-              className="h-5 w-5 rounded border-border text-primary focus:ring-primary focus:ring-offset-background cursor-pointer"
+              className="h-4 w-4 mt-0.5 rounded border-border text-primary focus:ring-ring cursor-pointer"
             />
-            <label htmlFor="fyLocked" className="font-semibold text-muted-foreground select-none cursor-pointer">
-              Lock Financial Year (Prevent postings before FY Start Date)
-            </label>
-          </div>
+            <div>
+              <span className="text-xs sm:text-sm font-medium text-foreground block">
+                Lock Financial Year Period
+              </span>
+              <span className="text-xs text-muted-foreground">
+                Prevent invoices and vouchers from being posted prior to the FY Start Date.
+              </span>
+            </div>
+          </label>
         </div>
 
-        <button
-          onClick={saveSettings}
-          className="bg-primary text-primary-foreground px-6 py-3 rounded-lg hover:bg-primary/95 font-semibold cursor-pointer transition shadow-sm"
-        >
-          Save Settings
-        </button>
+        {/* Footer */}
+        <div className="px-5 sm:px-6 py-4 bg-secondary/25 flex justify-end">
+          <button
+            type="button"
+            onClick={saveSettings}
+            className="inline-flex items-center gap-2 h-9 px-4 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 text-xs sm:text-sm font-medium cursor-pointer transition-colors"
+          >
+            <Save className="w-4 h-4" />
+            <span>Save Company Settings</span>
+          </button>
+        </div>
       </div>
     </div>
   );

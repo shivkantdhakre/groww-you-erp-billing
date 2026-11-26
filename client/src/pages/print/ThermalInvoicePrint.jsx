@@ -111,7 +111,7 @@ function ThermalInvoicePrint() {
           }
         }
         body {
-          background: #f7f7f7;
+          background: #EAE6DF;
         }
       `}</style>
 

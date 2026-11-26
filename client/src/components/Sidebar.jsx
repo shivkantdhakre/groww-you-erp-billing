@@ -1,397 +1,329 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useStore } from "../store/useStore";
 import BrandLogo from "./common/BrandLogo";
 import {
-    LayoutDashboard,
-    Database,
-    TrendingUp,
-    ShoppingCart,
-    Receipt,
-    BookOpen,
-    BarChart3,
-    Settings,
-    LogOut,
-    ChevronDown,
-    Users,
-    Truck,
-    Package,
-    FileText,
-    Undo2,
-    FileInput,
-    CreditCard,
-    Wallet,
-    PenLine,
-    ArrowLeftRight,
-    BookMarked,
-    Banknote,
-    Building2,
-    CalendarDays,
-    PieChart,
-    PackageSearch,
-    AlertCircle,
-    Shield,
-    Building,
-    UserCog,
-    HardDrive,
-    ShieldCheck,
-    Sparkles,
-    X
+  LayoutDashboard,
+  Database,
+  TrendingUp,
+  ShoppingCart,
+  Receipt,
+  BookOpen,
+  BarChart3,
+  Settings,
+  LogOut,
+  ChevronDown,
+  Users,
+  Truck,
+  Package,
+  FileText,
+  Undo2,
+  FileInput,
+  CreditCard,
+  Wallet,
+  PenLine,
+  ArrowLeftRight,
+  BookMarked,
+  Banknote,
+  Building2,
+  CalendarDays,
+  PieChart,
+  PackageSearch,
+  AlertCircle,
+  Shield,
+  Building,
+  UserCog,
+  HardDrive,
+  ShieldCheck,
+  Sparkles,
+  X,
 } from "lucide-react";
 
-// Lightweight helper to render navigation icons with layout/accessibility defaults
-function NavIcon({ icon: Icon, isSubLink = false, ...props }) {
-    if (!Icon) return null;
-    return (
-        <Icon
-            className={`${isSubLink ? "w-4 h-4" : "w-5 h-5"} shrink-0`}
-            strokeWidth={isSubLink ? 1.5 : 2}
-            aria-hidden="true"
-            {...props}
-        />
-    );
+function NavIcon({ icon: Icon, isSubLink = false, className = "", ...props }) {
+  if (!Icon) return null;
+  return (
+    <Icon
+      className={`${isSubLink ? "w-3.5 h-3.5" : "w-4 h-4"} shrink-0 ${className}`}
+      strokeWidth={isSubLink ? 1.6 : 1.75}
+      aria-hidden="true"
+      {...props}
+    />
+  );
 }
 
+function getActiveSection(pathname) {
+  if (["/customers", "/vendors", "/inventory", "/leads"].includes(pathname)) {
+    return "masters";
+  }
+  if (
+    ["/sales-invoice", "/sales-return"].includes(pathname) ||
+    pathname.startsWith("/print/sales-invoice") ||
+    pathname.startsWith("/print/thermal-invoice")
+  ) {
+    return "sales";
+  }
+  if (
+    ["/purchase-invoice", "/purchase-return"].includes(pathname) ||
+    pathname.startsWith("/print/purchase-invoice")
+  ) {
+    return "purchase";
+  }
+  if (
+    ["/payment-voucher", "/receipt-voucher", "/journal-voucher", "/contra-voucher"].includes(pathname) ||
+    pathname.startsWith("/print/payment-voucher") ||
+    pathname.startsWith("/print/receipt-voucher")
+  ) {
+    return "accounts";
+  }
+  if (
+    ["/customer-ledger", "/vendor-ledger", "/cash-book", "/bank-book", "/day-book"].includes(pathname)
+  ) {
+    return "books";
+  }
+  if (
+    [
+      "/reports-dashboard",
+      "/sales-report",
+      "/purchase-report",
+      "/stock-report",
+      "/profit-report",
+      "/outstanding-report",
+      "/compliance-dashboard",
+    ].includes(pathname)
+  ) {
+    return "reports";
+  }
+  if (
+    [
+      "/company-settings",
+      "/user-management",
+      "/role-management",
+      "/backup-restore",
+      "/pricing",
+      "/profile-settings",
+      "/checkout-test",
+    ].includes(pathname)
+  ) {
+    return "settings";
+  }
+  return null;
+}
+
+const NAV_SECTIONS = [
+  {
+    key: "masters",
+    label: "Masters & CRM",
+    icon: Database,
+    items: [
+      { to: "/customers", label: "Customer Master", icon: Users },
+      { to: "/leads", label: "CRM & AI Leads", icon: Sparkles },
+      { to: "/vendors", label: "Vendor Master", icon: Truck },
+      { to: "/inventory", label: "Item Master", icon: Package },
+    ],
+  },
+  {
+    key: "sales",
+    label: "Sales",
+    icon: TrendingUp,
+    items: [
+      { to: "/sales-invoice", label: "Sales Invoice", icon: FileText },
+      { to: "/sales-return", label: "Sales Return", icon: Undo2 },
+    ],
+  },
+  {
+    key: "purchase",
+    label: "Purchase",
+    icon: ShoppingCart,
+    items: [
+      { to: "/purchase-invoice", label: "Purchase Invoice", icon: FileInput },
+      { to: "/purchase-return", label: "Purchase Return", icon: Undo2 },
+    ],
+  },
+  {
+    key: "accounts",
+    label: "Accounts",
+    icon: Receipt,
+    items: [
+      { to: "/payment-voucher", label: "Payment Voucher", icon: CreditCard },
+      { to: "/receipt-voucher", label: "Receipt Voucher", icon: Wallet },
+      { to: "/journal-voucher", label: "Journal Voucher", icon: PenLine },
+      { to: "/contra-voucher", label: "Contra Voucher", icon: ArrowLeftRight },
+    ],
+  },
+  {
+    key: "books",
+    label: "Books & Ledgers",
+    icon: BookOpen,
+    items: [
+      { to: "/customer-ledger", label: "Customer Ledger", icon: BookMarked },
+      { to: "/vendor-ledger", label: "Vendor Ledger", icon: BookMarked },
+      { to: "/cash-book", label: "Cash Book", icon: Banknote },
+      { to: "/bank-book", label: "Bank Book", icon: Building2 },
+      { to: "/day-book", label: "Day Book", icon: CalendarDays },
+    ],
+  },
+  {
+    key: "reports",
+    label: "Reports & GST",
+    icon: BarChart3,
+    items: [
+      { to: "/reports-dashboard", label: "Reports Overview", icon: PieChart },
+      { to: "/sales-report", label: "Sales Report", icon: TrendingUp },
+      { to: "/purchase-report", label: "Purchase Report", icon: ShoppingCart },
+      { to: "/stock-report", label: "Stock Report", icon: PackageSearch },
+      { to: "/profit-report", label: "Profit & Loss", icon: BarChart3 },
+      { to: "/outstanding-report", label: "Outstanding Report", icon: AlertCircle },
+      { to: "/compliance-dashboard", label: "GST Compliance", icon: Shield },
+    ],
+  },
+  {
+    key: "settings",
+    label: "Settings",
+    icon: Settings,
+    items: [
+      { to: "/company-settings", label: "Company Settings", icon: Building },
+      { to: "/user-management", label: "User Management", icon: UserCog },
+      { to: "/role-management", label: "Role Management", icon: ShieldCheck },
+      { to: "/backup-restore", label: "Backup & Restore", icon: HardDrive },
+      { to: "/pricing", label: "Pricing Plans", icon: CreditCard },
+      { to: "/checkout-test", label: "Checkout Test", icon: CreditCard },
+    ],
+  },
+];
+
+/**
+ * Primary ERP navigation rail with route-synced collapsible modules
+ * and understated footer logout action.
+ */
 function Sidebar() {
-    const logout = useStore((state) => state.logout);
-    const sidebarOpen = useStore((state) => state.sidebarOpen);
-    const setSidebarOpen = useStore((state) => state.setSidebarOpen);
-    const location = useLocation();
-    const pathname = location.pathname;
+  const logout = useStore((state) => state.logout);
+  const sidebarOpen = useStore((state) => state.sidebarOpen);
+  const setSidebarOpen = useStore((state) => state.setSidebarOpen);
+  const location = useLocation();
+  const pathname = location.pathname;
 
-    // Collapsible states
-    const [masters, setMasters] = useState(false);
-    const [sales, setSales] = useState(false);
-    const [purchase, setPurchase] = useState(false);
-    const [accounts, setAccounts] = useState(false);
-    const [books, setBooks] = useState(false);
-    const [reports, setReports] = useState(false);
-    const [settings, setSettings] = useState(false);
+  const activeSection = useMemo(() => getActiveSection(pathname), [pathname]);
+  const [groupOverrides, setGroupOverrides] = useState({});
 
-    // Auto-open active categories on route change
-    useEffect(() => {
-        setSidebarOpen(false);
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname, setSidebarOpen]);
 
-        /* eslint-disable react-hooks/set-state-in-effect */
-        if (
-            ["/customers", "/vendors", "/inventory"].includes(pathname)
-        ) {
-            setMasters(true);
-        }
-        if (
-            ["/sales-invoice", "/sales-return"].includes(pathname) ||
-            pathname.startsWith("/print/sales-invoice") ||
-            pathname.startsWith("/print/thermal-invoice")
-        ) {
-            setSales(true);
-        }
-        if (
-            ["/purchase-invoice", "/purchase-return"].includes(pathname) ||
-            pathname.startsWith("/print/purchase-invoice")
-        ) {
-            setPurchase(true);
-        }
-        if (
-            ["/payment-voucher", "/receipt-voucher", "/journal-voucher", "/contra-voucher"].includes(pathname) ||
-            pathname.startsWith("/print/payment-voucher") ||
-            pathname.startsWith("/print/receipt-voucher")
-        ) {
-            setAccounts(true);
-        }
-        if (
-            ["/customer-ledger", "/vendor-ledger", "/cash-book", "/bank-book", "/day-book"].includes(pathname)
-        ) {
-            setBooks(true);
-        }
-        if (
-            ["/reports-dashboard", "/sales-report", "/purchase-report", "/stock-report", "/outstanding-report", "/compliance-dashboard"].includes(pathname)
-        ) {
-            setReports(true);
-        }
-        if (
-            ["/company-settings", "/user-management", "/role-management", "/backup-restore", "/pricing", "/profile-settings", "/checkout-test"].includes(pathname)
-        ) {
-            setSettings(true);
-        }
-        /* eslint-enable react-hooks/set-state-in-effect */
-    }, [pathname, setSidebarOpen]);
+  const isSectionOpen = (key) => groupOverrides[key] ?? activeSection === key;
+  const toggleSection = (key) => {
+    setGroupOverrides((prev) => ({
+      ...prev,
+      [key]: !(prev[key] ?? activeSection === key),
+    }));
+  };
 
-    // Helpers to style links
-    const isLinkActive = (path) => pathname === path;
-    const linkClass = (path) => {
-        const isActive = isLinkActive(path);
-        return `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
-            isActive
-                ? "bg-primary text-primary-foreground shadow-md shadow-primary/20 scale-[1.02]"
-                : "text-muted-foreground hover:bg-secondary hover:text-foreground hover:translate-x-1"
-        }`;
-    };
+  const linkClass = (path) => {
+    const isActive = pathname === path;
+    return `relative flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] transition-colors duration-150 cursor-pointer ${
+      isActive
+        ? "bg-primary/10 text-primary-text font-semibold before:content-[''] before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-0.5 before:rounded-full before:bg-primary"
+        : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground font-medium"
+    }`;
+  };
 
-    const headerClass = () =>
-        `w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold transition-all duration-200 cursor-pointer hover:bg-secondary text-foreground`;
+  return (
+    <>
+      <div
+        className={`fixed inset-0 bg-black/50 backdrop-blur-[1px] z-40 lg:hidden transition-opacity duration-200 ${
+          sidebarOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) setSidebarOpen(false);
+        }}
+      />
 
-    return (
-        <>
-            {/* Backdrop overlay for mobile drawer layout */}
-            <div
-                className={`fixed inset-0 bg-black/60 z-40 lg:hidden transition-opacity duration-300 ${
-                    sidebarOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-                }`}
-                onClick={(e) => {
-                    if (e.target === e.currentTarget) setSidebarOpen(false);
-                }}
-            />
-
-            <div
-                className={`fixed inset-y-0 left-0 w-64 bg-card z-50 transform transition-transform duration-300 ease-in-out shadow-xl overflow-y-auto scrollbar-thin p-5 flex flex-col justify-between border-r border-border text-foreground no-print lg:sticky lg:top-0 lg:self-start lg:h-screen lg:inset-auto lg:z-auto lg:translate-x-0 lg:shadow-none lg:bg-transparent lg:glass-panel-blur ${
-                    sidebarOpen ? "translate-x-0" : "-translate-x-full"
-                }`}
-            >
-                <div className="flex flex-col flex-1 min-h-0">
-                    {/* Brand Logo and Mobile Close Button */}
-                    <div className="flex items-center justify-between mb-8 px-1 shrink-0">
-                        <BrandLogo size={48} showText={true} />
-                        <button
-                            onClick={() => setSidebarOpen(false)}
-                            className="lg:hidden p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer focus:outline-none transition-colors"
-                            aria-label="Close menu"
-                        >
-                            <X className="w-5 h-5 shrink-0" strokeWidth={1.5} />
-                        </button>
-                    </div>
-
-                {/* Navigation Items */}
-                <div className="space-y-1.5 overflow-y-auto flex-1 min-h-0 pr-1 scrollbar-thin">
-                    
-                    {/* Dashboard */}
-                    <Link to="/" className={linkClass("/")}>
-                        <NavIcon icon={LayoutDashboard} />
-                        <span>Dashboard</span>
-                    </Link>
-
-                    {/* Masters Section */}
-                    <div>
-                        <button onClick={() => setMasters(!masters)} className={headerClass()}>
-                            <div className="flex items-center gap-3">
-                                <NavIcon icon={Database} className="text-muted-foreground" />
-                                <span>Masters</span>
-                            </div>
-                            <NavIcon icon={ChevronDown} className={`w-4 h-4 transition-transform duration-200 ${masters ? "rotate-180" : ""}`} />
-                        </button>
-                        <div className={`ml-4 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${masters ? "max-h-80 opacity-100" : "max-h-0 opacity-0"}`}>
-                            <Link to="/customers" className={linkClass("/customers")}>
-                                <NavIcon icon={Users} isSubLink />
-                                <span>Customer Master</span>
-                            </Link>
-                            <Link to="/leads" className={linkClass("/leads")}>
-                                <NavIcon icon={Sparkles} isSubLink />
-                                <span>CRM & AI Leads</span>
-                            </Link>
-                            <Link to="/vendors" className={linkClass("/vendors")}>
-                                <NavIcon icon={Truck} isSubLink />
-                                <span>Vendor Master</span>
-                            </Link>
-                            <Link to="/inventory" className={linkClass("/inventory")}>
-                                <NavIcon icon={Package} isSubLink />
-                                <span>Item Master</span>
-                            </Link>
-                        </div>
-                    </div>
-
-                    {/* Sales Section */}
-                    <div>
-                        <button onClick={() => setSales(!sales)} className={headerClass()}>
-                            <div className="flex items-center gap-3">
-                                <NavIcon icon={TrendingUp} className="text-muted-foreground" />
-                                <span>Sales</span>
-                            </div>
-                            <NavIcon icon={ChevronDown} className={`w-4 h-4 transition-transform duration-200 ${sales ? "rotate-180" : ""}`} />
-                        </button>
-                        <div className={`ml-4 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${sales ? "max-h-48 opacity-100" : "max-h-0 opacity-0"}`}>
-                            <Link to="/sales-invoice" className={linkClass("/sales-invoice")}>
-                                <NavIcon icon={FileText} isSubLink />
-                                <span>Sales Invoice</span>
-                            </Link>
-                            <Link to="/sales-return" className={linkClass("/sales-return")}>
-                                <NavIcon icon={Undo2} isSubLink />
-                                <span>Sales Return</span>
-                            </Link>
-                        </div>
-                    </div>
-
-                    {/* Purchase Section */}
-                    <div>
-                        <button onClick={() => setPurchase(!purchase)} className={headerClass()}>
-                            <div className="flex items-center gap-3">
-                                <NavIcon icon={ShoppingCart} className="text-muted-foreground" />
-                                <span>Purchase</span>
-                            </div>
-                            <NavIcon icon={ChevronDown} className={`w-4 h-4 transition-transform duration-200 ${purchase ? "rotate-180" : ""}`} />
-                        </button>
-                        <div className={`ml-4 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${purchase ? "max-h-48 opacity-100" : "max-h-0 opacity-0"}`}>
-                            <Link to="/purchase-invoice" className={linkClass("/purchase-invoice")}>
-                                <NavIcon icon={FileInput} isSubLink />
-                                <span>Purchase Invoice</span>
-                            </Link>
-                            <Link to="/purchase-return" className={linkClass("/purchase-return")}>
-                                <NavIcon icon={Undo2} isSubLink />
-                                <span>Purchase Return</span>
-                            </Link>
-                        </div>
-                    </div>
-
-                    {/* Accounts Section */}
-                    <div>
-                        <button onClick={() => setAccounts(!accounts)} className={headerClass()}>
-                            <div className="flex items-center gap-3">
-                                <NavIcon icon={Receipt} className="text-muted-foreground" />
-                                <span>Accounts</span>
-                            </div>
-                            <NavIcon icon={ChevronDown} className={`w-4 h-4 transition-transform duration-200 ${accounts ? "rotate-180" : ""}`} />
-                        </button>
-                        <div className={`ml-4 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${accounts ? "max-h-80 opacity-100" : "max-h-0 opacity-0"}`}>
-                            <Link to="/payment-voucher" className={linkClass("/payment-voucher")}>
-                                <NavIcon icon={CreditCard} isSubLink />
-                                <span>Payment Voucher</span>
-                            </Link>
-                            <Link to="/receipt-voucher" className={linkClass("/receipt-voucher")}>
-                                <NavIcon icon={Wallet} isSubLink />
-                                <span>Receipt Voucher</span>
-                            </Link>
-                            <Link to="/journal-voucher" className={linkClass("/journal-voucher")}>
-                                <NavIcon icon={PenLine} isSubLink />
-                                <span>Journal Voucher</span>
-                            </Link>
-                            <Link to="/contra-voucher" className={linkClass("/contra-voucher")}>
-                                <NavIcon icon={ArrowLeftRight} isSubLink />
-                                <span>Contra Voucher</span>
-                            </Link>
-                        </div>
-                    </div>
-
-                    {/* Books Section */}
-                    <div>
-                        <button onClick={() => setBooks(!books)} className={headerClass()}>
-                            <div className="flex items-center gap-3">
-                                <NavIcon icon={BookOpen} className="text-muted-foreground" />
-                                <span>Books</span>
-                            </div>
-                            <NavIcon icon={ChevronDown} className={`w-4 h-4 transition-transform duration-200 ${books ? "rotate-180" : ""}`} />
-                        </button>
-                        <div className={`ml-4 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${books ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>
-                            <Link to="/customer-ledger" className={linkClass("/customer-ledger")}>
-                                <NavIcon icon={BookMarked} isSubLink />
-                                <span>Customer Ledger</span>
-                            </Link>
-                            <Link to="/vendor-ledger" className={linkClass("/vendor-ledger")}>
-                                <NavIcon icon={BookMarked} isSubLink />
-                                <span>Vendor Ledger</span>
-                            </Link>
-                            <Link to="/cash-book" className={linkClass("/cash-book")}>
-                                <NavIcon icon={Banknote} isSubLink />
-                                <span>Cash Book</span>
-                            </Link>
-                            <Link to="/bank-book" className={linkClass("/bank-book")}>
-                                <NavIcon icon={Building2} isSubLink />
-                                <span>Bank Book</span>
-                            </Link>
-                            <Link to="/day-book" className={linkClass("/day-book")}>
-                                <NavIcon icon={CalendarDays} isSubLink />
-                                <span>Day Book</span>
-                            </Link>
-                        </div>
-                    </div>
-
-                    {/* Reports Section */}
-                    <div>
-                        <button onClick={() => setReports(!reports)} className={headerClass()}>
-                            <div className="flex items-center gap-3">
-                                <NavIcon icon={BarChart3} className="text-muted-foreground" />
-                                <span>Reports</span>
-                            </div>
-                            <NavIcon icon={ChevronDown} className={`w-4 h-4 transition-transform duration-200 ${reports ? "rotate-180" : ""}`} />
-                        </button>
-                        <div className={`ml-4 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${reports ? "max-h-[400px] opacity-100" : "max-h-0 opacity-0"}`}>
-                            <Link to="/reports-dashboard" className={linkClass("/reports-dashboard")}>
-                                <NavIcon icon={PieChart} isSubLink />
-                                <span>Reports Dashboard</span>
-                            </Link>
-                            <Link to="/sales-report" className={linkClass("/sales-report")}>
-                                <NavIcon icon={TrendingUp} isSubLink />
-                                <span>Sales Report</span>
-                            </Link>
-                            <Link to="/purchase-report" className={linkClass("/purchase-report")}>
-                                <NavIcon icon={ShoppingCart} isSubLink />
-                                <span>Purchase Report</span>
-                            </Link>
-                            <Link to="/stock-report" className={linkClass("/stock-report")}>
-                                <NavIcon icon={PackageSearch} isSubLink />
-                                <span>Stock Report</span>
-                            </Link>
-                            <Link to="/outstanding-report" className={linkClass("/outstanding-report")}>
-                                <NavIcon icon={AlertCircle} isSubLink />
-                                <span>Outstanding Report</span>
-                            </Link>
-                            <Link to="/compliance-dashboard" className={linkClass("/compliance-dashboard")}>
-                                <NavIcon icon={Shield} isSubLink />
-                                <span>Compliance Dashboard</span>
-                            </Link>
-                        </div>
-                    </div>
-
-                    {/* Settings Section */}
-                    <div>
-                        <button onClick={() => setSettings(!settings)} className={headerClass()}>
-                            <div className="flex items-center gap-3">
-                                <NavIcon icon={Settings} className="text-muted-foreground" />
-                                <span>Settings</span>
-                            </div>
-                            <NavIcon icon={ChevronDown} className={`w-4 h-4 transition-transform duration-200 ${settings ? "rotate-180" : ""}`} />
-                        </button>
-                        <div className={`ml-4 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${settings ? "max-h-80 opacity-100" : "max-h-0 opacity-0"}`}>
-                            <Link to="/company-settings" className={linkClass("/company-settings")}>
-                                <NavIcon icon={Building} isSubLink />
-                                <span>Company Settings</span>
-                            </Link>
-                            <Link to="/user-management" className={linkClass("/user-management")}>
-                                <NavIcon icon={UserCog} isSubLink />
-                                <span>User Management</span>
-                            </Link>
-                            <Link to="/backup-restore" className={linkClass("/backup-restore")}>
-                                <NavIcon icon={HardDrive} isSubLink />
-                                <span>Backup & Restore</span>
-                            </Link>
-                            <Link to="/role-management" className={linkClass("/role-management")}>
-                                <NavIcon icon={ShieldCheck} isSubLink />
-                                <span>Role Management</span>
-                            </Link>
-                            <Link to="/pricing" className={linkClass("/pricing")}>
-                                <NavIcon icon={CreditCard} isSubLink />
-                                <span>Pricing Plans</span>
-                            </Link>
-                            <Link to="/checkout-test" className={linkClass("/checkout-test")}>
-                                <NavIcon icon={CreditCard} isSubLink />
-                                <span>Checkout Test</span>
-                            </Link>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-
-            {/* Logout Button */}
-            <div className="pt-4 border-t border-border mt-auto shrink-0">
-                <button
-                    onClick={logout}
-                    className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl font-semibold shadow-lg shadow-destructive/10 transition-all duration-200 cursor-pointer active:scale-95"
-                >
-                    <NavIcon icon={LogOut} />
-                    <span>Logout</span>
-                </button>
-            </div>
+      <aside
+        aria-label="Primary Navigation"
+        className={`fixed inset-y-0 left-0 w-60 xl:w-64 bg-sidebar border-r border-border z-50 transform transition-transform duration-200 ease-out flex flex-col justify-between text-foreground no-print lg:sticky lg:top-0 lg:self-start lg:h-screen lg:inset-auto lg:z-auto lg:translate-x-0 shrink-0 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        {/* Header Logo */}
+        <div className="h-14 px-4 border-b border-border flex items-center justify-between shrink-0">
+          <Link to="/" className="focus:outline-none">
+            <BrandLogo size={34} showText={true} />
+          </Link>
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(false)}
+            className="lg:hidden p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+            aria-label="Close menu"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
-        </>
-    );
+
+        {/* Navigation Sections */}
+        <nav className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-1 scrollbar-thin">
+          <Link to="/" className={linkClass("/")}>
+            <NavIcon icon={LayoutDashboard} />
+            <span>Dashboard</span>
+          </Link>
+
+          <div className="pt-2 space-y-0.5">
+            {NAV_SECTIONS.map((section) => {
+              const open = isSectionOpen(section.key);
+              const containsActive = activeSection === section.key;
+
+              return (
+                <div key={section.key} className="pt-0.5">
+                  <button
+                    type="button"
+                    aria-expanded={open}
+                    onClick={() => toggleSection(section.key)}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-[13px] font-medium transition-colors cursor-pointer ${
+                      containsActive
+                        ? "text-foreground bg-secondary/50"
+                        : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <NavIcon icon={section.icon} />
+                      <span className="truncate">{section.label}</span>
+                    </div>
+                    <NavIcon
+                      icon={ChevronDown}
+                      className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-150 ${
+                        open ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {open && (
+                    <div className="mt-0.5 ml-3 pl-2.5 border-l border-border/80 space-y-0.5 py-0.5">
+                      {section.items.map((item) => (
+                        <Link key={item.to} to={item.to} className={linkClass(item.to)}>
+                          <NavIcon icon={item.icon} isSubLink />
+                          <span className="truncate">{item.label}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </nav>
+
+        {/* Understated Logout Footer */}
+        <div className="p-3 border-t border-border shrink-0">
+          <button
+            type="button"
+            onClick={logout}
+            className="w-full h-9 flex items-center justify-between px-3 rounded-md border border-border bg-card hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 text-xs font-medium text-muted-foreground transition-colors cursor-pointer"
+          >
+            <span>Sign out of workspace</span>
+            <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
+          </button>
+        </div>
+      </aside>
+    </>
+  );
 }
 
 export default Sidebar;

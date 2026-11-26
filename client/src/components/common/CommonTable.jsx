@@ -1,31 +1,30 @@
+/**
+ * Reusable bordered table container with muted typographic header.
+ */
 function CommonTable({
-  headers,
+  headers = [],
   children,
+  className = "",
 }) {
   return (
-    <div className="bg-white p-5 rounded-xl shadow">
-
-      <table className="w-full">
-
-        <thead className="bg-blue-600 text-white">
-
+    <div
+      className={`bg-card text-foreground border border-border rounded-lg surface-shadow overflow-x-auto scrollbar-thin ${className}`}
+    >
+      <table className="w-full text-sm text-left border-collapse">
+        <thead className="bg-secondary/70 border-b border-border">
           <tr>
             {headers.map((header, index) => (
               <th
                 key={index}
-                className="p-3"
+                className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap"
               >
                 {header}
               </th>
             ))}
           </tr>
-
         </thead>
-
-        <tbody>{children}</tbody>
-
+        <tbody className="divide-y divide-border/70">{children}</tbody>
       </table>
-
     </div>
   );
 }

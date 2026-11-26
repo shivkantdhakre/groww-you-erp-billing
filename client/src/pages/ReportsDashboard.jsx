@@ -1,188 +1,239 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import TableWrapper from "../components/common/TableWrapper";
+import CommonPageHeader from "../components/common/CommonPageHeader";
+import CommonCard from "../components/common/CommonCard";
 import api from "../utils/api";
+import {
+  Loader2,
+  TrendingUp,
+  ShoppingCart,
+  PackageSearch,
+  BarChart3,
+  AlertCircle,
+  Shield,
+  ArrowRight,
+  Users,
+  Truck,
+} from "lucide-react";
 
+const REPORT_DIRECTORY = [
+  {
+    name: "Sales Register Report",
+    category: "Revenue & GST",
+    description: "Date-filtered tax invoices, customer breakdown, and net receivables.",
+    path: "/sales-report",
+    icon: TrendingUp,
+  },
+  {
+    name: "Purchase Register Report",
+    category: "Procurement & ITC",
+    description: "Vendor bills, input tax totals, and paid vs payable breakdown.",
+    path: "/purchase-report",
+    icon: ShoppingCart,
+  },
+  {
+    name: "Inventory & Stock Valuation",
+    category: "Warehouse",
+    description: "On-hand stock quantities, reorder status, and inventory valuation.",
+    path: "/stock-report",
+    icon: PackageSearch,
+  },
+  {
+    name: "Profit & Loss Statement",
+    category: "Financials",
+    description: "Gross revenue, purchase costs, direct margins, and net profitability.",
+    path: "/profit-report",
+    icon: BarChart3,
+  },
+  {
+    name: "Outstanding Receivables & Payables",
+    category: "Aging",
+    description: "Unpaid party balances requiring follow-up or settlement.",
+    path: "/outstanding-report",
+    icon: AlertCircle,
+  },
+  {
+    name: "GST Compliance & E-Way Filing",
+    category: "Statutory",
+    description: "GSTR-3B readiness, GSTR-1 return preview, and E-Way bill queue.",
+    path: "/compliance-dashboard",
+    icon: Shield,
+  },
+];
+
+/**
+ * Unified financial & statutory reports index with summary KPIs.
+ */
 function ReportsDashboard() {
-    const navigate = useNavigate();
-    const [summary, setSummary] = useState(null);
-    const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-    const loadSummary = useCallback(async () => {
-        setLoading(true);
-        try {
-            const res = await api.get("/reports/summary");
-            setSummary(res.data);
-        } catch (err) {
-            console.error("Failed to load reports summary:", err);
-        } finally {
-            setLoading(false);
+  const loadSummary = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await api.get("/reports/summary");
+      setSummary(res.data);
+    } catch (err) {
+      console.error("Failed to load reports summary:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadSummary();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [loadSummary]);
+
+  const cards = [
+    {
+      title: "Total Sales",
+      value: summary ? `₹ ${summary.totalSales.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "₹ 0.00",
+      color: "text-success",
+      icon: TrendingUp,
+    },
+    {
+      title: "Total Purchases",
+      value: summary ? `₹ ${summary.totalPurchases.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "₹ 0.00",
+      color: "text-foreground",
+      icon: ShoppingCart,
+    },
+    {
+      title: "Active Customers",
+      value: summary ? String(summary.activeCustomersCount) : "0",
+      color: "text-foreground",
+      icon: Users,
+    },
+    {
+      title: "Active Vendors",
+      value: summary ? String(summary.activeVendorsCount) : "0",
+      color: "text-foreground",
+      icon: Truck,
+    },
+    {
+      title: "Low Stock Items",
+      value: summary ? `${summary.lowStockItemsCount} SKUs` : "0 SKUs",
+      color: summary?.lowStockItemsCount > 0 ? "text-destructive" : "text-foreground",
+      icon: PackageSearch,
+    },
+  ];
+
+  return (
+    <div className="space-y-5 text-foreground">
+      <CommonPageHeader
+        title="Reports Overview"
+        subtitle="Financial statements, stock valuation registers, and GST compliance queues"
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => navigate("/sales-report")}
+              className="h-8 px-3 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-medium cursor-pointer transition-colors"
+            >
+              Sales Report
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/purchase-report")}
+              className="h-8 px-3 rounded-md bg-card border border-border text-foreground hover:bg-secondary/70 text-xs font-medium cursor-pointer transition-colors"
+            >
+              Purchase Report
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/stock-report")}
+              className="h-8 px-3 rounded-md bg-card border border-border text-foreground hover:bg-secondary/70 text-xs font-medium cursor-pointer transition-colors"
+            >
+              Stock Report
+            </button>
+          </div>
         }
-    }, []);
+      />
 
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            loadSummary();
-        }, 0);
-        return () => clearTimeout(timer);
-    }, [loadSummary]);
-
-    const reports = [
-        {
-            title: "Total Sales",
-            value: summary ? `₹ ${summary.totalSales.toFixed(2)}` : "₹ 0.00",
-        },
-        {
-            title: "Total Purchases",
-            value: summary ? `₹ ${summary.totalPurchases.toFixed(2)}` : "₹ 0.00",
-        },
-        {
-            title: "Active Customers",
-            value: summary ? String(summary.activeCustomersCount) : "0",
-        },
-        {
-            title: "Active Vendors",
-            value: summary ? String(summary.activeVendorsCount) : "0",
-        },
-        {
-            title: "Low Stock Items",
-            value: summary ? `${summary.lowStockItemsCount} Items` : "0 Items",
-        },
-    ];
-
-    return (
-        <div className="space-y-6 text-foreground">
-            <h1 className="text-3xl font-bold mb-6 text-foreground">
-                Reports Dashboard
-            </h1>
-
-            {loading && (
-                <div className="text-center text-muted-foreground font-semibold mb-6 flex items-center justify-center gap-2">
-                    <svg className="animate-spin h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    <span>Loading dashboard statistics...</span>
-                </div>
-            )}
-
-            {/* Report Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                {reports.map((report, index) => (
-                    <div
-                        key={index}
-                        className="bg-card p-5 rounded-xl border border-border shadow-sm hover:shadow-md transition duration-200"
-                    >
-                        <h2 className="text-muted-foreground text-sm font-semibold tracking-wide">
-                            {report.title}
-                        </h2>
-
-                        <p className="text-2xl font-bold mt-2 text-primary">
-                            {report.value}
-                        </p>
-                    </div>
-                ))}
-            </div>
-
-            {/* Quick Actions */}
-            <div className="bg-card p-5 rounded-xl border border-border shadow-sm mt-6">
-                <h2 className="text-2xl font-bold mb-4 text-foreground">
-                    Quick Report Actions
-                </h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <button
-                        onClick={() => navigate("/sales-report")}
-                        className="bg-primary hover:bg-primary/90 text-primary-foreground p-3 rounded-lg cursor-pointer font-medium transition-colors shadow-sm"
-                    >
-                        Generate Sales Report
-                    </button>
-
-                    <button
-                        onClick={() => navigate("/purchase-report")}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white p-3 rounded-lg cursor-pointer font-medium transition-colors shadow-sm"
-                    >
-                        Generate Purchase Report
-                    </button>
-
-                    <button
-                        onClick={() => navigate("/stock-report")}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded-lg cursor-pointer font-medium transition-colors shadow-sm"
-                    >
-                        Generate Stock Report
-                    </button>
-                </div>
-            </div>
-
-            {/* Recent Reports */}
-            <div className="bg-card rounded-xl border border-border shadow-sm mt-6 overflow-hidden">
-                <div className="p-5 border-b border-border">
-                    <h2 className="text-xl font-bold text-foreground">
-                        Recent Reports
-                    </h2>
-                </div>
-
-                <TableWrapper className="!border-none !rounded-none !shadow-none !bg-transparent">
-                    <table className="w-full text-sm">
-                        <thead className="bg-secondary/40 text-muted-foreground border-b border-border">
-                            <tr>
-                                <th className="p-4 text-left font-semibold">
-                                    Report Name
-                                </th>
-                                <th className="p-4 text-center font-semibold">
-                                    Action
-                                </th>
-                            </tr>
-                        </thead>
-
-                        <tbody className="divide-y divide-border">
-                            <tr className="hover:bg-secondary/20 transition-colors duration-150">
-                                <td className="p-4 text-left font-medium text-foreground">
-                                    Sales Report
-                                </td>
-                                <td className="p-4 text-center">
-                                    <button
-                                        onClick={() => navigate("/sales-report")}
-                                        className="text-primary hover:underline cursor-pointer font-medium"
-                                    >
-                                        View Report
-                                    </button>
-                                </td>
-                            </tr>
-
-                            <tr className="hover:bg-secondary/20 transition-colors duration-150">
-                                <td className="p-4 text-left font-medium text-foreground">
-                                    Purchase Report
-                                </td>
-                                <td className="p-4 text-center">
-                                    <button
-                                        onClick={() => navigate("/purchase-report")}
-                                        className="text-primary hover:underline cursor-pointer font-medium"
-                                    >
-                                        View Report
-                                    </button>
-                                </td>
-                            </tr>
-
-                            <tr className="hover:bg-secondary/20 transition-colors duration-150">
-                                <td className="p-4 text-left font-medium text-foreground">
-                                    Stock Report
-                                </td>
-                                <td className="p-4 text-center">
-                                    <button
-                                        onClick={() => navigate("/stock-report")}
-                                        className="text-primary hover:underline cursor-pointer font-medium"
-                                    >
-                                        View Report
-                                    </button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </TableWrapper>
-            </div>
+      {loading && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin text-primary-text" />
+          <span>Refreshing report summary...</span>
         </div>
-    );
+      )}
+
+      {/* KPI Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        {cards.map((card, index) => (
+          <CommonCard
+            key={index}
+            title={card.title}
+            value={card.value}
+            color={card.color}
+            icon={card.icon}
+          />
+        ))}
+      </div>
+
+      {/* Report Directory Table */}
+      <div className="bg-card rounded-lg border border-border surface-shadow overflow-hidden">
+        <div className="px-4 sm:px-5 py-3.5 border-b border-border flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Financial & Operational Reports</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Select a ledger or statutory register to filter and print
+            </p>
+          </div>
+        </div>
+
+        <TableWrapper className="!border-none !rounded-none !shadow-none !bg-transparent">
+          <table className="w-full text-sm text-left border-collapse">
+            <thead className="bg-secondary/70 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border">
+              <tr>
+                <th className="px-4 py-2.5">Report Name</th>
+                <th className="px-4 py-2.5 hidden sm:table-cell">Category</th>
+                <th className="px-4 py-2.5 hidden md:table-cell">Description</th>
+                <th className="px-4 py-2.5 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/70">
+              {REPORT_DIRECTORY.map((report) => {
+                const Icon = report.icon;
+                return (
+                  <tr
+                    key={report.path}
+                    className="elevated-table-row transition-colors"
+                  >
+                    <td className="px-4 py-3 font-medium text-foreground">
+                      <div className="flex items-center gap-2.5">
+                        <Icon className="w-4 h-4 text-primary-text shrink-0" aria-hidden="true" />
+                        <span>{report.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground hidden sm:table-cell whitespace-nowrap">
+                      {report.category}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground hidden md:table-cell">
+                      {report.description}
+                    </td>
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      <button
+                        type="button"
+                        onClick={() => navigate(report.path)}
+                        className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md border border-border bg-background hover:bg-secondary text-xs font-medium text-primary-text cursor-pointer transition-colors"
+                      >
+                        <span>Open</span>
+                        <ArrowRight className="w-3 h-3" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </TableWrapper>
+      </div>
+    </div>
+  );
 }
 
 export default ReportsDashboard;

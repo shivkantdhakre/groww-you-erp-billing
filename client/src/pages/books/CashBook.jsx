@@ -1,7 +1,21 @@
 import { useState, useEffect, useCallback } from "react";
+import CommonPageHeader from "../../components/common/CommonPageHeader";
+import CommonFilter from "../../components/common/CommonFilter";
+import CommonCard from "../../components/common/CommonCard";
 import TableWrapper from "../../components/common/TableWrapper";
+import ValidationMessage from "../../components/common/ValidationMessage";
+import StatusBadge from "../../components/common/StatusBadge";
 import api from "../../utils/api";
+import { Banknote, Loader2, Printer, RotateCcw, Search } from "lucide-react";
 
+const INPUT_CLASS =
+  "h-9 px-3 rounded-md w-full border border-input bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors";
+const LABEL_CLASS =
+  "block mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider";
+
+/**
+ * Cash book ledger tracking physical counter receipts, payouts, and closing cash.
+ */
 function CashBook() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -9,16 +23,18 @@ function CashBook() {
   const [cashEntries, setCashEntries] = useState([]);
   const [openingCash, setOpeningCash] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const loadCashBook = useCallback(async () => {
     setLoading(true);
+    setError("");
     try {
       const res = await api.get(`/reports/cash-book?fromDate=${fromDate}&toDate=${toDate}`);
       setOpeningCash(res.data.openingCash || 0);
       setCashEntries(res.data.cashEntries || []);
     } catch (err) {
       console.error("Failed to load cash book:", err);
-      alert("Failed to load cash book data");
+      setError("Failed to load cash book data. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -31,148 +47,160 @@ function CashBook() {
     return () => clearTimeout(timer);
   }, [loadCashBook]);
 
-  const totalReceipt = cashEntries.reduce(
-    (total, item) => total + item.receipt,
-    0
-  );
-
-  const totalPayment = cashEntries.reduce(
-    (total, item) => total + item.payment,
-    0
-  );
-
+  const totalReceipt = cashEntries.reduce((total, item) => total + item.receipt, 0);
+  const totalPayment = cashEntries.reduce((total, item) => total + item.payment, 0);
   const closingCash = openingCash + totalReceipt - totalPayment;
 
   return (
-    <div className="space-y-6 text-foreground">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">
-          Cash Book
-        </h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Track all cash transactions
-        </p>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-card p-5 rounded-xl border border-border shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <input
-            type="date"
-            value={fromDate}
-            onChange={(e) => setFromDate(e.target.value)}
-            className="border border-border p-3 rounded-lg bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-          />
-
-          <input
-            type="date"
-            value={toDate}
-            onChange={(e) => setToDate(e.target.value)}
-            className="border border-border p-3 rounded-lg bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-          />
-
+    <div className="space-y-5 text-foreground">
+      <CommonPageHeader
+        title="Cash Book"
+        subtitle="Track daily cash drawer inflows, expenses, and closing cash balance"
+        actions={
           <button
-            onClick={loadCashBook}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-3 px-4 rounded-lg cursor-pointer transition shadow-sm"
+            type="button"
+            onClick={() => window.print()}
+            className="no-print inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-border bg-card hover:bg-secondary/70 text-xs font-medium text-foreground cursor-pointer transition-colors"
           >
-            Search
+            <Printer className="w-3.5 h-3.5" />
+            <span>Print Book</span>
           </button>
+        }
+      />
+
+      <ValidationMessage
+        type="error"
+        message={error}
+        onDismiss={() => setError("")}
+        className="mt-0!"
+      />
+
+      <CommonFilter className="no-print mb-0!">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+          <div>
+            <label className={LABEL_CLASS}>From Date</label>
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              className={INPUT_CLASS}
+            />
+          </div>
+
+          <div>
+            <label className={LABEL_CLASS}>To Date</label>
+            <input
+              type="date"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              className={INPUT_CLASS}
+            />
+          </div>
+
           <button
+            type="button"
+            onClick={loadCashBook}
+            className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground text-xs sm:text-sm font-medium cursor-pointer transition-colors"
+          >
+            <Search className="w-3.5 h-3.5" />
+            <span>Apply Filter</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => {
               setFromDate("");
               setToDate("");
-              // Wait briefly before reloading to let state clear
               setTimeout(() => {
                 loadCashBook();
-              }, 100);
+              }, 80);
             }}
-            className="bg-secondary hover:bg-secondary/80 text-secondary-foreground font-semibold py-3 px-4 rounded-lg cursor-pointer transition"
+            className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-md bg-secondary hover:bg-secondary/80 border border-border text-secondary-foreground text-xs sm:text-sm font-medium cursor-pointer transition-colors"
           >
-            Reset
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Reset</span>
           </button>
         </div>
-      </div>
+      </CommonFilter>
 
-      {loading && (
-        <div className="text-center mt-6 text-muted-foreground font-semibold flex items-center justify-center gap-2">
-          <svg className="animate-spin h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-          </svg>
+      {loading ? (
+        <div className="flex items-center justify-center py-10 gap-2 text-xs text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin text-primary-text" />
           <span>Loading cash book records...</span>
         </div>
-      )}
-
-      {!loading && (
+      ) : (
         <>
-          {/* Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
-            <div className="bg-card p-5 rounded-xl border border-border shadow-sm">
-              <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">Opening Cash</p>
-              <p className="text-2xl font-bold text-primary mt-1">
-                ₹ {openingCash.toFixed(2)}
-              </p>
-            </div>
-
-            <div className="bg-card p-5 rounded-xl border border-border shadow-sm">
-              <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">Total Receipt</p>
-              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-500 mt-1">
-                ₹ {totalReceipt.toFixed(2)}
-              </p>
-            </div>
-
-            <div className="bg-card p-5 rounded-xl border border-border shadow-sm">
-              <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">Total Payment</p>
-              <p className="text-2xl font-bold text-destructive mt-1">
-                ₹ {totalPayment.toFixed(2)}
-              </p>
-            </div>
-
-            <div className="bg-card p-5 rounded-xl border border-border shadow-sm">
-              <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">Closing Cash</p>
-              <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">
-                ₹ {closingCash.toFixed(2)}
-              </p>
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            <CommonCard
+              title="Opening Cash"
+              value={`₹ ${openingCash.toFixed(2)}`}
+              color="text-foreground"
+              icon={Banknote}
+            />
+            <CommonCard
+              title="Total Receipts (Dr)"
+              value={`₹ ${totalReceipt.toFixed(2)}`}
+              color="text-success"
+            />
+            <CommonCard
+              title="Total Payments (Cr)"
+              value={`₹ ${totalPayment.toFixed(2)}`}
+              color="text-destructive"
+            />
+            <CommonCard
+              title="Closing Cash"
+              value={`₹ ${closingCash.toFixed(2)}`}
+              color="text-primary-text"
+            />
           </div>
 
-          <div className="flex gap-3 mt-6 mb-3 no-print">
-            <button
-              onClick={() => window.print()}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-4 py-2 rounded-lg cursor-pointer transition shadow-sm"
-            >
-              Print Cash Book
-            </button>
-          </div>
-
-          {/* Table */}
-          <TableWrapper className="mt-6">
-            <table className="w-full text-sm">
-              <thead className="bg-secondary/40 text-muted-foreground border-b border-border">
+          <TableWrapper>
+            <table className="w-full text-sm text-left border-collapse">
+              <thead className="bg-secondary/70 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border">
                 <tr>
-                  <th className="p-4 text-left font-semibold">Date</th>
-                  <th className="p-4 text-left font-semibold">Voucher No</th>
-                  <th className="p-4 text-left font-semibold">Particulars</th>
-                  <th className="p-4 text-right font-semibold">Receipt (Dr)</th>
-                  <th className="p-4 text-right font-semibold">Payment (Cr)</th>
-                  <th className="p-4 text-right font-semibold">Balance</th>
+                  <th className="px-4 py-2.5">Date</th>
+                  <th className="px-4 py-2.5">Voucher No</th>
+                  <th className="px-4 py-2.5">Particulars</th>
+                  <th className="px-4 py-2.5 text-right">Receipt (Dr)</th>
+                  <th className="px-4 py-2.5 text-right">Payment (Cr)</th>
+                  <th className="px-4 py-2.5 text-right">Balance</th>
                 </tr>
               </thead>
-
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-border/70">
                 {cashEntries.map((item, index) => (
-                  <tr key={index} className="hover:bg-secondary/20 transition-colors duration-150">
-                    <td className="p-4 text-muted-foreground">{item.date}</td>
-                    <td className="p-4 font-mono font-semibold text-foreground">{item.voucherNo}</td>
-                    <td className="p-4 text-foreground font-medium text-left">{item.particulars}</td>
-                    <td className="p-4 text-right font-mono text-emerald-600 dark:text-emerald-500">₹ {item.receipt.toFixed(2)}</td>
-                    <td className="p-4 text-right font-mono text-destructive">₹ {item.payment.toFixed(2)}</td>
-                    <td className="p-4 text-right font-mono font-bold text-foreground">₹ {item.balance.toFixed(2)}</td>
+                  <tr key={index} className="elevated-table-row transition-colors">
+                    <td className="px-4 py-2.5 text-xs text-muted-foreground tabular-nums">
+                      {item.date}
+                    </td>
+                    <td className="px-4 py-2.5 font-mono text-xs font-semibold text-foreground">
+                      {item.voucherNo}
+                    </td>
+                    <td className="px-4 py-2.5 text-foreground font-medium">{item.particulars}</td>
+                    <td className="px-4 py-2.5 text-right font-mono text-xs text-success tabular-nums">
+                      {item.receipt > 0 ? (
+                        <span>₹ {item.receipt.toFixed(2)}</span>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-mono text-xs text-destructive tabular-nums">
+                      {item.payment > 0 ? (
+                        <span>₹ {item.payment.toFixed(2)}</span>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-mono text-xs font-semibold text-foreground tabular-nums">
+                      ₹ {item.balance.toFixed(2)}{" "}
+                      <StatusBadge variant={item.balance >= 0 ? "success" : "destructive"} className="ml-1">
+                        {item.balance >= 0 ? "Dr" : "Cr"}
+                      </StatusBadge>
+                    </td>
                   </tr>
                 ))}
                 {cashEntries.length === 0 && (
                   <tr>
-                    <td colSpan="6" className="p-8 text-muted-foreground text-center font-medium">
+                    <td colSpan="6" className="px-4 py-8 text-center text-xs text-muted-foreground">
                       No cash transactions found for this period.
                     </td>
                   </tr>

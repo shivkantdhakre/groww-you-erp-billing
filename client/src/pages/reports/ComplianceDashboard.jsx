@@ -1,20 +1,63 @@
 import { useState, useEffect, useCallback } from "react";
-import axios from "axios";
 import { useStore } from "../../store/useStore";
-import "./ComplianceDashboard.css"; // We will create a beautiful style sheet for this page
+import CommonPageHeader from "../../components/common/CommonPageHeader";
+import CommonModal from "../../components/common/CommonModal";
+import CommonCard from "../../components/common/CommonCard";
+import TableWrapper from "../../components/common/TableWrapper";
+import ValidationMessage from "../../components/common/ValidationMessage";
+import StatusBadge from "../../components/common/StatusBadge";
+import api from "../../utils/api";
+import {
+  Shield,
+  AlertTriangle,
+  CheckCircle2,
+  KeyRound,
+  FileJson,
+  UploadCloud,
+  Truck,
+  Link2,
+  Loader2,
+} from "lucide-react";
 
+const INPUT_CLASS =
+  "h-9 px-3 rounded-md w-full border border-input bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors";
+const LABEL_CLASS =
+  "block mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider";
+
+const MONTHS = [
+  { value: "01", label: "January" },
+  { value: "02", label: "February" },
+  { value: "03", label: "March" },
+  { value: "04", label: "April" },
+  { value: "05", label: "May" },
+  { value: "06", label: "June" },
+  { value: "07", label: "July" },
+  { value: "08", label: "August" },
+  { value: "09", label: "September" },
+  { value: "10", label: "October" },
+  { value: "11", label: "November" },
+  { value: "12", label: "December" },
+];
+
+/**
+ * GST compliance, GSTR-3B readiness, GSTR-1 return filing, orphan credit-note reconciliation,
+ * and >= ₹50,000 E-Way Bill dispatch console.
+ */
 export default function ComplianceDashboard() {
   const token = useStore((state) => state.token);
-  const [month, setMonth] = useState("06");
-  const [year, setYear] = useState("2026");
-  
-  // State variables
-  const [healthStatus, setHealthStatus] = useState({ blockFiling: false, issues: { items: [], customers: [], branches: [] } });
+  const [month, setMonth] = useState(() =>
+    String(new Date().getMonth() + 1).padStart(2, "0")
+  );
+  const [year, setYear] = useState(() => String(new Date().getFullYear()));
+
+  const [healthStatus, setHealthStatus] = useState({
+    blockFiling: false,
+    issues: { items: [], customers: [], branches: [] },
+  });
   const [gstr3b, setGstr3b] = useState(null);
   const [invoices, setInvoices] = useState([]);
   const [previewData, setPreviewData] = useState(null);
-  
-  // Dialog / Modal states
+
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [otp, setOtp] = useState("");
   const [showEwayModal, setShowEwayModal] = useState(false);
@@ -29,7 +72,6 @@ export default function ComplianceDashboard() {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
-  // Cooldown, Warning & Reconciliations states
   const [otpCooldown, setOtpCooldown] = useState(0);
   const [proactiveWarning, setProactiveWarning] = useState(false);
   const [orphanedReturns, setOrphanedReturns] = useState([]);
@@ -39,31 +81,25 @@ export default function ComplianceDashboard() {
   const [mappingError, setMappingError] = useState("");
   const [resolvingId, setResolvingId] = useState(null);
 
-  // Axios config with headers
-  const getAxiosConfig = useCallback(() => ({
-    headers: { Authorization: `Bearer ${token}` },
-  }), [token]);
-
-  // 1. Fetch data on load or date change
   const loadComplianceData = useCallback(async () => {
     setLoading(true);
     setErrorMsg("");
     setSuccessMsg("");
     try {
-      // Fetch data health status
-      const healthRes = await axios.get(
-        `http://localhost:5000/api/compliance/gst/health?month=${month}&year=${year}`,
-        getAxiosConfig()
-      );
-      setHealthStatus(healthRes.data);
+      const [healthRes, salesRes] = await Promise.all([
+        api.get(`/compliance/gst/health?month=${month}&year=${year}`),
+        api.get("/transactions/sales-invoices?limit=100"),
+      ]);
 
-      // Fetch Sales Invoices for E-way filtering
-      const salesRes = await axios.get(
-        "http://localhost:5000/api/transactions/sales",
-        getAxiosConfig()
+      setHealthStatus(
+        healthRes.data || { blockFiling: false, issues: { items: [], customers: [], branches: [] } }
       );
-      // Filter invoices for current month and company
-      const currentMonthInvoices = salesRes.data.filter((inv) => {
+
+      const salesList = Array.isArray(salesRes.data)
+        ? salesRes.data
+        : salesRes.data?.data || [];
+
+      const currentMonthInvoices = salesList.filter((inv) => {
         const invDate = new Date(inv.invoiceDate);
         const invMonth = String(invDate.getMonth() + 1).padStart(2, "0");
         const invYear = String(invDate.getFullYear());
@@ -71,21 +107,12 @@ export default function ComplianceDashboard() {
       });
       setInvoices(currentMonthInvoices);
 
-      // Fetch GSP session status
       try {
-        const sessionStatusRes = await axios.get(
-          "http://localhost:5000/api/compliance/gst/session-status",
-          getAxiosConfig()
-        );
+        const sessionStatusRes = await api.get("/compliance/gst/session-status");
         const { active: isSessionActive, expiresAt: sessionExpiresAt } = sessionStatusRes.data;
-
         if (isSessionActive && sessionExpiresAt) {
           const remainingMs = new Date(sessionExpiresAt).getTime() - Date.now();
-          if (remainingMs > 0 && remainingMs < 30 * 60 * 1000) {
-            setProactiveWarning(true);
-          } else {
-            setProactiveWarning(false);
-          }
+          setProactiveWarning(remainingMs > 0 && remainingMs < 30 * 60 * 1000);
         } else {
           setProactiveWarning(false);
         }
@@ -93,27 +120,20 @@ export default function ComplianceDashboard() {
         console.error("Error fetching session status:", err);
       }
 
-      // Fetch orphaned returns
       try {
-        const orphansRes = await axios.get(
-          "http://localhost:5000/api/compliance/orphans",
-          getAxiosConfig()
-        );
-        setOrphanedReturns(orphansRes.data);
+        const orphansRes = await api.get("/compliance/orphans");
+        setOrphanedReturns(orphansRes.data || []);
       } catch (err) {
         console.error("Error fetching orphaned returns:", err);
       }
 
-      // Try fetching GSTR-3B summary (will fail with 401 if portal token expired)
       try {
-        const gstrRes = await axios.get(
-          `http://localhost:5000/api/compliance/gst/gstr3b/summary?month=${month}&year=${year}`,
-          getAxiosConfig()
+        const gstrRes = await api.get(
+          `/compliance/gst/gstr3b/summary?month=${month}&year=${year}`
         );
         setGstr3b(gstrRes.data);
       } catch (err) {
         if (err.response?.data?.error === "GSTN_SESSION_EXPIRED") {
-          console.log("Portal session expired. OTP Authentication required.");
           setGstr3b(null);
         } else {
           throw err;
@@ -121,11 +141,11 @@ export default function ComplianceDashboard() {
       }
     } catch (err) {
       console.error("Error loading compliance details:", err);
-      setErrorMsg("Failed to load compliance details. Authenticate with GST portal.");
+      setErrorMsg("Failed to load compliance details. Verify GST portal authentication.");
     } finally {
       setLoading(false);
     }
-  }, [month, year, getAxiosConfig]);
+  }, [month, year]);
 
   useEffect(() => {
     if (token) {
@@ -136,11 +156,10 @@ export default function ComplianceDashboard() {
     }
   }, [token, loadComplianceData]);
 
-  // Initialize and run OTP cooldown countdown timer
   useEffect(() => {
     const expiry = localStorage.getItem("gsp_otp_cooldown_expiry");
     if (expiry) {
-      const remaining = Math.ceil((parseInt(expiry) - Date.now()) / 1000);
+      const remaining = Math.ceil((parseInt(expiry, 10) - Date.now()) / 1000);
       if (remaining > 0) {
         const timer = setTimeout(() => {
           setOtpCooldown(remaining);
@@ -165,27 +184,21 @@ export default function ComplianceDashboard() {
     return () => clearInterval(interval);
   }, [otpCooldown]);
 
-  // Request GSTN OTP
   const handleRequestOtp = async () => {
     setErrorMsg("");
     setSuccessMsg("");
     try {
-      await axios.post(
-        "http://localhost:5000/api/compliance/gst/otp/request",
-        {},
-        getAxiosConfig()
-      );
-      setSuccessMsg("OTP request sent successfully! Enter code below.");
+      await api.post("/compliance/gst/otp/request", {});
+      setSuccessMsg("OTP request dispatched. Enter the 6-digit verification code below.");
       const expiry = Date.now() + 180 * 1000;
       localStorage.setItem("gsp_otp_cooldown_expiry", String(expiry));
       setOtpCooldown(180);
     } catch (err) {
       console.error("Failed to trigger portal OTP:", err);
-      setErrorMsg("Failed to trigger portal OTP. Check GSP configurations.");
+      setErrorMsg("Failed to dispatch GST portal OTP. Verify GSP credentials.");
     }
   };
 
-  // Submit GSTN OTP
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     setErrorMsg("");
@@ -193,35 +206,28 @@ export default function ComplianceDashboard() {
     if (!otp) return;
 
     try {
-      await axios.post(
-        "http://localhost:5000/api/compliance/gst/otp/verify",
-        { otp },
-        getAxiosConfig()
-      );
-      setSuccessMsg("Portal session established successfully!");
+      await api.post("/compliance/gst/otp/verify", { otp });
+      setSuccessMsg("GST portal session established.");
       setShowOtpModal(false);
       setOtp("");
       localStorage.removeItem("gsp_otp_cooldown_expiry");
       setOtpCooldown(0);
-      // Reload details now that session is active
       loadComplianceData();
     } catch (err) {
       setErrorMsg(err.response?.data?.error || "OTP verification failed.");
     }
   };
 
-  // Resolve orphaned returns by writing off
   const handleWriteOff = async (returnId) => {
     setErrorMsg("");
     setSuccessMsg("");
     setResolvingId(returnId);
     try {
-      await axios.post(
-        "http://localhost:5000/api/compliance/orphans/resolve",
-        { returnId, action: "WRITE_OFF" },
-        getAxiosConfig()
-      );
-      setSuccessMsg("Return record written off successfully. It will be ignored in GSTR-1 compilation.");
+      await api.post("/compliance/orphans/resolve", {
+        returnId,
+        action: "WRITE_OFF",
+      });
+      setSuccessMsg("Credit return written off and excluded from GSTR-1 staging.");
       loadComplianceData();
     } catch (err) {
       console.error("Write off failed:", err);
@@ -231,7 +237,6 @@ export default function ComplianceDashboard() {
     }
   };
 
-  // Resolve orphaned returns by mapping
   const handleMapSubmit = async (e) => {
     e.preventDefault();
     setMappingError("");
@@ -240,79 +245,67 @@ export default function ComplianceDashboard() {
 
     const retDate = new Date(reconcilingReturn.returnDate);
     const invDate = new Date(legacyInvoiceDate);
-
-    // Client-side chronological check
     if (invDate > retDate) {
-      setMappingError("The original invoice date cannot be after the return date.");
+      setMappingError("Original invoice date cannot be after the credit return date.");
       return;
     }
 
     setResolvingId(reconcilingReturn.id);
     try {
-      await axios.post(
-        "http://localhost:5000/api/compliance/orphans/resolve",
-        {
-          returnId: reconcilingReturn.id,
-          action: "MAP_INVOICE",
-          invoiceNo: legacyInvoiceNo,
-          invoiceDate: legacyInvoiceDate,
-        },
-        getAxiosConfig()
-      );
-      setSuccessMsg("Return mapped successfully!");
+      await api.post("/compliance/orphans/resolve", {
+        returnId: reconcilingReturn.id,
+        action: "MAP_INVOICE",
+        invoiceNo: legacyInvoiceNo,
+        invoiceDate: legacyInvoiceDate,
+      });
+      setSuccessMsg("Orphaned return mapped to original invoice.");
       setReconcilingReturn(null);
       setLegacyInvoiceNo("");
       setLegacyInvoiceDate("");
       loadComplianceData();
     } catch (err) {
-      setMappingError(err.response?.data?.message || err.response?.data?.error || "Failed to map return to invoice.");
+      setMappingError(
+        err.response?.data?.message || err.response?.data?.error || "Failed to map return to invoice."
+      );
     } finally {
       setResolvingId(null);
     }
   };
 
-  // Preview GSTR-1 JSON
   const handlePreviewGstr1 = async () => {
     setErrorMsg("");
     setSuccessMsg("");
     try {
-      const res = await axios.get(
-        `http://localhost:5000/api/compliance/gst/gstr1/preview?month=${month}&year=${year}`,
-        getAxiosConfig()
-      );
+      const res = await api.get(`/compliance/gst/gstr1/preview?month=${month}&year=${year}`);
       setPreviewData(res.data);
     } catch (err) {
       console.error("Preview GSTR-1 failed:", err);
-      setErrorMsg("Failed to load GSTR-1 preview data.");
+      setErrorMsg("Failed to load GSTR-1 payload preview.");
     }
   };
 
-  // File GSTR-1 Upload
   const handleFileGstr1 = async () => {
     setErrorMsg("");
     setSuccessMsg("");
     setLoading(true);
     try {
-      const res = await axios.post(
-        "http://localhost:5000/api/compliance/gst/gstr1/file",
-        { month, year },
-        getAxiosConfig()
-      );
-      setSuccessMsg(`GSTR-1 successfully uploaded! Ref: ${res.data.referenceId}`);
+      const res = await api.post("/compliance/gst/gstr1/file", { month, year });
+      setSuccessMsg(`GSTR-1 uploaded successfully. Filing Ref: ${res.data.referenceId}`);
       setPreviewData(null);
       loadComplianceData();
     } catch (err) {
       if (err.response?.data?.error === "GSTN_SESSION_EXPIRED") {
         setShowOtpModal(true);
       } else {
-        setErrorMsg(err.response?.data?.message || err.response?.data?.error || "GSTR-1 filing failed.");
+        setErrorMsg(
+          err.response?.data?.message || err.response?.data?.error || "GSTR-1 filing failed."
+        );
       }
     } finally {
       setLoading(false);
     }
   };
 
-  // Trigger E-way Modal
   const openEwayModal = (inv) => {
     setSelectedInvoice(inv);
     setTransporterId("");
@@ -323,32 +316,27 @@ export default function ComplianceDashboard() {
     setShowEwayModal(true);
   };
 
-  // Generate E-way Bill
   const handleGenerateEwayBill = async (e) => {
     e.preventDefault();
     setErrorMsg("");
     setSuccessMsg("");
-    const distVal = parseInt(distanceKm);
+    const distVal = parseInt(distanceKm, 10);
 
-    if (isNaN(distVal) || distVal < 1 || distVal > 4000) {
+    if (Number.isNaN(distVal) || distVal < 1 || distVal > 4000) {
       setErrorMsg("Distance must be a valid number between 1 and 4000 km.");
       return;
     }
 
     setLoading(true);
     try {
-      const res = await axios.post(
-        `http://localhost:5000/api/compliance/ewaybill/generate/${selectedInvoice.id}`,
-        {
-          transporterId,
-          transporterName,
-          transportMode,
-          vehicleNo,
-          distanceKm: distVal,
-        },
-        getAxiosConfig()
-      );
-      setSuccessMsg(`E-Way Bill successfully generated! Number: ${res.data.ewayBillNo}`);
+      const res = await api.post(`/compliance/ewaybill/generate/${selectedInvoice.id}`, {
+        transporterId,
+        transporterName,
+        transportMode,
+        vehicleNo,
+        distanceKm: distVal,
+      });
+      setSuccessMsg(`E-Way Bill generated. EWB Number: ${res.data.ewayBillNo}`);
       setShowEwayModal(false);
       loadComplianceData();
     } catch (err) {
@@ -356,96 +344,158 @@ export default function ComplianceDashboard() {
         setShowEwayModal(false);
         setShowOtpModal(true);
       } else {
-        setErrorMsg(err.response?.data?.message || err.response?.data?.error || "E-Way Bill generation failed.");
+        setErrorMsg(
+          err.response?.data?.message ||
+            err.response?.data?.error ||
+            "E-Way Bill generation failed."
+        );
       }
     } finally {
       setLoading(false);
     }
   };
 
+  const highValueInvoices = invoices.filter((inv) => inv.grandTotal >= 50000);
+
   return (
-    <div className="compliance-container">
-      <div className="compliance-header">
-        <h2>GST & E-Way Bill Compliance Console</h2>
-        <div className="date-selectors">
-          <select value={month} onChange={(e) => setMonth(e.target.value)} className="selector-input">
-            <option value="01">January</option>
-            <option value="02">February</option>
-            <option value="03">March</option>
-            <option value="04">April</option>
-            <option value="05">May</option>
-            <option value="06">June</option>
-            <option value="07">July</option>
-            <option value="08">August</option>
-            <option value="09">September</option>
-            <option value="10">October</option>
-            <option value="11">November</option>
-            <option value="12">December</option>
-          </select>
-          <select value={year} onChange={(e) => setYear(e.target.value)} className="selector-input">
-            <option value="2025">2025</option>
-            <option value="2026">2026</option>
-            <option value="2027">2027</option>
-          </select>
-        </div>
-      </div>
-
-      {errorMsg && <div className="alert-box error-alert">{errorMsg}</div>}
-      {successMsg && <div className="alert-box success-alert">{successMsg}</div>}
-
-      {/* Proactive Token Refresh Suggestion */}
-      {proactiveWarning && (
-        <div className="alert-box warning-alert proactive-token-warning">
-          <div className="warning-content">
-            <h3>⚠️ Proactive Token Refresh Suggestion</h3>
-            <p>Your GSTN session token is older than 5.5 hours and will expire in less than 30 minutes. To prevent interruptions during heavy bulk filing operations, we recommend refreshing your session now.</p>
+    <div className="space-y-5 text-foreground">
+      <CommonPageHeader
+        title="GST & E-Way Compliance"
+        subtitle="GSTR-3B tax liability, GSTR-1 monthly filing staging, credit-note reconciliation, and E-Way bills"
+        badge={
+          gstr3b ? (
+            <StatusBadge variant="success">
+              <CheckCircle2 className="w-3 h-3" />
+              <span>GSTN Session Active</span>
+            </StatusBadge>
+          ) : (
+            <StatusBadge variant="warning">Session Auth Required</StatusBadge>
+          )
+        }
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              aria-label="Filing Month"
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
+              className="h-8 px-2.5 rounded-md border border-border bg-card text-foreground text-xs font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              {MONTHS.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Filing Year"
+              value={year}
+              onChange={(e) => setYear(e.target.value)}
+              className="h-8 px-2.5 rounded-md border border-border bg-card text-foreground text-xs font-medium font-mono cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="2025">2025</option>
+              <option value="2026">2026</option>
+              <option value="2027">2027</option>
+            </select>
+            {!gstr3b && (
+              <button
+                type="button"
+                onClick={() => setShowOtpModal(true)}
+                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-medium cursor-pointer transition-colors"
+              >
+                <KeyRound className="w-3.5 h-3.5" />
+                <span>Authenticate GST Portal</span>
+              </button>
+            )}
           </div>
-          <button onClick={() => setShowOtpModal(true)} className="btn btn-primary btn-sm">
+        }
+      />
+
+      <ValidationMessage
+        type="error"
+        message={errorMsg}
+        onDismiss={() => setErrorMsg("")}
+        className="mt-0!"
+      />
+      <ValidationMessage
+        type="success"
+        message={successMsg}
+        onDismiss={() => setSuccessMsg("")}
+        className="mt-0!"
+      />
+
+      {/* Proactive Session Expiry Suggestion */}
+      {proactiveWarning && (
+        <div className="px-4 py-3 rounded-lg bg-warning/10 border border-warning/30 text-foreground flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-2.5">
+            <AlertTriangle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs sm:text-sm font-semibold">GSTN Session Expiring Soon</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Current portal authorization expires in under 30 minutes. Refresh OTP before bulk filing.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowOtpModal(true)}
+            className="h-8 px-3 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-medium cursor-pointer shrink-0"
+          >
             Refresh OTP Session
           </button>
         </div>
       )}
 
-      {/* 1. Portal Status Toolbar */}
-      <div className="status-toolbar card-blur">
-        <div className="status-indicator">
-          <span className={`status-dot ${gstr3b ? "active" : "inactive"}`}></span>
-          <span>GSTN Connection: <strong>{gstr3b ? "Active Portal Session" : "Session Expired"}</strong></span>
-        </div>
-        {!gstr3b && (
-          <button onClick={() => setShowOtpModal(true)} className="btn btn-primary">
-            Authenticate GST Portal
-          </button>
-        )}
-      </div>
-
-      {/* 2. Data Health Blocks Warning */}
+      {/* Data Health Blockers */}
       {healthStatus.blockFiling && (
-        <div className="alert-box warning-alert">
-          <h3>⚠️ Data Health Blockers Detected</h3>
-          <p>The GST staging portal will reject transactions containing defaults. Resolve the following legacy parameters before uploading GSTR-1 or E-way bills:</p>
-          <div className="issues-grid">
+        <div className="p-4 sm:p-5 rounded-lg bg-warning/10 border border-warning/30 space-y-3">
+          <div className="flex items-start gap-2.5">
+            <AlertTriangle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Data Health Blockers Detected</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Resolve missing HSN codes or pincodes below before filing GSTR-1 or generating E-Way bills.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {healthStatus.issues.items.length > 0 && (
-              <div className="issue-block">
-                <strong>Items missing HSN (HSN="000000"):</strong>
-                <ul>
-                  {healthStatus.issues.items.map(i => <li key={i.id}>{i.name} (SKU: {i.sku})</li>)}
+              <div className="bg-card border border-border rounded-md p-3">
+                <p className="text-xs font-semibold text-foreground mb-1.5">
+                  Items missing HSN
+                </p>
+                <ul className="space-y-1 text-xs text-muted-foreground list-disc pl-4">
+                  {healthStatus.issues.items.map((i) => (
+                    <li key={i.id}>
+                      {i.name} ({i.sku})
+                    </li>
+                  ))}
                 </ul>
               </div>
             )}
             {healthStatus.issues.customers.length > 0 && (
-              <div className="issue-block">
-                <strong>Customers missing Pincode (PIN="000000"):</strong>
-                <ul>
-                  {healthStatus.issues.customers.map(c => <li key={c.id}>{c.name} (Mob: {c.mobile})</li>)}
+              <div className="bg-card border border-border rounded-md p-3">
+                <p className="text-xs font-semibold text-foreground mb-1.5">
+                  Customers missing Pincode
+                </p>
+                <ul className="space-y-1 text-xs text-muted-foreground list-disc pl-4">
+                  {healthStatus.issues.customers.map((c) => (
+                    <li key={c.id}>
+                      {c.name} ({c.mobile})
+                    </li>
+                  ))}
                 </ul>
               </div>
             )}
             {healthStatus.issues.branches.length > 0 && (
-              <div className="issue-block">
-                <strong>Branches missing Pincode (PIN="000000"):</strong>
-                <ul>
-                  {healthStatus.issues.branches.map(b => <li key={b.id}>{b.name}</li>)}
+              <div className="bg-card border border-border rounded-md p-3">
+                <p className="text-xs font-semibold text-foreground mb-1.5">
+                  Branches missing Pincode
+                </p>
+                <ul className="space-y-1 text-xs text-muted-foreground list-disc pl-4">
+                  {healthStatus.issues.branches.map((b) => (
+                    <li key={b.id}>{b.name}</li>
+                  ))}
                 </ul>
               </div>
             )}
@@ -453,330 +503,472 @@ export default function ComplianceDashboard() {
         </div>
       )}
 
-      {/* 3. GSTR-3B scorecards */}
-      <div className="metrics-grid">
-        <div className="metric-card card-blur">
-          <h4>Outward Sales Tax (GSTR-3B Liability)</h4>
-          {gstr3b ? (
-            <div className="metric-content">
-              <span className="metric-value">₹{gstr3b.summary.outwardSupplies.taxableValue.toLocaleString()}</span>
-              <div className="tax-split">
-                <span>CGST: ₹{gstr3b.summary.outwardSupplies.cgst.toLocaleString()}</span>
-                <span>SGST: ₹{gstr3b.summary.outwardSupplies.sgst.toLocaleString()}</span>
-              </div>
-            </div>
-          ) : (
-            <span className="no-data">Session Auth Required</span>
-          )}
-        </div>
+      {/* GSTR-3B Scorecards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <CommonCard
+          title="Outward Sales Tax (GSTR-3B Liability)"
+          value={
+            gstr3b
+              ? `₹ ${gstr3b.summary.outwardSupplies.taxableValue.toLocaleString("en-IN")}`
+              : "Auth Required"
+          }
+          color={gstr3b ? "text-foreground" : "text-muted-foreground"}
+          subtitle={
+            gstr3b
+              ? `CGST: ₹ ${gstr3b.summary.outwardSupplies.cgst.toLocaleString("en-IN")} · SGST: ₹ ${gstr3b.summary.outwardSupplies.sgst.toLocaleString("en-IN")}`
+              : "Authenticate GST portal session to retrieve live return summary"
+          }
+          icon={Shield}
+        />
 
-        <div className="metric-card card-blur">
-          <h4>Input Tax Credit (ITC Claims)</h4>
-          {gstr3b ? (
-            <div className="metric-content">
-              <span className="metric-value value-green">₹{(gstr3b.summary.eligibleItc.cgst + gstr3b.summary.eligibleItc.sgst).toLocaleString()}</span>
-              <div className="tax-split">
-                <span>CGST: ₹{gstr3b.summary.eligibleItc.cgst.toLocaleString()}</span>
-                <span>SGST: ₹{gstr3b.summary.eligibleItc.sgst.toLocaleString()}</span>
-              </div>
-            </div>
-          ) : (
-            <span className="no-data">Session Auth Required</span>
-          )}
-        </div>
+        <CommonCard
+          title="Eligible Input Tax Credit (ITC)"
+          value={
+            gstr3b
+              ? `₹ ${(gstr3b.summary.eligibleItc.cgst + gstr3b.summary.eligibleItc.sgst).toLocaleString("en-IN")}`
+              : "Auth Required"
+          }
+          color={gstr3b ? "text-success" : "text-muted-foreground"}
+          subtitle={
+            gstr3b
+              ? `CGST: ₹ ${gstr3b.summary.eligibleItc.cgst.toLocaleString("en-IN")} · SGST: ₹ ${gstr3b.summary.eligibleItc.sgst.toLocaleString("en-IN")}`
+              : "Authenticate GST portal session to inspect ITC eligibility"
+          }
+          icon={CheckCircle2}
+        />
       </div>
 
-      {/* 4. GST Filing Section */}
-      <div className="section-panel card-blur">
-        <h3>GSTR-1 Monthly Filing</h3>
-        <p>Prepare outward sales summaries for registered (B2B) and unregistered (B2CS) returns.</p>
-        
-        <div className="actions-row">
-          <button onClick={handlePreviewGstr1} className="btn btn-secondary">
-            Preview GSTR-1 Payload
-          </button>
-          <button 
-            onClick={handleFileGstr1} 
-            disabled={healthStatus.blockFiling || loading} 
-            className="btn btn-success"
-          >
-            {loading ? "Uploading..." : "File GSTR-1 to Staging"}
-          </button>
+      {/* GSTR-1 Monthly Filing */}
+      <div className="bg-card p-5 rounded-lg border border-border surface-shadow space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">GSTR-1 Monthly Return Staging</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Preview B2B / B2CS outward payload or file return to GSTN staging
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handlePreviewGstr1}
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80 text-xs font-medium cursor-pointer transition-colors"
+            >
+              <FileJson className="w-3.5 h-3.5" />
+              <span>Preview Payload</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleFileGstr1}
+              disabled={healthStatus.blockFiling || loading}
+              className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {loading ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <UploadCloud className="w-3.5 h-3.5" />
+              )}
+              <span>{loading ? "Uploading..." : "File GSTR-1 to Staging"}</span>
+            </button>
+          </div>
         </div>
 
         {previewData && (
-          <div className="json-preview">
-            <h4>GSTR-1 Raw Payload Preview:</h4>
-            <pre>{JSON.stringify(previewData, null, 2)}</pre>
+          <div className="bg-background border border-border rounded-md p-3.5">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                GSTR-1 JSON Payload Preview
+              </span>
+              <button
+                type="button"
+                onClick={() => setPreviewData(null)}
+                className="text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+            <pre className="text-xs font-mono text-foreground overflow-x-auto max-h-72 scrollbar-thin">
+              {JSON.stringify(previewData, null, 2)}
+            </pre>
           </div>
         )}
       </div>
 
-      {/* Pending Reconciliations (Orphan Returns) Section */}
+      {/* Orphaned Credit Notes Reconciliation */}
       {orphanedReturns.length > 0 && (
-        <div className="section-panel card-blur pending-reconciliations-panel">
-          <h3 className="warning-text-title">⚠️ Pending Reconciliations: Orphaned Credit Notes</h3>
-          <p>The GST portal requires original invoice numbers and dates to file Credit Notes (CDNR). Resolve the orphans below by mapping them or writing them off.</p>
-          <table className="eway-table">
-            <thead>
+        <div className="bg-card rounded-lg border border-warning/40 surface-shadow overflow-hidden">
+          <div className="px-4 sm:px-5 py-3.5 border-b border-border bg-warning/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-warning" />
+                <span>Pending Reconciliations: Orphaned Credit Notes</span>
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                GSTN requires an original invoice number and date for CDNR returns.
+              </p>
+            </div>
+            <StatusBadge variant="warning tabular-nums">{orphanedReturns.length} pending</StatusBadge>
+          </div>
+
+          <TableWrapper className="!border-none !rounded-none !shadow-none !bg-transparent">
+            <table className="w-full text-sm text-left border-collapse">
+              <thead className="bg-secondary/70 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border">
+                <tr>
+                  <th className="px-4 py-2.5">Return No</th>
+                  <th className="px-4 py-2.5">Date</th>
+                  <th className="px-4 py-2.5">Customer</th>
+                  <th className="px-4 py-2.5 text-right">Amount</th>
+                  <th className="px-4 py-2.5 text-right">Resolution</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/70">
+                {orphanedReturns.map((ret) => (
+                  <tr key={ret.id} className="elevated-table-row transition-colors">
+                    <td className="px-4 py-2.5 font-mono text-xs font-semibold text-foreground">
+                      {ret.returnNo}
+                    </td>
+                    <td className="px-4 py-2.5 text-xs text-muted-foreground tabular-nums">
+                      {new Date(ret.returnDate).toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-2.5 font-medium text-foreground">
+                      {ret.customer?.name || "Walk-in Customer"}
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-mono font-semibold tabular-nums">
+                      ₹ {Number(ret.grandTotal || 0).toLocaleString("en-IN")}
+                    </td>
+                    <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                      <div className="inline-flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setReconcilingReturn(ret)}
+                          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-medium cursor-pointer"
+                        >
+                          <Link2 className="w-3 h-3" />
+                          <span>Map Invoice</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleWriteOff(ret.id)}
+                          disabled={resolvingId === ret.id}
+                          className="h-7 px-2.5 rounded-md border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80 text-xs font-medium cursor-pointer disabled:opacity-50"
+                        >
+                          {resolvingId === ret.id ? "Processing..." : "Write Off"}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TableWrapper>
+        </div>
+      )}
+
+      {/* E-Way Bill Generation */}
+      <div className="bg-card rounded-lg border border-border surface-shadow overflow-hidden">
+        <div className="px-4 sm:px-5 py-3.5 border-b border-border flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <Truck className="w-4 h-4 text-primary-text" />
+              <span>E-Way Bill Queue (Invoices &ge; ₹50,000)</span>
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Mandatory transit permits for high-value invoices in the selected period
+            </p>
+          </div>
+          <StatusBadge variant="neutral tabular-nums">
+            {highValueInvoices.length} eligible
+          </StatusBadge>
+        </div>
+
+        <TableWrapper className="!border-none !rounded-none !shadow-none !bg-transparent">
+          <table className="w-full text-sm text-left border-collapse">
+            <thead className="bg-secondary/70 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border">
               <tr>
-                <th>Return No</th>
-                <th>Date</th>
-                <th>Customer</th>
-                <th>Amount</th>
-                <th>Action</th>
+                <th className="px-4 py-2.5">Invoice No</th>
+                <th className="px-4 py-2.5">Date</th>
+                <th className="px-4 py-2.5">Customer</th>
+                <th className="px-4 py-2.5 text-right">Amount</th>
+                <th className="px-4 py-2.5">E-Way Bill No</th>
+                <th className="px-4 py-2.5 text-right">Action</th>
               </tr>
             </thead>
-            <tbody>
-              {orphanedReturns.map((ret) => (
-                <tr key={ret.id}>
-                  <td><strong>{ret.returnNo}</strong></td>
-                  <td>{new Date(ret.returnDate).toLocaleDateString()}</td>
-                  <td>{ret.customer?.name || "Walk-in Customer"}</td>
-                  <td>₹{ret.grandTotal.toLocaleString()}</td>
-                  <td>
-                    <div className="actions-row">
-                      <button 
-                        onClick={() => setReconcilingReturn(ret)}
-                        className="btn btn-primary btn-sm"
+            <tbody className="divide-y divide-border/70">
+              {highValueInvoices.map((inv) => (
+                <tr key={inv.id} className="elevated-table-row transition-colors">
+                  <td className="px-4 py-2.5 font-mono text-xs font-semibold text-foreground">
+                    {inv.invoiceNo}
+                  </td>
+                  <td className="px-4 py-2.5 text-xs text-muted-foreground tabular-nums">
+                    {new Date(inv.invoiceDate).toLocaleDateString()}
+                  </td>
+                  <td className="px-4 py-2.5 font-medium text-foreground">
+                    {inv.customer?.name || "-"}
+                  </td>
+                  <td className="px-4 py-2.5 text-right font-mono font-semibold tabular-nums">
+                    ₹ {Number(inv.grandTotal || 0).toLocaleString("en-IN")}
+                  </td>
+                  <td className="px-4 py-2.5 font-mono text-xs">
+                    {inv.ewayBillNo ? (
+                      <span className="text-foreground font-semibold">{inv.ewayBillNo}</span>
+                    ) : (
+                      <span className="text-muted-foreground">Not generated</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-2.5 text-right">
+                    {!inv.ewayBillNo ? (
+                      <button
+                        type="button"
+                        onClick={() => openEwayModal(inv)}
+                        disabled={healthStatus.blockFiling}
+                        className="h-7 px-3 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-medium cursor-pointer disabled:opacity-50"
                       >
-                        Map Invoice
+                        Generate E-Way
                       </button>
-                      <button 
-                        onClick={() => handleWriteOff(ret.id)}
-                        disabled={resolvingId === ret.id}
-                        className="btn btn-secondary btn-sm"
-                      >
-                        {resolvingId === ret.id ? "Processing..." : "Write Off"}
-                      </button>
-                    </div>
+                    ) : (
+                      <StatusBadge variant="success">Generated</StatusBadge>
+                    )}
                   </td>
                 </tr>
               ))}
+              {highValueInvoices.length === 0 && (
+                <tr>
+                  <td colSpan="6" className="px-4 py-8 text-center text-xs text-muted-foreground">
+                    No invoices exceeding ₹50,000 found for {MONTHS.find((m) => m.value === month)?.label} {year}.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
-        </div>
-      )}
-
-      {/* 5. E-Way Bill Generation Panel */}
-      <div className="section-panel card-blur">
-        <h3>E-Way Bill Generation</h3>
-        <p>Invoices exceeding the ₹50,000 threshold requirement for inter-state cargo transits.</p>
-        <table className="eway-table">
-          <thead>
-            <tr>
-              <th>Invoice No</th>
-              <th>Date</th>
-              <th>Customer</th>
-              <th>Amount</th>
-              <th>E-Way Bill No</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.filter(inv => inv.grandTotal >= 50000).map((inv) => (
-              <tr key={inv.id}>
-                <td>{inv.invoiceNo}</td>
-                <td>{new Date(inv.invoiceDate).toLocaleDateString()}</td>
-                <td>{inv.customer?.name}</td>
-                <td>₹{inv.grandTotal.toLocaleString()}</td>
-                <td>{inv.ewayBillNo || <span className="text-gray">Not Generated</span>}</td>
-                <td>
-                  {!inv.ewayBillNo ? (
-                    <button 
-                      onClick={() => openEwayModal(inv)} 
-                      disabled={healthStatus.blockFiling}
-                      className="btn btn-primary btn-sm"
-                    >
-                      Generate E-Way
-                    </button>
-                  ) : (
-                    <span className="text-green font-bold">Generated</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {invoices.filter(inv => inv.grandTotal >= 50000).length === 0 && (
-              <tr>
-                <td colSpan="6" className="no-rows">No invoices exceeding the ₹50,000 threshold found this period.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        </TableWrapper>
       </div>
 
-      {/* OTP AUTH MODAL */}
-      {showOtpModal && (
-        <div className="modal-overlay">
-          <div className="modal-content card-blur">
-            <h3>Portal Authentication OTP</h3>
-            <p>A verification code was sent by the GSP system to your registered mobile.</p>
-            
-            <button 
+      {/* Portal OTP Modal */}
+      <CommonModal
+        isOpen={showOtpModal}
+        onClose={() => setShowOtpModal(false)}
+        title="GST Portal OTP Authentication"
+        description="A verification code is dispatched via your registered GSP contact."
+      >
+        <div className="space-y-4">
+          <button
+            type="button"
+            onClick={handleRequestOtp}
+            disabled={otpCooldown > 0}
+            className="h-8 px-3 rounded-md border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80 text-xs font-medium cursor-pointer disabled:opacity-50"
+          >
+            {otpCooldown > 0
+              ? `Resend OTP (${Math.floor(otpCooldown / 60)}:${String(otpCooldown % 60).padStart(
+                  2,
+                  "0"
+                )})`
+              : "Send Portal OTP"}
+          </button>
+
+          <form onSubmit={handleVerifyOtp} className="space-y-4">
+            <div>
+              <label className={LABEL_CLASS}>6-Digit OTP</label>
+              <input
+                type="text"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                placeholder="e.g. 123456"
+                className={`${INPUT_CLASS} font-mono tracking-widest`}
+                required
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2 border-t border-border/70">
+              <button
+                type="button"
+                onClick={() => setShowOtpModal(false)}
+                className="h-8 px-3.5 rounded-md border border-border bg-secondary text-secondary-foreground text-xs font-medium cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="h-8 px-4 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-medium cursor-pointer"
+              >
+                Verify & Connect
+              </button>
+            </div>
+          </form>
+        </div>
+      </CommonModal>
+
+      {/* Orphan Invoice Mapping Modal */}
+      <CommonModal
+        isOpen={Boolean(reconcilingReturn)}
+        onClose={() => {
+          setReconcilingReturn(null);
+          setLegacyInvoiceNo("");
+          setLegacyInvoiceDate("");
+          setMappingError("");
+        }}
+        title={
+          reconcilingReturn ? `Map Original Invoice · ${reconcilingReturn.returnNo}` : "Map Invoice"
+        }
+        description="Link this return to an existing ERP invoice or external legacy bill number."
+      >
+        {reconcilingReturn && (
+          <form onSubmit={handleMapSubmit} className="space-y-4">
+            <ValidationMessage
+              type="error"
+              message={mappingError}
+              onDismiss={() => setMappingError("")}
+              className="mt-0!"
+            />
+
+            <div>
+              <label className={LABEL_CLASS}>Original Invoice No *</label>
+              <input
+                type="text"
+                value={legacyInvoiceNo}
+                onChange={(e) => setLegacyInvoiceNo(e.target.value)}
+                placeholder="e.g. GY-2026-0001"
+                className={`${INPUT_CLASS} font-mono`}
+                required
+              />
+            </div>
+
+            <div>
+              <label className={LABEL_CLASS}>Original Invoice Date *</label>
+              <input
+                type="date"
+                value={legacyInvoiceDate}
+                onChange={(e) => setLegacyInvoiceDate(e.target.value)}
+                className={INPUT_CLASS}
+                required
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Must be on or before the return date (
+                {new Date(reconcilingReturn.returnDate).toLocaleDateString()}).
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-border/70">
+              <button
+                type="button"
+                onClick={() => {
+                  setReconcilingReturn(null);
+                  setLegacyInvoiceNo("");
+                  setLegacyInvoiceDate("");
+                  setMappingError("");
+                }}
+                className="h-8 px-3.5 rounded-md border border-border bg-secondary text-secondary-foreground text-xs font-medium cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={resolvingId === reconcilingReturn.id}
+                className="h-8 px-4 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-medium cursor-pointer disabled:opacity-50"
+              >
+                {resolvingId === reconcilingReturn.id ? "Linking..." : "Link Invoice"}
+              </button>
+            </div>
+          </form>
+        )}
+      </CommonModal>
+
+      {/* E-Way Parameters Modal */}
+      <CommonModal
+        isOpen={showEwayModal}
+        onClose={() => setShowEwayModal(false)}
+        title={
+          selectedInvoice ? `Generate E-Way Bill · ${selectedInvoice.invoiceNo}` : "Generate E-Way Bill"
+        }
+        description={
+          selectedInvoice
+            ? `Destination: ${selectedInvoice.customer?.name || "Party"} (PIN: ${
+                selectedInvoice.customer?.pincode || "N/A"
+              })`
+            : ""
+        }
+      >
+        <form onSubmit={handleGenerateEwayBill} className="space-y-3.5">
+          <div>
+            <label className={LABEL_CLASS}>Transporter GSTIN</label>
+            <input
+              type="text"
+              value={transporterId}
+              onChange={(e) => setTransporterId(e.target.value)}
+              placeholder="e.g. 09ABCDE1234F1Z5"
+              className={`${INPUT_CLASS} font-mono uppercase`}
+            />
+          </div>
+
+          <div>
+            <label className={LABEL_CLASS}>Transporter Name</label>
+            <input
+              type="text"
+              value={transporterName}
+              onChange={(e) => setTransporterName(e.target.value)}
+              placeholder="e.g. VRL Logistics"
+              className={INPUT_CLASS}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className={LABEL_CLASS}>Vehicle Number *</label>
+              <input
+                type="text"
+                value={vehicleNo}
+                onChange={(e) => setVehicleNo(e.target.value)}
+                placeholder="e.g. UP80AT1234"
+                className={`${INPUT_CLASS} font-mono uppercase`}
+                required
+              />
+            </div>
+
+            <div>
+              <label className={LABEL_CLASS}>Transport Mode</label>
+              <select
+                value={transportMode}
+                onChange={(e) => setTransportMode(e.target.value)}
+                className={`${INPUT_CLASS} cursor-pointer`}
+              >
+                <option value="ROAD">Road</option>
+                <option value="RAIL">Rail</option>
+                <option value="AIR">Air</option>
+                <option value="SHIP">Ship</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className={LABEL_CLASS}>Transit Distance (km) *</label>
+            <input
+              type="number"
+              value={distanceKm}
+              onChange={(e) => setDistanceKm(e.target.value)}
+              min="1"
+              max="4000"
+              className={`${INPUT_CLASS} font-mono tabular-nums`}
+              required
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Override NIC distance calculation (1–4000 km).
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-border/70">
+            <button
               type="button"
-              onClick={handleRequestOtp} 
-              disabled={otpCooldown > 0}
-              className="btn btn-secondary btn-sm mb-4"
+              onClick={() => setShowEwayModal(false)}
+              className="h-8 px-3.5 rounded-md border border-border bg-secondary text-secondary-foreground text-xs font-medium cursor-pointer"
             >
-              {otpCooldown > 0 
-                ? `Resend OTP (${Math.floor(otpCooldown / 60)}:${String(otpCooldown % 60).padStart(2, "0")})` 
-                : "Send Portal OTP"}
+              Cancel
             </button>
-
-            <form onSubmit={handleVerifyOtp}>
-              <div className="form-group">
-                <label>Enter 6-Digit OTP:</label>
-                <input 
-                  type="text" 
-                  value={otp} 
-                  onChange={(e) => setOtp(e.target.value)} 
-                  placeholder="e.g. 123456" 
-                  className="form-control"
-                  required
-                />
-              </div>
-              <div className="modal-actions">
-                <button type="button" onClick={() => setShowOtpModal(false)} className="btn btn-secondary">
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-success">
-                  Verify & Connect
-                </button>
-              </div>
-            </form>
+            <button
+              type="submit"
+              className="h-8 px-4 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-medium cursor-pointer"
+            >
+              Generate E-Way Bill
+            </button>
           </div>
-        </div>
-      )}
-
-      {/* ORPHAN MAPPING MODAL */}
-      {reconcilingReturn && (
-        <div className="modal-overlay">
-          <div className="modal-content card-blur">
-            <h3>Map Original Invoice - {reconcilingReturn.returnNo}</h3>
-            <p>Enter the original invoice details. If the invoice exists in the ERP, they will be linked. Otherwise, it will be mapped as a legacy external invoice.</p>
-            
-            {mappingError && <div className="alert-box error-alert">{mappingError}</div>}
-
-            <form onSubmit={handleMapSubmit}>
-              <div className="form-group">
-                <label>Original Invoice No:</label>
-                <input 
-                  type="text" 
-                  value={legacyInvoiceNo} 
-                  onChange={(e) => setLegacyInvoiceNo(e.target.value)} 
-                  placeholder="e.g. GY-2026-0001" 
-                  className="form-control"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Original Invoice Date:</label>
-                <input 
-                  type="date" 
-                  value={legacyInvoiceDate} 
-                  onChange={(e) => setLegacyInvoiceDate(e.target.value)} 
-                  className="form-control"
-                  required
-                />
-                <small className="help-text">Must be on or before the return date ({new Date(reconcilingReturn.returnDate).toLocaleDateString()})</small>
-              </div>
-
-              <div className="modal-actions">
-                <button 
-                  type="button" 
-                  onClick={() => {
-                    setReconcilingReturn(null);
-                    setLegacyInvoiceNo("");
-                    setLegacyInvoiceDate("");
-                    setMappingError("");
-                  }} 
-                  className="btn btn-secondary"
-                >
-                  Cancel
-                </button>
-                <button type="submit" disabled={resolvingId === reconcilingReturn.id} className="btn btn-success">
-                  {resolvingId === reconcilingReturn.id ? "Linking..." : "Link Invoice"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* E-WAY PARAMETERS MODAL */}
-      {showEwayModal && (
-        <div className="modal-overlay">
-          <div className="modal-content card-blur">
-            <h3>Generate E-Way Bill - {selectedInvoice?.invoiceNo}</h3>
-            <p>Target Destination: <strong>{selectedInvoice?.customer?.name}</strong> (PIN: {selectedInvoice?.customer?.pincode})</p>
-            
-            <form onSubmit={handleGenerateEwayBill}>
-              <div className="form-group">
-                <label>Transporter GSTIN:</label>
-                <input 
-                  type="text" 
-                  value={transporterId} 
-                  onChange={(e) => setTransporterId(e.target.value)} 
-                  placeholder="e.g. 09ABCDE1234F1Z5" 
-                  className="form-control"
-                />
-              </div>
-              <div className="form-group">
-                <label>Transporter Name:</label>
-                <input 
-                  type="text" 
-                  value={transporterName} 
-                  onChange={(e) => setTransporterName(e.target.value)} 
-                  placeholder="e.g. VRL Logistics" 
-                  className="form-control"
-                />
-              </div>
-              <div className="form-group">
-                <label>Vehicle Number:</label>
-                <input 
-                  type="text" 
-                  value={vehicleNo} 
-                  onChange={(e) => setVehicleNo(e.target.value)} 
-                  placeholder="e.g. UP80AT1234" 
-                  className="form-control"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Transport Mode:</label>
-                <select value={transportMode} onChange={(e) => setTransportMode(e.target.value)} className="form-control">
-                  <option value="ROAD">Road</option>
-                  <option value="RAIL">Rail</option>
-                  <option value="AIR">Air</option>
-                  <option value="SHIP">Ship</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Transit Distance (km) - Auto Calculator Override:</label>
-                <input 
-                  type="number" 
-                  value={distanceKm} 
-                  onChange={(e) => setDistanceKm(e.target.value)} 
-                  min="1"
-                  max="4000"
-                  className="form-control"
-                  required
-                />
-                <small className="help-text">You may override NIC mapping calculations (Max distance: 4000 km)</small>
-              </div>
-
-              <div className="modal-actions">
-                <button type="button" onClick={() => setShowEwayModal(false)} className="btn btn-secondary">
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Generate E-Way Bill
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+        </form>
+      </CommonModal>
     </div>
   );
 }

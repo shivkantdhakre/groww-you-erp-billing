@@ -1,6 +1,7 @@
 import prisma from "../utils/prisma.js";
 import { paginate } from "../utils/pagination.js";
-import { analyzeLeadExecutiveSummary } from "../utils/geminiService.js";
+import { analyzeLeadExecutiveSummary, GeminiServiceError } from "../utils/geminiService.js";
+import { invalidateInsightsCache } from "../utils/cacheService.js";
 
 // Fetch all active leads for logged-in company with pagination and filters
 export const getLeads = async (req, res) => {
@@ -91,6 +92,8 @@ export const createLead = async (req, res) => {
       }
     });
 
+    invalidateInsightsCache(req.user.companyId);
+
     res.status(201).json(newLead);
   } catch (error) {
     console.error("Error creating lead:", error);
@@ -128,6 +131,8 @@ export const updateLead = async (req, res) => {
         interactions: { orderBy: { date: "desc" } }
       }
     });
+
+    invalidateInsightsCache(req.user.companyId);
 
     res.status(200).json(updatedLead);
   } catch (error) {
@@ -181,18 +186,33 @@ export const addLeadInteraction = async (req, res) => {
   }
 };
 
-// PUT Endpoint: Triggers Gemini AI Analysis & Write-Time Caching to PostgreSQL
+// PUT Endpoint: Triggers live Gemini AI Analysis & Write-Time Caching to PostgreSQL
 export const analyzeLead = async (req, res) => {
   try {
-    const leadId = parseInt(req.params.id);
+    const leadId = parseInt(req.params.id, 10);
+    if (Number.isNaN(leadId)) {
+      return res.status(400).json({ message: "Invalid lead ID" });
+    }
 
-    // Fetch lead with context truncation (last 20 interactions ordered by date desc)
+    // Fetch lead with linked ERP customer ledger context & last 20 interactions ordered by date desc
     const lead = await prisma.lead.findFirst({
       where: {
         id: leadId,
         companyId: req.user.companyId
       },
       include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            outstandingBalance: true,
+            invoices: {
+              take: 5,
+              orderBy: { invoiceDate: "desc" },
+              select: { invoiceNo: true, grandTotal: true, invoiceDate: true, invoiceType: true }
+            }
+          }
+        },
         interactions: {
           orderBy: { date: "desc" },
           take: 20
@@ -217,7 +237,7 @@ export const analyzeLead = async (req, res) => {
       interactions: safeInteractions
     };
 
-    // Call Gemini AI service with token-safe lead context
+    // Call live Gemini AI service (never falls back to heuristic template strings)
     const aiResult = await analyzeLeadExecutiveSummary(sanitizedLeadContext);
 
     // Write-time caching to PostgreSQL
@@ -232,6 +252,7 @@ export const analyzeLead = async (req, res) => {
         aiAnalyzedAt: new Date()
       },
       include: {
+        customer: true,
         interactions: {
           orderBy: { date: "desc" },
           take: 20
@@ -239,9 +260,21 @@ export const analyzeLead = async (req, res) => {
       }
     });
 
-    res.status(200).json(updatedLead);
+    invalidateInsightsCache(req.user.companyId);
+
+    res.status(200).json({
+      ...updatedLead,
+      aiSource: aiResult.source
+    });
   } catch (error) {
     console.error("Error analyzing lead with AI:", error);
+    if (error instanceof GeminiServiceError) {
+      return res.status(error.statusCode).json({
+        message: error.userMessage,
+        error: error.userMessage,
+        code: error.code
+      });
+    }
     res.status(500).json({ message: "Failed to generate AI executive summary" });
   }
 };
@@ -261,6 +294,8 @@ export const deleteLead = async (req, res) => {
     await prisma.lead.delete({
       where: { id: leadId }
     });
+
+    invalidateInsightsCache(req.user.companyId);
 
     res.status(200).json({ message: "Lead deleted successfully" });
   } catch (error) {

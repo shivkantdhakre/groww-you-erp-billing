@@ -1,9 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import api from "../utils/api";
 import { useStore } from "../store/useStore";
 import BrandLogo from "../components/common/BrandLogo";
-import { Mail, Lock, Building, Phone, Eye, EyeOff } from "lucide-react";
+import ValidationMessage from "../components/common/ValidationMessage";
+import { Mail, Lock, Building, Phone, Eye, EyeOff, Sun, Moon, ShieldCheck } from "lucide-react";
 
+const INPUT_CLASS =
+  "h-10 px-3.5 rounded-md w-full border border-input bg-background text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors";
+const LABEL_CLASS =
+  "flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5";
+
+/**
+ * Multi-tenant authentication & GSTIN/mobile-verified password recovery portal.
+ */
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -12,12 +21,21 @@ export default function Login() {
   const [success, setSuccess] = useState("");
   const login = useStore((state) => state.login);
 
-  // Password Visibility States
+  const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "light");
+
+  useEffect(() => {
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Forgot Password States
   const [showForgot, setShowForgot] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -40,14 +58,10 @@ export default function Login() {
     try {
       const response = await api.post("/auth/login", { email, password });
       const { token, user } = response.data;
-
-      // Trigger global store login action (handles localStorage automatically)
       login(token, user);
     } catch (err) {
       console.error("Login failed:", err);
-      setError(
-        err.response?.data?.message || "Invalid credentials. Please try again."
-      );
+      setError(err.response?.data?.message || "Invalid credentials. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -70,7 +84,8 @@ export default function Login() {
       errors.confirmPassword = "Passwords do not match.";
     }
     if (!trimmedGst && !mobileNumber) {
-      errors.verification = "Either Company GSTIN or Registered Mobile is required for tenant verification.";
+      errors.verification =
+        "Either Company GSTIN or Registered Mobile is required for tenant verification.";
     }
 
     if (Object.keys(errors).length > 0) {
@@ -92,8 +107,7 @@ export default function Login() {
         mobileNumber: mobileNumber || null,
       });
 
-      setSuccess(res.data.message || "Password reset successful! You can now log in.");
-      // Clear states
+      setSuccess(res.data.message || "Password reset successful. You can now sign in.");
       setForgotEmail("");
       setNewPassword("");
       setConfirmPassword("");
@@ -112,60 +126,268 @@ export default function Login() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background text-foreground transition-colors duration-300 font-sans relative overflow-hidden">
-      {/* Decorative gradient glowing balls using theme-consistent token colors */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 dark:bg-primary/25 rounded-full blur-3xl transition-colors duration-300"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/10 dark:bg-accent/20 rounded-full blur-3xl transition-colors duration-300"></div>
+    <div className="min-h-screen bg-background text-foreground flex flex-col justify-between p-4 sm:p-6">
+      <div className="flex items-center justify-between max-w-5xl w-full mx-auto">
+        <BrandLogo size={36} showText={true} />
+        <button
+          type="button"
+          onClick={() => setTheme((prev) => (prev === "light" ? "dark" : "light"))}
+          aria-label={theme === "light" ? "Switch to Dark Mode" : "Switch to Light Mode"}
+          className="h-8 w-8 rounded-md border border-border bg-card hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+        >
+          {theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+        </button>
+      </div>
 
-      <div className="relative w-full max-w-md p-8 glass-panel-blur border border-border rounded-2xl shadow-2xl transition-all duration-300">
-        <div className="flex flex-col items-center text-center mb-8">
-          <BrandLogo size={68} showText={true} className="mb-2" />
-          <p className="text-sm text-muted-foreground mt-2 font-medium">
-            {showForgot
-              ? "Verify Tenant details to reset your password"
-              : "Sign in to access your business operations"}
-          </p>
-        </div>
-
-        {error && (
-          <div className="p-3 mb-6 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg">
-            {error}
+      <div className="w-full max-w-md mx-auto my-8">
+        <div className="bg-card border border-border rounded-xl popover-shadow p-6 sm:p-8 space-y-5">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-primary-text">
+              Workspace Access
+            </p>
+            <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground mt-1">
+              {showForgot ? "Reset Account Password" : "Sign in to Groww You ERP"}
+            </h1>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+              {showForgot
+                ? "Verify your tenant GSTIN or registered mobile to authorize a password change."
+                : "Enter your workspace credentials to manage billing, ledgers, and compliance."}
+            </p>
           </div>
-        )}
 
-        {success && (
-          <div className="p-3 mb-6 text-sm text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-            {success}
-          </div>
-        )}
+          <ValidationMessage
+            type="error"
+            message={error}
+            onDismiss={() => setError("")}
+            className="mt-0!"
+          />
+          <ValidationMessage
+            type="success"
+            message={success}
+            onDismiss={() => setSuccess("")}
+            className="mt-0!"
+          />
 
-        {!showForgot ? (
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
-                <Mail className="w-4 h-4 shrink-0 text-muted-foreground/70" strokeWidth={1.5} aria-hidden="true" />
-                <span>Email Address</span>
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="example@gmail.com"
-                className="w-full px-4 py-3 rounded-lg bg-card border border-border text-foreground placeholder-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                required
-              />
-            </div>
-
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  <Lock className="w-4 h-4 shrink-0 text-muted-foreground/70" strokeWidth={1.5} aria-hidden="true" />
-                  <span>Password</span>
+          {!showForgot ? (
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label className={LABEL_CLASS}>
+                  <Mail className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span>Email Address</span>
                 </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="admin@company.com"
+                  className={INPUT_CLASS}
+                  required
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className={`${LABEL_CLASS} mb-0!`}>
+                    <Lock className="w-3.5 h-3.5" aria-hidden="true" />
+                    <span>Password</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForgot(true);
+                      setError("");
+                      setSuccess("");
+                      setConfirmPassword("");
+                      setForgotErrors({});
+                      setShowPassword(false);
+                      setShowNewPassword(false);
+                      setShowConfirmPassword(false);
+                    }}
+                    className="text-xs text-primary-text hover:underline cursor-pointer font-medium"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter password"
+                    className={`${INPUT_CLASS} pr-10`}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer focus:outline-none"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" strokeWidth={1.6} />
+                    ) : (
+                      <Eye className="w-4 h-4" strokeWidth={1.6} />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full h-10 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-sm rounded-md focus:outline-none focus:ring-2 focus:ring-ring transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+              >
+                {loading ? "Signing In..." : "Sign In"}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleForgotPassword} className="space-y-3.5">
+              {forgotErrors.verification && (
+                <ValidationMessage
+                  type="error"
+                  message={forgotErrors.verification}
+                  className="mt-0!"
+                />
+              )}
+
+              <div>
+                <label className={LABEL_CLASS}>
+                  <Mail className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span>Registered Email</span>
+                </label>
+                <input
+                  type="email"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  placeholder="admin@company.com"
+                  className={`${INPUT_CLASS} ${
+                    forgotErrors.email ? "border-destructive focus:ring-destructive" : ""
+                  }`}
+                  required
+                />
+                {forgotErrors.email && (
+                  <span className="text-xs text-destructive mt-1 block">{forgotErrors.email}</span>
+                )}
+              </div>
+
+              <div>
+                <label className={LABEL_CLASS}>
+                  <Building className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span>Company GSTIN (Tenant Verification)</span>
+                </label>
+                <input
+                  type="text"
+                  value={gstNumber}
+                  onChange={(e) => setGstNumber(e.target.value.toUpperCase())}
+                  placeholder="27AAACG1234D1Z5"
+                  className={`${INPUT_CLASS} font-mono uppercase ${
+                    forgotErrors.verification ? "border-destructive" : ""
+                  }`}
+                />
+              </div>
+
+              <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
+                <span className="h-px flex-1 bg-border" />
+                <span>OR</span>
+                <span className="h-px flex-1 bg-border" />
+              </div>
+
+              <div>
+                <label className={LABEL_CLASS}>
+                  <Phone className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span>Registered Mobile</span>
+                </label>
+                <input
+                  type="text"
+                  value={mobileNumber}
+                  onChange={(e) => setMobileNumber(e.target.value)}
+                  placeholder="10-digit mobile"
+                  className={`${INPUT_CLASS} font-mono tabular-nums ${
+                    forgotErrors.verification ? "border-destructive" : ""
+                  }`}
+                />
+              </div>
+
+              <div>
+                <label className={LABEL_CLASS}>
+                  <Lock className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span>New Password</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? "text" : "password"}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Minimum 6 characters"
+                    className={`${INPUT_CLASS} pr-10 ${
+                      forgotErrors.newPassword ? "border-destructive" : ""
+                    }`}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                    aria-label={showNewPassword ? "Hide password" : "Show password"}
+                  >
+                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {forgotErrors.newPassword && (
+                  <span className="text-xs text-destructive mt-1 block">
+                    {forgotErrors.newPassword}
+                  </span>
+                )}
+              </div>
+
+              <div>
+                <label className={LABEL_CLASS}>
+                  <Lock className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span>Confirm New Password</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Re-enter password"
+                    className={`${INPUT_CLASS} pr-10 ${
+                      forgotErrors.confirmPassword ? "border-destructive" : ""
+                    }`}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+                {forgotErrors.confirmPassword && (
+                  <span className="text-xs text-destructive mt-1 block">
+                    {forgotErrors.confirmPassword}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 h-9 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-sm rounded-md cursor-pointer disabled:opacity-50 transition-colors"
+                >
+                  {loading ? "Resetting..." : "Reset Password"}
+                </button>
                 <button
                   type="button"
                   onClick={() => {
-                    setShowForgot(true);
+                    setShowForgot(false);
                     setError("");
                     setSuccess("");
                     setConfirmPassword("");
@@ -174,205 +396,23 @@ export default function Login() {
                     setShowNewPassword(false);
                     setShowConfirmPassword(false);
                   }}
-                  className="text-xs text-primary hover:text-primary/80 cursor-pointer font-medium"
+                  className="h-9 px-4 bg-secondary border border-border text-secondary-foreground hover:bg-secondary/80 font-medium text-sm rounded-md cursor-pointer transition-colors"
                 >
-                  Forgot Password?
+                  Back
                 </button>
               </div>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full pl-4 pr-10 py-3 rounded-lg bg-card border border-border text-foreground placeholder-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-foreground transition-colors cursor-pointer focus:outline-none"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? (
-                    <EyeOff className="w-4 h-4" strokeWidth={1.5} />
-                  ) : (
-                    <Eye className="w-4 h-4" strokeWidth={1.5} />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg shadow-lg hover:shadow-primary/20 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? "Signing In..." : "Sign In"}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={handleForgotPassword} className="space-y-4">
-            {forgotErrors.verification && (
-              <div className="p-3 text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-lg font-semibold">
-                ⚠️ {forgotErrors.verification}
-              </div>
-            )}
-
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-1">
-                <Mail className="w-4 h-4 shrink-0 text-muted-foreground/70" strokeWidth={1.5} aria-hidden="true" />
-                <span>Registered Email</span>
-              </label>
-              <input
-                type="email"
-                value={forgotEmail}
-                onChange={(e) => setForgotEmail(e.target.value)}
-                placeholder="example@gmail.com"
-                className={`w-full px-4 py-2.5 rounded-lg bg-card border text-foreground placeholder-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
-                  forgotErrors.email ? "border-destructive focus:ring-destructive" : "border-border"
-                }`}
-                required
-              />
-              {forgotErrors.email && (
-                <span className="text-xs text-destructive mt-1 block font-semibold">{forgotErrors.email}</span>
-              )}
-            </div>
-
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-1">
-                <Building className="w-4 h-4 shrink-0 text-muted-foreground/70" strokeWidth={1.5} aria-hidden="true" />
-                <span>Company GSTIN (Tenant Verification)</span>
-              </label>
-              <input
-                type="text"
-                value={gstNumber}
-                onChange={(e) => setGstNumber(e.target.value.toUpperCase())}
-                placeholder="27AAACG1234D1Z5"
-                className={`w-full px-4 py-2.5 rounded-lg bg-card border text-foreground placeholder-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
-                  forgotErrors.verification ? "border-destructive focus:ring-destructive" : "border-border"
-                }`}
-              />
-            </div>
-
-            <div className="text-center text-xs text-muted-foreground/70 my-1 font-semibold">OR</div>
-
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-1">
-                <Phone className="w-4 h-4 shrink-0 text-muted-foreground/70" strokeWidth={1.5} aria-hidden="true" />
-                <span>Registered Mobile (Tenant Verification)</span>
-              </label>
-              <input
-                type="text"
-                value={mobileNumber}
-                onChange={(e) => setMobileNumber(e.target.value)}
-                placeholder="9876543210"
-                className={`w-full px-4 py-2.5 rounded-lg bg-card border text-foreground placeholder-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
-                  forgotErrors.verification ? "border-destructive focus:ring-destructive" : "border-border"
-                }`}
-              />
-            </div>
-
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-1">
-                <Lock className="w-4 h-4 shrink-0 text-muted-foreground/70" strokeWidth={1.5} aria-hidden="true" />
-                <span>New Password</span>
-              </label>
-              <div className="relative">
-                <input
-                  type={showNewPassword ? "text" : "password"}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="New Password"
-                  className={`w-full pl-4 pr-10 py-2.5 rounded-lg bg-card border text-foreground placeholder-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
-                    forgotErrors.newPassword ? "border-destructive focus:ring-destructive" : "border-border"
-                  }`}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-foreground transition-colors cursor-pointer focus:outline-none"
-                  aria-label={showNewPassword ? "Hide password" : "Show password"}
-                >
-                  {showNewPassword ? (
-                    <EyeOff className="w-4 h-4" strokeWidth={1.5} />
-                  ) : (
-                    <Eye className="w-4 h-4" strokeWidth={1.5} />
-                  )}
-                </button>
-              </div>
-              {forgotErrors.newPassword && (
-                <span className="text-xs text-destructive mt-1 block font-semibold">{forgotErrors.newPassword}</span>
-              )}
-            </div>
-
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-1">
-                <Lock className="w-4 h-4 shrink-0 text-muted-foreground/70" strokeWidth={1.5} aria-hidden="true" />
-                <span>Confirm New Password</span>
-              </label>
-              <div className="relative">
-                <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm Password"
-                  className={`w-full pl-4 pr-10 py-2.5 rounded-lg bg-card border text-foreground placeholder-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
-                    forgotErrors.confirmPassword ? "border-destructive focus:ring-destructive" : "border-border"
-                  }`}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-foreground transition-colors cursor-pointer focus:outline-none"
-                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="w-4 h-4" strokeWidth={1.5} />
-                  ) : (
-                    <Eye className="w-4 h-4" strokeWidth={1.5} />
-                  )}
-                </button>
-              </div>
-              {forgotErrors.confirmPassword && (
-                <span className="text-xs text-destructive mt-1 block font-semibold">{forgotErrors.confirmPassword}</span>
-              )}
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex-1 py-3 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg shadow-lg hover:shadow-primary/20 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 cursor-pointer disabled:opacity-50"
-              >
-                {loading ? "Resetting..." : "Reset Password"}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowForgot(false);
-                  setError("");
-                  setSuccess("");
-                  setConfirmPassword("");
-                  setForgotErrors({});
-                  setShowPassword(false);
-                  setShowNewPassword(false);
-                  setShowConfirmPassword(false);
-                }}
-                className="py-3 px-4 bg-secondary text-secondary-foreground hover:bg-secondary/80 font-semibold rounded-lg shadow-lg focus:outline-none transition-all duration-200 cursor-pointer"
-              >
-                Back
-              </button>
-            </div>
-          </form>
-        )}
-
-        <div className="mt-8 text-center text-xs text-muted-foreground/70 font-semibold">
-          Secure, multi-tenant cloud operations enabled.
+            </form>
+          )}
         </div>
       </div>
+
+      <footer className="max-w-5xl w-full mx-auto flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5">
+          <ShieldCheck className="w-3.5 h-3.5 text-primary-text" />
+          <span>Tenant-isolated PostgreSQL & GST compliance platform</span>
+        </span>
+        <span>Groww You ERP</span>
+      </footer>
     </div>
   );
 }

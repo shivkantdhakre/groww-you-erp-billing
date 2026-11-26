@@ -1,30 +1,34 @@
 import { useState, useEffect } from "react";
 import { useStore } from "../../store/useStore";
+import CommonPageHeader from "../../components/common/CommonPageHeader";
 import ValidationMessage from "../../components/common/ValidationMessage";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, User, KeyRound, Save } from "lucide-react";
 
+const INPUT_CLASS =
+  "h-9 px-3 rounded-md w-full border border-input bg-card text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors";
+const LABEL_CLASS =
+  "block mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider";
+
+/**
+ * Logged-in user profile and password credential manager.
+ */
 function ProfileSettings() {
   const user = useStore((state) => state.user);
   const updateProfile = useStore((state) => state.updateProfile);
   const changePassword = useStore((state) => state.changePassword);
 
   const [activeTab, setActiveTab] = useState("profile");
-
-  // Profile Form State
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
 
-  // Password Form State
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  // Password Visibility States
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Notifications State
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
 
@@ -43,6 +47,14 @@ function ProfileSettings() {
     setMessageType("");
   };
 
+  const switchTab = (tab) => {
+    setActiveTab(tab);
+    clearMessages();
+    setShowCurrentPassword(false);
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
+  };
+
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     clearMessages();
@@ -55,7 +67,7 @@ function ProfileSettings() {
 
     try {
       await updateProfile({ name, email });
-      setMessage("Profile updated successfully!");
+      setMessage("Profile updated successfully.");
       setMessageType("success");
     } catch (err) {
       setMessage(err.response?.data?.error || "Failed to update profile");
@@ -87,7 +99,7 @@ function ProfileSettings() {
 
     try {
       await changePassword({ currentPassword, newPassword });
-      setMessage("Password updated successfully!");
+      setMessage("Password updated successfully.");
       setMessageType("success");
       setCurrentPassword("");
       setNewPassword("");
@@ -102,199 +114,194 @@ function ProfileSettings() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto text-foreground">
-      <h1 className="text-3xl font-bold mb-2">My Settings</h1>
-      <p className="text-muted-foreground mb-6">Manage your ERP profile and password credentials</p>
+    <div className="max-w-3xl space-y-5 text-foreground">
+      <CommonPageHeader
+        title="Profile & Security"
+        subtitle="Manage your workspace identity details and account authentication password"
+      />
 
-      {/* Tabs Header */}
-      <div className="flex border-b border-border mb-6">
+      {/* Tabs */}
+      <div className="flex border-b border-border gap-1">
         <button
-          onClick={() => {
-            setActiveTab("profile");
-            clearMessages();
-            setShowCurrentPassword(false);
-            setShowNewPassword(false);
-            setShowConfirmPassword(false);
-          }}
-          className={`py-3 px-6 font-semibold border-b-2 transition-colors ${
+          type="button"
+          onClick={() => switchTab("profile")}
+          className={`inline-flex items-center gap-2 py-2.5 px-4 text-xs sm:text-sm font-medium border-b-2 transition-colors cursor-pointer ${
             activeTab === "profile"
-              ? "border-primary text-primary"
+              ? "border-primary text-primary-text"
               : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
-          👤 Profile Details
+          <User className="w-4 h-4" />
+          <span>Profile Details</span>
         </button>
         <button
-          onClick={() => {
-            setActiveTab("password");
-            clearMessages();
-            setShowCurrentPassword(false);
-            setShowNewPassword(false);
-            setShowConfirmPassword(false);
-          }}
-          className={`py-3 px-6 font-semibold border-b-2 transition-colors ${
+          type="button"
+          onClick={() => switchTab("password")}
+          className={`inline-flex items-center gap-2 py-2.5 px-4 text-xs sm:text-sm font-medium border-b-2 transition-colors cursor-pointer ${
             activeTab === "password"
-              ? "border-primary text-primary"
+              ? "border-primary text-primary-text"
               : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
-          🔑 Change Password
+          <KeyRound className="w-4 h-4" />
+          <span>Change Password</span>
         </button>
       </div>
 
-      {/* Status Alerts */}
-      <div className="mb-4">
-        <ValidationMessage type={messageType} message={message} />
-      </div>
+      <ValidationMessage
+        type={messageType}
+        message={message}
+        onDismiss={clearMessages}
+        className="mt-0!"
+      />
 
-      {/* Tab Panels */}
-      <div className="bg-card border border-border rounded-xl shadow p-6">
+      <div className="bg-card border border-border rounded-lg surface-shadow p-5 sm:p-6">
         {activeTab === "profile" ? (
-          <form onSubmit={handleUpdateProfile} className="space-y-6">
-            <h2 className="text-xl font-semibold text-foreground">Edit Profile Info</h2>
-            <hr className="border-border" />
+          <form onSubmit={handleUpdateProfile} className="space-y-5">
+            <h2 className="text-sm font-semibold text-foreground pb-3 border-b border-border/70">
+              Account Identity
+            </h2>
 
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-muted-foreground mb-2">Full Name</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className={LABEL_CLASS}>Full Name</label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="bg-card text-foreground border border-border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-primary"
+                  className={INPUT_CLASS}
                   placeholder="Enter full name"
                 />
               </div>
 
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-muted-foreground mb-2">Email Address</label>
+              <div>
+                <label className={LABEL_CLASS}>Email Address</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="bg-card text-foreground border border-border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-primary"
+                  className={INPUT_CLASS}
                   placeholder="Enter email address"
                 />
               </div>
 
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-muted-foreground/60 mb-2 font-semibold">User Role (Read Only)</label>
+              <div>
+                <label className={LABEL_CLASS}>System Role (Read Only)</label>
                 <input
                   type="text"
                   value={user?.role || ""}
                   disabled
-                  className="bg-muted border border-border rounded-lg p-3 text-muted-foreground cursor-not-allowed uppercase"
+                  className="h-9 px-3 rounded-md w-full bg-muted border border-border text-muted-foreground text-xs font-mono uppercase cursor-not-allowed"
                 />
               </div>
 
               {user?.subRole && (
-                <div className="flex flex-col">
-                  <label className="text-sm font-medium text-muted-foreground/60 mb-2 font-semibold">Staff Designation (Read Only)</label>
+                <div>
+                  <label className={LABEL_CLASS}>Staff Designation (Read Only)</label>
                   <input
-                     type="text"
-                     value={user.subRole}
-                     disabled
-                     className="bg-muted border border-border rounded-lg p-3 text-muted-foreground cursor-not-allowed uppercase"
+                    type="text"
+                    value={user.subRole}
+                    disabled
+                    className="h-9 px-3 rounded-md w-full bg-muted border border-border text-muted-foreground text-xs font-mono uppercase cursor-not-allowed"
                   />
                 </div>
               )}
             </div>
 
-            <button
-              type="submit"
-              className="bg-primary hover:bg-primary/95 text-primary-foreground font-semibold py-2 px-6 rounded-lg transition-colors cursor-pointer shadow-md"
-            >
-              Save Changes
-            </button>
+            <div className="pt-3 border-t border-border/70 flex justify-end">
+              <button
+                type="submit"
+                className="inline-flex items-center gap-2 h-9 px-4 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground text-xs sm:text-sm font-medium transition-colors cursor-pointer"
+              >
+                <Save className="w-4 h-4" />
+                <span>Save Profile</span>
+              </button>
+            </div>
           </form>
         ) : (
-          <form onSubmit={handleChangePassword} className="space-y-6">
-            <h2 className="text-xl font-semibold text-foreground">Update Password</h2>
-            <hr className="border-border" />
+          <form onSubmit={handleChangePassword} className="space-y-5">
+            <h2 className="text-sm font-semibold text-foreground pb-3 border-b border-border/70">
+              Update Authentication Password
+            </h2>
 
             <div className="max-w-md space-y-4">
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-muted-foreground mb-2">Current Password</label>
+              <div>
+                <label className={LABEL_CLASS}>Current Password</label>
                 <div className="relative">
                   <input
                     type={showCurrentPassword ? "text" : "password"}
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="w-full pl-3 pr-10 py-3 bg-card text-foreground border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                    placeholder="••••••••"
+                    className={`${INPUT_CLASS} pr-10`}
+                    placeholder="Enter current password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-foreground transition-colors cursor-pointer focus:outline-none"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                     aria-label={showCurrentPassword ? "Hide password" : "Show password"}
                   >
-                    {showCurrentPassword ? (
-                      <EyeOff className="w-4 h-4" strokeWidth={1.5} />
-                    ) : (
-                      <Eye className="w-4 h-4" strokeWidth={1.5} />
-                    )}
+                    {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
 
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-muted-foreground mb-2">New Password</label>
+              <div>
+                <label className={LABEL_CLASS}>New Password</label>
                 <div className="relative">
                   <input
                     type={showNewPassword ? "text" : "password"}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full pl-3 pr-10 py-3 bg-card text-foreground border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                    placeholder="••••••••"
+                    className={`${INPUT_CLASS} pr-10`}
+                    placeholder="Minimum 6 characters"
                   />
                   <button
                     type="button"
                     onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-foreground transition-colors cursor-pointer focus:outline-none"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                     aria-label={showNewPassword ? "Hide password" : "Show password"}
                   >
-                    {showNewPassword ? (
-                      <EyeOff className="w-4 h-4" strokeWidth={1.5} />
-                    ) : (
-                      <Eye className="w-4 h-4" strokeWidth={1.5} />
-                    )}
+                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
 
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-muted-foreground mb-2">Confirm New Password</label>
+              <div>
+                <label className={LABEL_CLASS}>Confirm New Password</label>
                 <div className="relative">
                   <input
                     type={showConfirmPassword ? "text" : "password"}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full pl-3 pr-10 py-3 bg-card text-foreground border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                    placeholder="••••••••"
+                    className={`${INPUT_CLASS} pr-10`}
+                    placeholder="Re-enter new password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-foreground transition-colors cursor-pointer focus:outline-none"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                     aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                   >
                     {showConfirmPassword ? (
-                      <EyeOff className="w-4 h-4" strokeWidth={1.5} />
+                      <EyeOff className="w-4 h-4" />
                     ) : (
-                      <Eye className="w-4 h-4" strokeWidth={1.5} />
+                      <Eye className="w-4 h-4" />
                     )}
                   </button>
                 </div>
               </div>
             </div>
 
-            <button
-              type="submit"
-              className="bg-primary hover:bg-primary/95 text-primary-foreground font-semibold py-2 px-6 rounded-lg transition-colors cursor-pointer shadow-md"
-            >
-              Change Password
-            </button>
+            <div className="pt-3 border-t border-border/70 flex justify-end">
+              <button
+                type="submit"
+                className="inline-flex items-center gap-2 h-9 px-4 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground text-xs sm:text-sm font-medium transition-colors cursor-pointer"
+              >
+                <KeyRound className="w-4 h-4" />
+                <span>Update Password</span>
+              </button>
+            </div>
           </form>
         )}
       </div>

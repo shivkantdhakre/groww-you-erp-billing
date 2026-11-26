@@ -1,8 +1,22 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useStore } from "../../store/useStore";
+import CommonPageHeader from "../../components/common/CommonPageHeader";
+import CommonFilter from "../../components/common/CommonFilter";
+import CommonCard from "../../components/common/CommonCard";
 import TableWrapper from "../../components/common/TableWrapper";
+import ValidationMessage from "../../components/common/ValidationMessage";
+import StatusBadge from "../../components/common/StatusBadge";
 import api from "../../utils/api";
+import { BarChart3, Loader2, Printer, Search, ShieldCheck } from "lucide-react";
 
+const INPUT_CLASS =
+  "h-9 px-3 rounded-md w-full border border-input bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors";
+const LABEL_CLASS =
+  "block mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider";
+
+/**
+ * Per-invoice gross profitability statement computed from cost snapshots.
+ */
 function ProfitReport() {
   const customers = useStore((state) => state.customers);
   const fetchCustomers = useStore((state) => state.fetchCustomers);
@@ -18,7 +32,6 @@ function ProfitReport() {
   const loadProfitReport = useCallback(async () => {
     setLoading(true);
     try {
-      // We query the sales report endpoint which returns full invoices with items and customers
       const res = await api.get(
         `/reports/sales?customerId=${customerId}&fromDate=${fromDate}&toDate=${toDate}`
       );
@@ -40,7 +53,6 @@ function ProfitReport() {
     return () => clearTimeout(timer);
   }, [fetchCustomers, loadProfitReport]);
 
-  // Perform dynamic cost & profitability calculations based on database snapshot costs
   const { invoiceProfitability, totalRevenue, totalCost, totalProfit } = useMemo(() => {
     const data = salesData.map((invoice) => {
       let invRevenue = 0;
@@ -48,8 +60,8 @@ function ProfitReport() {
 
       invoice.items.forEach((line) => {
         const lineQty = line.qty;
-        const lineSellPrice = line.price; // Base selling price (before GST)
-        const lineCostPrice = line.purchasePrice || 0.0; // Snapshot cost rate
+        const lineSellPrice = line.price;
+        const lineCostPrice = line.purchasePrice || 0.0;
 
         invRevenue += lineSellPrice * lineQty;
         invCost += lineCostPrice * lineQty;
@@ -64,9 +76,9 @@ function ProfitReport() {
         invoiceDate: invoice.invoiceDate,
         customerName: invoice.customer?.name || "Walk-in Customer",
         totalQty: invoice.totalQty,
-        grandTotal: invoice.grandTotal, // Inclusive of GST
-        revenue: invRevenue, // Pre-tax sales
-        cost: invCost, // Pre-tax cost
+        grandTotal: invoice.grandTotal,
+        revenue: invRevenue,
+        cost: invCost,
         profit: invProfit,
         margin: invMargin,
       };
@@ -93,147 +105,170 @@ function ProfitReport() {
   const overallMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
 
   return (
-    <div className="space-y-6 text-foreground">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-extrabold tracking-tight">Profitability Report</h1>
-        <div className="text-xs text-muted-foreground font-semibold bg-secondary/50 border border-border px-3 py-1.5 rounded-lg">
-          Zero-Trust Cost Snapshotting Active
-        </div>
-      </div>
+    <div className="space-y-5 text-foreground">
+      <CommonPageHeader
+        title="Profitability Report"
+        subtitle="Pre-tax margin analysis calculated from line-level historical purchase cost snapshots"
+        badge={
+          <StatusBadge variant="primary">
+            <ShieldCheck className="w-3 h-3" />
+            <span>Cost Snapshot Active</span>
+          </StatusBadge>
+        }
+        actions={
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="no-print inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-border bg-card hover:bg-secondary/70 text-xs font-medium text-foreground cursor-pointer transition-colors"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            <span>Print Report</span>
+          </button>
+        }
+      />
 
-      {/* Filters Form Panel */}
-      <div className="bg-card p-5 rounded-xl border border-border shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="flex flex-col">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">From Date</label>
+      <CommonFilter className="no-print mb-0!">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+          <div>
+            <label className={LABEL_CLASS}>From Date</label>
             <input
               type="date"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
-              className="border border-border p-3 rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+              className={INPUT_CLASS}
             />
           </div>
 
-          <div className="flex flex-col">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">To Date</label>
+          <div>
+            <label className={LABEL_CLASS}>To Date</label>
             <input
               type="date"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
-              className="border border-border p-3 rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+              className={INPUT_CLASS}
             />
           </div>
 
-          <div className="flex flex-col">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Customer</label>
+          <div>
+            <label className={LABEL_CLASS}>Customer</label>
             <select
               value={customerId}
               onChange={(e) => setCustomerId(e.target.value)}
-              className="border border-border p-3 rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm cursor-pointer"
+              className={`${INPUT_CLASS} cursor-pointer`}
             >
               <option value="">All Customers</option>
-              {customers.filter(c => c.isActive).map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
+              {customers
+                .filter((c) => c.isActive)
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
             </select>
           </div>
 
-          <div className="flex items-end">
-            <button
-              onClick={loadProfitReport}
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold p-3 rounded-lg transition-colors cursor-pointer shadow-md shadow-primary/10"
-            >
-              Run Report
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={loadProfitReport}
+            className="inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground text-xs sm:text-sm font-medium cursor-pointer transition-colors"
+          >
+            <Search className="w-3.5 h-3.5" />
+            <span>Run Analysis</span>
+          </button>
         </div>
-      </div>
+      </CommonFilter>
 
-      {error && (
-        <div className="p-4 bg-destructive/10 text-destructive border border-destructive/20 rounded-xl font-medium shadow-sm">
-          {error}
-        </div>
-      )}
+      <ValidationMessage
+        type="error"
+        message={error}
+        onDismiss={() => setError("")}
+        className="mt-0!"
+      />
 
       {loading ? (
-        <div className="text-center py-12 text-muted-foreground font-semibold flex items-center justify-center gap-2">
-          <svg className="animate-spin h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-          </svg>
+        <div className="flex items-center justify-center py-10 gap-2 text-xs text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin text-primary-text" />
           <span>Calculating profitability metrics...</span>
         </div>
       ) : (
         <>
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-card p-5 rounded-xl border border-border shadow-sm">
-              <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">Total Sales (Base)</p>
-              <h2 className="text-2xl font-extrabold text-foreground mt-1">₹ {totalRevenue.toFixed(2)}</h2>
-            </div>
-
-            <div className="bg-card p-5 rounded-xl border border-border shadow-sm">
-              <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">Total Cost of Goods</p>
-              <h2 className="text-2xl font-extrabold text-foreground mt-1">₹ {totalCost.toFixed(2)}</h2>
-            </div>
-
-            <div className="bg-card p-5 rounded-xl border border-border shadow-sm">
-              <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">Net Gross Profit</p>
-              <h2 className={`text-2xl font-extrabold mt-1 ${totalProfit >= 0 ? "text-emerald-600 dark:text-emerald-500" : "text-destructive"}`}>
-                ₹ {totalProfit.toFixed(2)}
-              </h2>
-            </div>
-
-            <div className="bg-card p-5 rounded-xl border border-border shadow-sm">
-              <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">Profit Margin</p>
-              <h2 className={`text-2xl font-extrabold mt-1 ${overallMargin >= 0 ? "text-emerald-600 dark:text-emerald-500" : "text-destructive"}`}>
-                {overallMargin.toFixed(2)}%
-              </h2>
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            <CommonCard
+              title="Sales Revenue (Base)"
+              value={`₹ ${totalRevenue.toFixed(2)}`}
+              icon={BarChart3}
+            />
+            <CommonCard title="Cost of Goods Sold" value={`₹ ${totalCost.toFixed(2)}`} />
+            <CommonCard
+              title="Net Gross Profit"
+              value={`₹ ${totalProfit.toFixed(2)}`}
+              color={totalProfit >= 0 ? "text-success" : "text-destructive"}
+            />
+            <CommonCard
+              title="Gross Margin"
+              value={`${overallMargin.toFixed(2)}%`}
+              color={overallMargin >= 0 ? "text-success" : "text-destructive"}
+            />
           </div>
 
-          {/* Details Table */}
-          <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
-            <div className="p-5 border-b border-border">
-              <h2 className="text-lg font-bold">Transaction Breakdown</h2>
+          <div className="bg-card rounded-lg border border-border surface-shadow overflow-hidden">
+            <div className="px-4 sm:px-5 py-3.5 border-b border-border flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-foreground">Invoice Margin Breakdown</h2>
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {invoiceProfitability.length} invoices
+              </span>
             </div>
             <TableWrapper className="!border-none !rounded-none !shadow-none !bg-transparent">
-              <table className="w-full text-sm">
-                <thead className="bg-secondary/40 text-muted-foreground border-b border-border">
+              <table className="w-full text-sm text-left border-collapse">
+                <thead className="bg-secondary/70 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border">
                   <tr>
-                    <th className="p-4 text-left font-semibold">Invoice No</th>
-                    <th className="p-4 text-left font-semibold">Date</th>
-                    <th className="p-4 text-left font-semibold">Customer</th>
-                    <th className="p-4 text-right font-semibold">Total Cost (Dr)</th>
-                    <th className="p-4 text-right font-semibold">Sales Revenue (Cr)</th>
-                    <th className="p-4 text-right font-semibold">Profit (Net)</th>
-                    <th className="p-4 text-right font-semibold">Margin (%)</th>
+                    <th className="px-4 py-2.5">Invoice No</th>
+                    <th className="px-4 py-2.5">Date</th>
+                    <th className="px-4 py-2.5">Customer</th>
+                    <th className="px-4 py-2.5 text-right">Cost (Dr)</th>
+                    <th className="px-4 py-2.5 text-right">Revenue (Cr)</th>
+                    <th className="px-4 py-2.5 text-right">Gross Profit</th>
+                    <th className="px-4 py-2.5 text-right">Margin %</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border">
+                <tbody className="divide-y divide-border/70">
                   {invoiceProfitability.map((row) => (
-                    <tr key={row.id} className="hover:bg-secondary/20 transition-colors duration-150">
-                      <td className="p-4 font-mono font-semibold text-foreground">{row.invoiceNo}</td>
-                      <td className="p-4 text-muted-foreground">
+                    <tr key={row.id} className="elevated-table-row transition-colors">
+                      <td className="px-4 py-2.5 font-mono text-xs font-semibold text-foreground">
+                        {row.invoiceNo}
+                      </td>
+                      <td className="px-4 py-2.5 text-xs text-muted-foreground tabular-nums">
                         {new Date(row.invoiceDate).toLocaleDateString()}
                       </td>
-                      <td className="p-4 text-foreground font-medium">{row.customerName}</td>
-                      <td className="p-4 text-right font-mono text-muted-foreground">₹{row.cost.toFixed(2)}</td>
-                      <td className="p-4 text-right font-mono text-foreground">₹{row.revenue.toFixed(2)}</td>
-                      <td className={`p-4 text-right font-mono font-bold ${row.profit >= 0 ? "text-emerald-600 dark:text-emerald-500" : "text-destructive"}`}>
-                        ₹{row.profit.toFixed(2)}
+                      <td className="px-4 py-2.5 text-foreground font-medium">
+                        {row.customerName}
                       </td>
-                      <td className={`p-4 text-right font-mono font-semibold ${row.margin >= 0 ? "text-emerald-600 dark:text-emerald-500" : "text-destructive"}`}>
+                      <td className="px-4 py-2.5 text-right font-mono text-xs text-muted-foreground tabular-nums">
+                        ₹ {row.cost.toFixed(2)}
+                      </td>
+                      <td className="px-4 py-2.5 text-right font-mono text-xs text-foreground tabular-nums">
+                        ₹ {row.revenue.toFixed(2)}
+                      </td>
+                      <td
+                        className={`px-4 py-2.5 text-right font-mono font-semibold tabular-nums ${
+                          row.profit >= 0 ? "text-success" : "text-destructive"
+                        }`}
+                      >
+                        ₹ {row.profit.toFixed(2)}
+                      </td>
+                      <td
+                        className={`px-4 py-2.5 text-right font-mono text-xs font-semibold tabular-nums ${
+                          row.margin >= 0 ? "text-success" : "text-destructive"
+                        }`}
+                      >
                         {row.margin.toFixed(2)}%
                       </td>
                     </tr>
                   ))}
                   {invoiceProfitability.length === 0 && (
                     <tr>
-                      <td colSpan="7" className="p-8 text-center text-muted-foreground font-medium">
-                        No transactions recorded for the selected search filters.
+                      <td colSpan="7" className="px-4 py-8 text-center text-xs text-muted-foreground">
+                        No transactions recorded for the selected filters.
                       </td>
                     </tr>
                   )}

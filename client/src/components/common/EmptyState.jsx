@@ -1,27 +1,43 @@
-function EmptyState({
-  icon = "📂",
-  message = "No Data Found",
-  buttonText = "Add New",
-  onButtonClick = () => { },
-}) {
-  return (
-    <div className="bg-white p-10 rounded-xl shadow text-center">
+import { Inbox } from "lucide-react";
 
-      <div className="text-6xl mb-4">
-        {icon}
+/**
+ * Clean enterprise empty state with optional action control.
+ */
+function EmptyState({
+  icon,
+  message = "No records found",
+  description,
+  buttonText,
+  onButtonClick,
+  action,
+  className = "",
+}) {
+  const showButton = Boolean(onButtonClick && buttonText);
+
+  return (
+    <div
+      className={`bg-card border border-border rounded-lg py-10 px-6 text-center surface-shadow ${className}`}
+    >
+      <div className="mx-auto w-10 h-10 rounded-full bg-secondary border border-border flex items-center justify-center text-muted-foreground mb-3">
+        {icon || <Inbox className="w-5 h-5" />}
       </div>
 
-      <h2 className="text-xl font-semibold text-gray-500 mb-4">
-        {message}
-      </h2>
+      <h3 className="text-sm font-semibold text-foreground">{message}</h3>
+      {description && (
+        <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">{description}</p>
+      )}
 
-      <button
-        onClick={onButtonClick}
-        className="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700"
-      >
-        {buttonText}
-      </button>
-
+      {action ? (
+        <div className="mt-4">{action}</div>
+      ) : showButton ? (
+        <button
+          type="button"
+          onClick={onButtonClick}
+          className="mt-4 inline-flex items-center justify-center h-8 px-3.5 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors cursor-pointer"
+        >
+          {buttonText}
+        </button>
+      ) : null}
     </div>
   );
 }

@@ -1,20 +1,25 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useStore } from "../../store/useStore";
+import CommonPageHeader from "../../components/common/CommonPageHeader";
+import ValidationMessage from "../../components/common/ValidationMessage";
+import StatusBadge from "../../components/common/StatusBadge";
+import TableWrapper from "../../components/common/TableWrapper";
 import api from "../../utils/api";
-import { Check, Loader2, CreditCard, ShieldAlert } from "lucide-react";
+import { Check, Loader2, CreditCard, ShieldAlert, X } from "lucide-react";
 
+/**
+ * SaaS subscription plan comparison, Razorpay checkout, sandbox simulator, and billing history.
+ */
 function PricingPlans() {
   const navigate = useNavigate();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
 
-  // Store references
   const user = useStore((state) => state.user);
   const verifyStatus = useStore((state) => state.verifyStatus);
   const activeSub = user?.subscription;
 
-  // Local States
   const [plans, setPlans] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,35 +27,33 @@ function PricingPlans() {
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
 
-  // Simulation Overlay States
   const isSimulating = searchParams.get("simulate_checkout") === "true";
   const simCompanyId = searchParams.get("companyId");
   const simPlanCode = searchParams.get("planCode");
   const simPrice = searchParams.get("price");
   const simPlanName = searchParams.get("planName");
+  const checkoutStatusParam = searchParams.get("checkout");
 
   useEffect(() => {
     const fetchBillingData = async () => {
       try {
         setLoading(true);
 
-        // If returning from a successful checkout, refresh subscription state first
-        const checkoutStatus = searchParams.get("checkout");
-        if (checkoutStatus === "success") {
+        if (checkoutStatusParam === "success") {
           await verifyStatus().catch(() => {});
-          setMessage("Subscription updated successfully! Welcome to your new tier.");
+          setMessage("Subscription updated successfully.");
           setMessageType("success");
-        } else if (checkoutStatus === "cancelled") {
+        } else if (checkoutStatusParam === "cancelled") {
           setMessage("Subscription checkout was cancelled.");
           setMessageType("warning");
         }
 
         const [plansRes, historyRes] = await Promise.all([
           api.get("/billing/plans"),
-          api.get("/billing/history").catch(() => ({ data: [] }))
+          api.get("/billing/history").catch(() => ({ data: [] })),
         ]);
-        setPlans(plansRes.data);
-        setInvoices(historyRes.data);
+        setPlans(plansRes.data || []);
+        setInvoices(historyRes.data || []);
       } catch (err) {
         console.error("Failed to load billing data:", err);
         setMessage("Failed to load plans from the server.");
@@ -60,8 +63,7 @@ function PricingPlans() {
       }
     };
     fetchBillingData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.search]);
+  }, [checkoutStatusParam, verifyStatus]);
 
   const loadRazorpayScript = () => {
     return new Promise((resolve) => {
@@ -79,9 +81,7 @@ function PricingPlans() {
       const res = await api.post("/billing/checkout", { planCode });
 
       if (res.data.gateway === "MOCK_SANDBOX") {
-        // Direct local redirect to simulate checkout
-        // eslint-disable-next-line react-hooks/immutability
-        window.location.href = res.data.url;
+        window.location.assign(res.data.url);
         return;
       }
 
@@ -102,34 +102,31 @@ function PricingPlans() {
           order_id: res.data.orderId,
           prefill: {
             name: user?.name || "",
-            email: user?.email || ""
+            email: user?.email || "",
           },
           theme: {
-            color: "#3B82F6"
+            color: "#2D5A47",
           },
           handler: async function (response) {
             try {
               setLoading(true);
-              // Call verify payment API
               await api.post("/billing/verify-payment", {
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
-                planCode: res.data.planCode
+                planCode: res.data.planCode,
               });
 
-              // Refresh subscription status in store (updates user.subscription)
               await verifyStatus();
 
-              // Re-fetch plans and billing history so the UI reflects the new active plan
               const [plansRes, historyRes] = await Promise.all([
                 api.get("/billing/plans"),
-                api.get("/billing/history").catch(() => ({ data: [] }))
+                api.get("/billing/history").catch(() => ({ data: [] })),
               ]);
-              setPlans(plansRes.data);
-              setInvoices(historyRes.data);
+              setPlans(plansRes.data || []);
+              setInvoices(historyRes.data || []);
 
-              setMessage("Payment verified and subscription activated successfully!");
+              setMessage("Payment verified and subscription activated.");
               setMessageType("success");
             } catch (verifyErr) {
               console.error("Payment verification failed:", verifyErr);
@@ -138,7 +135,7 @@ function PricingPlans() {
             } finally {
               setLoading(false);
             }
-          }
+          },
         };
 
         const rzp = new window.Razorpay(options);
@@ -157,8 +154,7 @@ function PricingPlans() {
     try {
       setLoading(true);
       const mockEventId = "evt_mock_" + Math.random().toString(36).substring(2, 11);
-      
-      // Post simulated payload to local webhook route
+
       await api.post("/billing/webhooks", {
         simulated: true,
         secret: "SIMULATED_SECRET_KEY",
@@ -172,16 +168,13 @@ function PricingPlans() {
             simulatedMetadata: {
               companyId: simCompanyId,
               planCode: simPlanCode,
-              price: parseFloat(simPrice)
-            }
-          }
-        }
+              price: parseFloat(simPrice),
+            },
+          },
+        },
       });
 
-      // Reload user status from backend
       await verifyStatus();
-      
-      // Clear simulation parameters and reload
       navigate("/pricing?checkout=success");
     } catch (err) {
       console.error("Simulation failed:", err);
@@ -194,37 +187,53 @@ function PricingPlans() {
   if (isSimulating) {
     return (
       <div className="flex items-center justify-center min-h-[70vh]">
-        <div className="bg-card text-foreground border border-border p-8 rounded-2xl w-full max-w-md shadow-xl text-center relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-amber-500 to-yellow-500 animate-pulse" />
-          
-          <ShieldAlert className="w-12 h-12 text-amber-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-extrabold text-foreground mb-2">Stripe Sandbox Simulation</h2>
-          <p className="text-muted-foreground text-sm mb-6">
-            You are in a development environment. Simulate a Stripe callback to finalize your subscription.
-          </p>
+        <div className="bg-card text-foreground border border-border p-6 sm:p-8 rounded-xl w-full max-w-md popover-shadow space-y-5 text-center">
+          <div className="mx-auto w-11 h-11 rounded-lg bg-warning/10 border border-warning/25 flex items-center justify-center text-warning">
+            <ShieldAlert className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">Sandbox Payment Simulation</h2>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              Simulate a payment webhook callback in this local development workspace.
+            </p>
+          </div>
 
-          <div className="bg-muted/50 p-4 rounded-xl text-left text-sm space-y-2 mb-6 border border-border">
-            <div><span className="text-muted-foreground font-semibold">Plan:</span> {simPlanName}</div>
-            <div><span className="text-muted-foreground font-semibold">Plan Code:</span> {simPlanCode}</div>
-            <div><span className="text-muted-foreground font-semibold">Amount:</span> ₹ {simPrice}</div>
-            <div><span className="text-muted-foreground font-semibold">Company ID:</span> {simCompanyId}</div>
+          <div className="bg-secondary/40 p-4 rounded-md text-left text-xs space-y-2 border border-border">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Plan</span>
+              <span className="font-semibold text-foreground">{simPlanName}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Code</span>
+              <span className="font-mono text-foreground">{simPlanCode}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Amount</span>
+              <span className="font-mono font-semibold text-foreground tabular-nums">₹ {simPrice}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Company ID</span>
+              <span className="font-mono text-foreground tabular-nums">{simCompanyId}</span>
+            </div>
           </div>
 
           {loading ? (
-            <div className="flex justify-center py-4">
-              <Loader2 className="w-8 h-8 text-primary animate-spin" />
+            <div className="flex justify-center py-3">
+              <Loader2 className="w-6 h-6 text-primary-text animate-spin" />
             </div>
           ) : (
             <div className="flex flex-col gap-2">
               <button
+                type="button"
                 onClick={handleSimulatePayment}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 py-3 rounded-lg font-bold transition shadow-md w-full cursor-pointer"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 h-9 rounded-md text-xs sm:text-sm font-medium transition-colors w-full cursor-pointer"
               >
                 Complete Mock Payment
               </button>
               <button
+                type="button"
                 onClick={() => navigate("/pricing?checkout=cancelled")}
-                className="bg-secondary text-secondary-foreground hover:bg-secondary/80 py-3 rounded-lg font-semibold transition w-full cursor-pointer"
+                className="bg-secondary border border-border text-secondary-foreground hover:bg-secondary/80 h-9 rounded-md text-xs sm:text-sm font-medium transition-colors w-full cursor-pointer"
               >
                 Cancel Checkout
               </button>
@@ -236,48 +245,45 @@ function PricingPlans() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="text-center max-w-2xl mx-auto space-y-2">
-        <h1 className="text-4xl font-extrabold text-foreground tracking-tight">SaaS Subscription Management</h1>
-        <p className="text-muted-foreground">
-          Scale your business seamlessly. Choose the perfect tier for your shop or enterprise operations.
-        </p>
-      </div>
+    <div className="space-y-6 text-foreground">
+      <CommonPageHeader
+        title="Subscription & Billing"
+        subtitle="Select your workspace tier, branch capacity, and GST filing entitlements"
+        badge={
+          activeSub?.planCode && (
+            <StatusBadge variant="success">Active: {activeSub.planCode}</StatusBadge>
+          )
+        }
+      />
 
-      {message && (
-        <div
-          className={`p-4 rounded-xl text-white font-medium shadow-sm transition max-w-2xl mx-auto ${
-            messageType === "success"
-              ? "bg-emerald-600"
-              : messageType === "warning"
-              ? "bg-amber-500"
-              : "bg-destructive"
-          }`}
-        >
-          {message}
-        </div>
-      )}
+      <ValidationMessage
+        type={messageType}
+        message={message}
+        onDismiss={() => setMessage("")}
+        className="mt-0!"
+      />
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {[1, 2, 3].map((n) => (
-            <div key={n} className="bg-card border border-border rounded-2xl h-[450px] animate-pulse p-6 space-y-4">
-              <div className="h-6 w-1/3 bg-muted rounded" />
-              <div className="h-10 w-2/3 bg-muted rounded" />
+            <div
+              key={n}
+              className="bg-card border border-border rounded-lg h-96 animate-pulse p-5 space-y-4"
+            >
+              <div className="h-5 w-1/3 bg-muted rounded" />
+              <div className="h-8 w-2/3 bg-muted rounded" />
               <div className="h-4 w-full bg-muted rounded" />
-              <div className="h-12 w-full bg-muted rounded mt-8" />
-              <div className="space-y-2 mt-8">
-                <div className="h-4 w-5/6 bg-muted rounded" />
-                <div className="h-4 w-4/5 bg-muted rounded" />
-                <div className="h-4 w-3/4 bg-muted rounded" />
+              <div className="space-y-2 pt-4">
+                <div className="h-3.5 w-5/6 bg-muted rounded" />
+                <div className="h-3.5 w-4/5 bg-muted rounded" />
+                <div className="h-3.5 w-3/4 bg-muted rounded" />
               </div>
             </div>
           ))}
         </div>
       ) : (
         <>
-          {/* Pricing Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {plans.map((plan) => {
               const isActive = activeSub?.planCode === plan.code;
               const features = plan.features || {};
@@ -288,86 +294,101 @@ function PricingPlans() {
               const isFreeTrial = plan.price === 0;
 
               let buttonText = "Upgrade Plan";
-              if (isActive) {
-                buttonText = "Active Plan";
-              } else if (isDowngrade) {
-                buttonText = isFreeTrial ? "Trial Expired" : "Downgrade Plan";
-              }
+              if (isActive) buttonText = "Active Plan";
+              else if (isDowngrade) buttonText = isFreeTrial ? "Trial Expired" : "Switch Plan";
 
-              const isButtonDisabled = isActive || (isFreeTrial && activePlanPrice > 0) || checkoutLoading === plan.code;
+              const isButtonDisabled =
+                isActive ||
+                (isFreeTrial && activePlanPrice > 0) ||
+                checkoutLoading === plan.code;
 
               return (
                 <div
                   key={plan.id}
-                  className={`bg-card text-foreground rounded-2xl p-6 border flex flex-col justify-between relative shadow-sm hover:shadow-md transition duration-300 ${
-                    isActive 
-                      ? "border-primary ring-2 ring-primary/20 scale-[1.02]" 
-                      : "border-border"
+                  className={`bg-card text-foreground rounded-lg p-5 border flex flex-col justify-between surface-shadow transition-colors ${
+                    isActive ? "border-primary ring-1 ring-primary/30" : "border-border"
                   }`}
                 >
-                  {isActive && (
-                    <span className="absolute -top-3 right-6 bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow">
-                      Current Plan
-                    </span>
-                  )}
-
                   <div>
-                    <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
-                    <div className="flex items-baseline gap-1 mb-4">
-                      <span className="text-3xl font-extrabold">₹ {plan.price}</span>
-                      <span className="text-muted-foreground text-sm">
+                    <div className="flex items-start justify-between gap-2 mb-3">
+                      <h3 className="text-base font-semibold text-foreground">{plan.name}</h3>
+                      {isActive && <StatusBadge variant="primary">Current Plan</StatusBadge>}
+                    </div>
+
+                    <div className="flex items-baseline gap-1 mb-3">
+                      <span className="text-2xl sm:text-3xl font-semibold tracking-tight tabular-nums">
+                        ₹ {plan.price}
+                      </span>
+                      <span className="text-muted-foreground text-xs">
                         / {plan.interval.toLowerCase() === "yearly" ? "year" : "month"}
                       </span>
                     </div>
 
-                    <p className="text-muted-foreground text-sm mb-6">
-                      Provides support for up to {plan.branchLimit} branches and {plan.staffLimit > 1000 ? "unlimited" : plan.staffLimit} staff members.
+                    <p className="text-muted-foreground text-xs leading-relaxed pb-4 mb-4 border-b border-border/70">
+                      Up to {plan.branchLimit} branch{plan.branchLimit === 1 ? "" : "es"} and{" "}
+                      {plan.staffLimit > 1000 ? "unlimited" : plan.staffLimit} staff seats.
                     </p>
 
-                    {/* Features checklist */}
-                    <ul className="space-y-3 mb-8 text-sm">
+                    <ul className="space-y-2.5 mb-6 text-xs sm:text-sm">
                       {features.maxInvoicesPerMonth && (
                         <li className="flex items-center gap-2">
-                          <Check className="w-4 h-4 text-emerald-500 shrink-0" />
-                          <span>Max {features.maxInvoicesPerMonth} invoices / mo</span>
+                          <Check className="w-4 h-4 text-success shrink-0" />
+                          <span>Up to {features.maxInvoicesPerMonth} invoices / mo</span>
                         </li>
                       )}
                       <li className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-emerald-500 shrink-0" />
-                        <span>Fast Billing Matrix</span>
+                        <Check className="w-4 h-4 text-success shrink-0" />
+                        <span>Billing & POS Terminal</span>
                       </li>
                       <li className="flex items-center gap-2">
-                        <Check className="w-4 h-4 text-emerald-500 shrink-0" />
-                        <span>Customer/Vendor Ledgers</span>
+                        <Check className="w-4 h-4 text-success shrink-0" />
+                        <span>Customer & Vendor Ledgers</span>
                       </li>
-                      <li className={`${features.ewayBill ? "text-foreground" : "text-muted-foreground/50 line-through"} flex items-center gap-2`}>
-                        <Check className={`w-4 h-4 ${features.ewayBill ? "text-emerald-500" : "text-muted-foreground/30"} shrink-0`} />
+                      <li
+                        className={`flex items-center gap-2 ${
+                          features.ewayBill ? "text-foreground" : "text-muted-foreground/60"
+                        }`}
+                      >
+                        {features.ewayBill ? (
+                          <Check className="w-4 h-4 text-success shrink-0" />
+                        ) : (
+                          <X className="w-4 h-4 text-muted-foreground/50 shrink-0" />
+                        )}
                         <span>E-Way Bill Integration</span>
                       </li>
-                      <li className={`${features.gstFiling ? "text-foreground" : "text-muted-foreground/50 line-through"} flex items-center gap-2`}>
-                        <Check className={`w-4 h-4 ${features.gstFiling ? "text-emerald-500" : "text-muted-foreground/30"} shrink-0`} />
+                      <li
+                        className={`flex items-center gap-2 ${
+                          features.gstFiling ? "text-foreground" : "text-muted-foreground/60"
+                        }`}
+                      >
+                        {features.gstFiling ? (
+                          <Check className="w-4 h-4 text-success shrink-0" />
+                        ) : (
+                          <X className="w-4 h-4 text-muted-foreground/50 shrink-0" />
+                        )}
                         <span>GSTR-1 & GSTR-3B Filing</span>
                       </li>
                     </ul>
                   </div>
 
                   <button
+                    type="button"
                     disabled={isButtonDisabled}
                     onClick={() => handleSubscribe(plan.code)}
-                    className={`w-full py-3 rounded-lg font-semibold transition cursor-pointer flex items-center justify-center gap-2 shadow-sm ${
+                    className={`w-full h-9 rounded-md text-xs sm:text-sm font-medium transition-colors cursor-pointer flex items-center justify-center gap-2 ${
                       isButtonDisabled
                         ? "bg-muted text-muted-foreground cursor-not-allowed"
                         : isDowngrade
-                        ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                        : "bg-primary text-primary-foreground hover:bg-primary/95"
+                          ? "bg-secondary border border-border text-secondary-foreground hover:bg-secondary/80"
+                          : "bg-primary text-primary-foreground hover:bg-primary/90"
                     }`}
                   >
                     {checkoutLoading === plan.code ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <>
                         <CreditCard className="w-4 h-4" />
-                        {buttonText}
+                        <span>{buttonText}</span>
                       </>
                     )}
                   </button>
@@ -377,44 +398,53 @@ function PricingPlans() {
           </div>
 
           {/* Billing History */}
-          <div className="bg-card text-foreground rounded-2xl border border-border p-6 shadow-sm max-w-4xl">
-            <h2 className="text-xl font-bold mb-4">Billing & Invoice History</h2>
-            
+          <div className="bg-card text-foreground rounded-lg border border-border surface-shadow overflow-hidden">
+            <div className="px-4 sm:px-5 py-3.5 border-b border-border flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-foreground">Billing & Invoice History</h2>
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {invoices.length} statements
+              </span>
+            </div>
+
             {invoices.length === 0 ? (
-              <p className="text-muted-foreground text-sm py-4">No past billing statements found.</p>
+              <p className="text-muted-foreground text-xs py-8 text-center">
+                No past billing statements found.
+              </p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-secondary text-secondary-foreground border-b border-border">
+              <TableWrapper className="!border-none !rounded-none !shadow-none !bg-transparent">
+                <table className="w-full text-sm text-left border-collapse">
+                  <thead className="bg-secondary/70 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border">
                     <tr>
-                      <th className="text-left p-3 font-semibold">Date</th>
-                      <th className="text-left p-3 font-semibold">Invoice No</th>
-                      <th className="text-right p-3 font-semibold">Amount</th>
-                      <th className="text-center p-3 font-semibold">Status</th>
+                      <th className="px-4 py-2.5">Date</th>
+                      <th className="px-4 py-2.5">Invoice No</th>
+                      <th className="px-4 py-2.5 text-right">Amount</th>
+                      <th className="px-4 py-2.5 text-right">Status</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-border/70">
                     {invoices.map((inv) => (
-                      <tr key={inv.id} className="border-b border-border hover:bg-muted/30 transition">
-                        <td className="p-3 text-muted-foreground">
+                      <tr key={inv.id} className="elevated-table-row transition-colors">
+                        <td className="px-4 py-2.5 text-xs text-muted-foreground tabular-nums">
                           {new Date(inv.billingDate).toLocaleDateString("en-IN", {
                             day: "2-digit",
                             month: "short",
-                            year: "numeric"
+                            year: "numeric",
                           })}
                         </td>
-                        <td className="p-3 font-mono font-semibold">{inv.invoiceNo}</td>
-                        <td className="p-3 text-right font-semibold">₹ {inv.amount}</td>
-                        <td className="p-3 text-center">
-                          <span className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-xs font-bold px-2 py-0.5 rounded-full">
-                            {inv.status}
-                          </span>
+                        <td className="px-4 py-2.5 font-mono text-xs font-semibold text-foreground">
+                          {inv.invoiceNo}
+                        </td>
+                        <td className="px-4 py-2.5 text-right font-mono font-semibold tabular-nums">
+                          ₹ {inv.amount}
+                        </td>
+                        <td className="px-4 py-2.5 text-right">
+                          <StatusBadge variant="success">{inv.status}</StatusBadge>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </TableWrapper>
             )}
           </div>
         </>

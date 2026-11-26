@@ -1,6 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
+import { X } from "lucide-react";
 
+/**
+ * Accessible portal-backed autocomplete combobox supporting keyboard navigation
+ * and pre-populated display text (used by invoice & ledger selectors + OCR).
+ */
 function Autocomplete({
   options = [],
   labelKey = "name",
@@ -12,26 +17,33 @@ function Autocomplete({
   onClear = null,
   searchFields = ["name"],
   customRender = null,
-  inputRef = null
+  inputRef = null,
+  className = "",
+  inputClassName = "",
+  disabled = false,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeIndex, setActiveIndex] = useState(-1);
-  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0, maxHeight: 240 });
   const wrapperRef = useRef(null);
   const listRef = useRef(null);
 
-  // Find currently selected option
   const selectedOption = options.find((opt) => opt[valueKey] === selectedId);
 
-  // Calculate dropdown position from the wrapper's bounding rect
   const updatePosition = useCallback(() => {
     if (!wrapperRef.current) return;
     const rect = wrapperRef.current.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom - 12;
+    const spaceAbove = rect.top - 12;
+    const openUpward = spaceBelow < 160 && spaceAbove > spaceBelow;
+    const maxHeight = Math.min(240, Math.max(120, openUpward ? spaceAbove : spaceBelow));
+
     setDropdownPos({
-      top: rect.bottom + 4,
-      left: rect.left,
-      width: rect.width,
+      top: openUpward ? Math.max(8, rect.top - maxHeight - 4) : rect.bottom + 4,
+      left: Math.max(8, Math.min(rect.left, window.innerWidth - Math.max(rect.width, 220) - 8)),
+      width: Math.max(rect.width, 200),
+      maxHeight,
     });
   }, []);
 
@@ -48,7 +60,6 @@ function Autocomplete({
     return () => clearTimeout(timer);
   }, [selectedOption, labelKey, value]);
 
-  // Reset active index when list opens or filters change
   useEffect(() => {
     const timer = setTimeout(() => {
       setActiveIndex(-1);
@@ -56,7 +67,6 @@ function Autocomplete({
     return () => clearTimeout(timer);
   }, [searchTerm, isOpen]);
 
-  // Reposition dropdown on scroll/resize while open
   useEffect(() => {
     if (!isOpen) return;
     updatePosition();
@@ -71,14 +81,15 @@ function Autocomplete({
   useEffect(() => {
     function handleClickOutside(event) {
       if (
-        wrapperRef.current && !wrapperRef.current.contains(event.target) &&
-        listRef.current && !listRef.current.contains(event.target)
+        wrapperRef.current &&
+        !wrapperRef.current.contains(event.target) &&
+        listRef.current &&
+        !listRef.current.contains(event.target)
       ) {
         setIsOpen(false);
-        // Reset search term to selected option's name when closing
         if (selectedOption) {
           setSearchTerm(selectedOption[labelKey]);
-        } else {
+        } else if (!value) {
           setSearchTerm("");
         }
       }
@@ -87,10 +98,10 @@ function Autocomplete({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [selectedOption, labelKey]);
+  }, [selectedOption, labelKey, value]);
 
   const filteredOptions = options.filter((opt) => {
-    const term = searchTerm.toLowerCase();
+    const term = String(searchTerm || "").toLowerCase();
     return searchFields.some((field) => {
       const val = opt[field];
       return val && String(val).toLowerCase().includes(term);
@@ -108,6 +119,14 @@ function Autocomplete({
     setIsOpen(true);
     if (e.target.value === "" && onClear) {
       onClear();
+    }
+  };
+
+  const scrollActiveIntoView = (index) => {
+    if (!listRef.current) return;
+    const activeEl = listRef.current.children[index];
+    if (activeEl) {
+      activeEl.scrollIntoView({ block: "nearest" });
     }
   };
 
@@ -147,7 +166,7 @@ function Autocomplete({
         setIsOpen(false);
         if (selectedOption) {
           setSearchTerm(selectedOption[labelKey]);
-        } else {
+        } else if (!value) {
           setSearchTerm("");
         }
         break;
@@ -156,72 +175,71 @@ function Autocomplete({
     }
   };
 
-  const scrollActiveIntoView = (index) => {
-    if (!listRef.current) return;
-    const activeEl = listRef.current.children[index];
-    if (activeEl) {
-      activeEl.scrollIntoView({ block: "nearest" });
-    }
-  };
-
   const dropdownList = isOpen ? (
     <ul
       ref={listRef}
+      role="listbox"
       style={{
         position: "fixed",
         top: `${dropdownPos.top}px`,
         left: `${dropdownPos.left}px`,
         width: `${dropdownPos.width}px`,
+        maxHeight: `${dropdownPos.maxHeight}px`,
       }}
-      className="z-[9999] bg-card border border-border rounded-lg shadow-xl max-h-60 overflow-y-auto divide-y divide-border text-foreground"
+      className="z-[9999] bg-card border border-border rounded-lg popover-shadow overflow-y-auto divide-y divide-border/60 text-foreground scrollbar-thin"
     >
       {filteredOptions.length > 0 ? (
         filteredOptions.map((option, index) => (
           <li
             key={option[valueKey]}
+            role="option"
+            aria-selected={index === activeIndex || option[valueKey] === selectedId}
             onClick={() => handleSelect(option)}
-            className={`p-3 cursor-pointer transition-colors duration-150 flex justify-between items-center text-foreground ${
+            className={`px-3 py-2 cursor-pointer transition-colors duration-100 flex justify-between items-center text-xs sm:text-sm ${
               index === activeIndex
-                ? "bg-secondary font-medium"
-                : "hover:bg-secondary/40 text-muted-foreground hover:text-foreground"
+                ? "bg-primary/10 text-primary-text font-medium"
+                : option[valueKey] === selectedId
+                  ? "bg-secondary/70 text-foreground font-medium"
+                  : "hover:bg-secondary/50 text-foreground"
             }`}
           >
-            {customRender ? (
-              customRender(option)
-            ) : (
-              <span>{option[labelKey]}</span>
-            )}
+            {customRender ? customRender(option) : <span>{option[labelKey]}</span>}
           </li>
         ))
       ) : (
-        <li className="p-3 text-muted-foreground text-center">No results found</li>
+        <li className="px-3 py-3 text-xs text-muted-foreground text-center">No matching records</li>
       )}
     </ul>
   ) : null;
 
   return (
-    <div ref={wrapperRef} className="relative w-full">
+    <div ref={wrapperRef} className={`relative w-full ${className}`}>
       <div className="relative">
         <input
           ref={inputRef}
           type="text"
+          role="combobox"
+          aria-expanded={isOpen}
+          aria-autocomplete="list"
+          disabled={disabled}
           value={searchTerm}
           onChange={handleInputChange}
-          onFocus={() => setIsOpen(true)}
+          onFocus={() => !disabled && setIsOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="border border-border p-3 rounded-lg w-full bg-card text-foreground pr-10 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition duration-200"
+          className={`h-9 px-3 pr-8 rounded-md w-full border border-input bg-card text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${inputClassName}`}
         />
-        {searchTerm && (
+        {searchTerm && !disabled && (
           <button
             type="button"
+            aria-label="Clear selection"
             onClick={() => {
               setSearchTerm("");
               if (onClear) onClear();
             }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none cursor-pointer"
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-secondary/70 focus:outline-none cursor-pointer"
           >
-            ✕
+            <X className="w-3.5 h-3.5" />
           </button>
         )}
       </div>

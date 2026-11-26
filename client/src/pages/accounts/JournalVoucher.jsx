@@ -1,13 +1,22 @@
 import { useState, useEffect, useCallback } from "react";
-import CommonModal from "../../components/common/CommonModal";
+import CommonPageHeader from "../../components/common/CommonPageHeader";
 import TableWrapper from "../../components/common/TableWrapper";
+import ValidationMessage from "../../components/common/ValidationMessage";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
+import StatusBadge from "../../components/common/StatusBadge";
 import api from "../../utils/api";
+import { PenLine, Ban, RotateCcw, Save } from "lucide-react";
 
+const INPUT_CLASS =
+  "h-9 px-3 rounded-md w-full border border-input bg-card text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors";
+const LABEL_CLASS =
+  "block mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider";
+
+/**
+ * Double-entry journal adjustment voucher register.
+ */
 function JournalVoucher() {
-  const [date, setDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
-
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [debitAccount, setDebitAccount] = useState("");
   const [creditAccount, setCreditAccount] = useState("");
   const [amount, setAmount] = useState("");
@@ -16,13 +25,13 @@ function JournalVoucher() {
   const [entries, setEntries] = useState([]);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleteId, setDeleteId] = useState(null);
+  const [voidTarget, setVoidTarget] = useState(null);
+  const [voiding, setVoiding] = useState(false);
 
   const loadVouchers = useCallback(async () => {
     try {
       const res = await api.get("/transactions/vouchers?type=JOURNAL");
-      setEntries(res.data.data);
+      setEntries(res.data.data || []);
     } catch (err) {
       console.error("Failed to load journal vouchers:", err);
     }
@@ -35,19 +44,28 @@ function JournalVoucher() {
     return () => clearTimeout(timer);
   }, [loadVouchers]);
 
+  const resetForm = () => {
+    setDebitAccount("");
+    setCreditAccount("");
+    setAmount("");
+    setNarration("");
+    setMessage("");
+    setMessageType("");
+  };
+
   const saveVoucher = async () => {
     if (!debitAccount || !creditAccount || !amount) {
-      setMessage("Please fill all required fields");
+      setMessage("Please fill all required fields.");
       setMessageType("error");
       return;
     }
     if (Number(amount) <= 0) {
-      setMessage("Enter valid amount");
+      setMessage("Enter a valid voucher amount.");
       setMessageType("error");
       return;
     }
     if (debitAccount === creditAccount) {
-      setMessage("Debit and Credit Account cannot be same");
+      setMessage("Debit and Credit account cannot be the same.");
       setMessageType("warning");
       return;
     }
@@ -64,109 +82,102 @@ function JournalVoucher() {
 
       await loadVouchers();
 
-      setMessage("Voucher Saved Successfully");
+      setDebitAccount("");
+      setCreditAccount("");
+      setAmount("");
+      setNarration("");
+      setMessage("Journal voucher saved successfully.");
       setMessageType("success");
       setTimeout(() => {
         setMessage("");
         setMessageType("");
       }, 3000);
-
-      setDebitAccount("");
-      setCreditAccount("");
-      setAmount("");
-      setNarration("");
     } catch (err) {
-      setMessage(err.response?.data?.error || "Failed to save voucher");
+      setMessage(err.response?.data?.error || "Failed to save voucher.");
       setMessageType("error");
     }
   };
 
   const handleCancel = async () => {
+    if (!voidTarget) return;
+    setVoiding(true);
     try {
-      await api.post(`/transactions/vouchers/${deleteId}/cancel`);
+      await api.post(`/transactions/vouchers/${voidTarget.id}/cancel`);
       await loadVouchers();
-      setShowDeleteModal(false);
-      setDeleteId(null);
-      setMessage("Voucher Voided Successfully");
+      setVoidTarget(null);
+      setMessage("Voucher voided successfully.");
       setMessageType("success");
       setTimeout(() => {
         setMessage("");
         setMessageType("");
       }, 3000);
     } catch (err) {
-      setShowDeleteModal(false);
-      setMessage(err.response?.data?.error || "Failed to void voucher");
+      setVoidTarget(null);
+      setMessage(err.response?.data?.error || "Failed to void voucher.");
       setMessageType("error");
+    } finally {
+      setVoiding(false);
     }
   };
 
   return (
-    <div className="space-y-6 text-foreground">
-      <div>
-        <h1 className="text-3xl font-bold mb-2 text-foreground">
-          Journal Voucher
-        </h1>
-        <p className="text-muted-foreground text-sm">
-          Manage journal voucher entries
-        </p>
-      </div>
+    <div className="space-y-5 text-foreground">
+      <CommonPageHeader
+        title="Journal Voucher"
+        subtitle="Record double-entry ledger adjustments between nominal and general accounts"
+        badge={
+          <StatusBadge variant="neutral tabular-nums">
+            {entries.filter((e) => !e.isCancelled).length} active entries
+          </StatusBadge>
+        }
+      />
 
-      {message && (
-        <div
-          className={`p-3 rounded-lg mb-4 text-white font-medium shadow-sm ${messageType === "success"
-            ? "bg-emerald-600"
-            : messageType === "warning"
-              ? "bg-amber-500"
-              : "bg-destructive"
-            }`}
-        >
-          {message}
-        </div>
-      )}
+      <ValidationMessage
+        type={messageType}
+        message={message}
+        onDismiss={() => setMessage("")}
+        className="mt-0!"
+      />
 
-      {/* Form */}
-
-      <div className="bg-card p-5 rounded-xl border border-border shadow-sm">
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-          <div className="flex flex-col">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Voucher Number</label>
+      <div className="bg-card p-5 rounded-lg border border-border surface-shadow">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div>
+            <label className={LABEL_CLASS}>Voucher Number</label>
             <input
               type="text"
               value="Auto Generated"
               readOnly
-              className="border border-border p-3 rounded-lg bg-muted text-muted-foreground font-medium text-sm focus:outline-none"
+              className="h-9 px-3 rounded-md w-full border border-border bg-muted text-muted-foreground font-mono text-xs focus:outline-none"
             />
           </div>
 
-          <div className="flex flex-col">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Voucher Date</label>
+          <div>
+            <label className={LABEL_CLASS}>Voucher Date</label>
             <input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="border border-border p-3 rounded-lg bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              className={INPUT_CLASS}
             />
           </div>
 
-          <div className="flex flex-col">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Amount</label>
+          <div>
+            <label className={LABEL_CLASS}>Amount (₹) *</label>
             <input
               type="number"
-              placeholder="Amount"
+              placeholder="0.00"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="border border-border p-3 rounded-lg bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              className={`${INPUT_CLASS} font-mono tabular-nums`}
             />
           </div>
 
-          <div className="flex flex-col">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Debit Account</label>
+          <div>
+            <label className={LABEL_CLASS}>Debit Account (Dr) *</label>
             <select
               value={debitAccount}
               onChange={(e) => setDebitAccount(e.target.value)}
-              className="border border-border p-3 rounded-lg bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent cursor-pointer"
+              className={`${INPUT_CLASS} cursor-pointer`}
             >
               <option value="">Select Debit Account</option>
               <option>Cash A/c</option>
@@ -176,12 +187,12 @@ function JournalVoucher() {
             </select>
           </div>
 
-          <div className="flex flex-col">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Credit Account</label>
+          <div>
+            <label className={LABEL_CLASS}>Credit Account (Cr) *</label>
             <select
               value={creditAccount}
               onChange={(e) => setCreditAccount(e.target.value)}
-              className="border border-border p-3 rounded-lg bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent cursor-pointer"
+              className={`${INPUT_CLASS} cursor-pointer`}
             >
               <option value="">Select Credit Account</option>
               <option>Cash A/c</option>
@@ -191,85 +202,96 @@ function JournalVoucher() {
             </select>
           </div>
 
-          <div className="flex flex-col">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Narration</label>
+          <div>
+            <label className={LABEL_CLASS}>Narration</label>
             <input
               type="text"
-              placeholder="Narration"
+              placeholder="Adjustment reference"
               value={narration}
               onChange={(e) => setNarration(e.target.value)}
-              className="border border-border p-3 rounded-lg bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              className={INPUT_CLASS}
             />
           </div>
-
         </div>
 
-        <div className="flex gap-3 mt-4">
+        <div className="flex flex-wrap justify-end gap-2 mt-5 pt-4 border-t border-border/70">
           <button
+            type="button"
+            onClick={resetForm}
+            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-md border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80 text-xs font-medium cursor-pointer transition-colors"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Clear</span>
+          </button>
+          <button
+            type="button"
             onClick={saveVoucher}
-            className="bg-primary text-primary-foreground px-6 py-3 rounded-lg font-semibold cursor-pointer hover:bg-primary/90 transition shadow-sm"
+            className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-primary text-primary-foreground text-xs sm:text-sm font-medium cursor-pointer hover:bg-primary/90 transition-colors"
           >
-            Save Voucher
-          </button>
-
-          <button
-            onClick={() => {
-              setDebitAccount("");
-              setCreditAccount("");
-              setAmount("");
-              setNarration("");
-              setMessage("");
-              setMessageType("");
-            }}
-            className="bg-secondary text-secondary-foreground px-6 py-3 rounded-lg font-semibold cursor-pointer hover:bg-secondary/80 transition"
-          >
-            Clear
+            <Save className="w-4 h-4" />
+            <span>Save Journal Voucher</span>
           </button>
         </div>
-
       </div>
 
-      {/* Table */}
-
-      <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden mt-6">
-        <div className="p-5 border-b border-border">
-          <h2 className="text-xl font-bold">Voucher Journal</h2>
+      {/* Journal Table */}
+      <div className="bg-card rounded-lg border border-border surface-shadow overflow-hidden">
+        <div className="px-4 sm:px-5 py-3.5 border-b border-border flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <PenLine className="w-4 h-4 text-primary-text" aria-hidden="true" />
+            <h2 className="text-sm font-semibold text-foreground">Voucher Journal</h2>
+          </div>
+          <span className="text-xs text-muted-foreground tabular-nums">{entries.length} records</span>
         </div>
 
         <TableWrapper className="!border-none !rounded-none !shadow-none !bg-transparent">
-          <table className="w-full text-sm">
-
-            <thead className="bg-secondary/40 text-muted-foreground border-b border-border">
+          <table className="w-full text-sm text-left border-collapse">
+            <thead className="bg-secondary/70 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border">
               <tr>
-                <th className="p-4 text-left font-semibold">Voucher No</th>
-                <th className="p-4 text-left font-semibold">Date</th>
-                <th className="p-4 text-left font-semibold">Debit Account</th>
-                <th className="p-4 text-left font-semibold">Credit Account</th>
-                <th className="p-4 text-right font-semibold">Amount</th>
-                <th className="p-4 text-center font-semibold">Action</th>
+                <th className="px-4 py-2.5">Voucher No</th>
+                <th className="px-4 py-2.5">Date</th>
+                <th className="px-4 py-2.5">Debit Account</th>
+                <th className="px-4 py-2.5">Credit Account</th>
+                <th className="px-4 py-2.5 text-right">Amount</th>
+                <th className="px-4 py-2.5">Status</th>
+                <th className="px-4 py-2.5 text-right">Action</th>
               </tr>
             </thead>
-
-            <tbody className="divide-y divide-border">
+            <tbody className="divide-y divide-border/70">
               {entries.map((item) => (
-                <tr key={item.id} className={`hover:bg-secondary/20 transition-colors duration-150 ${item.isCancelled ? "bg-destructive/10 text-muted-foreground line-through" : ""}`}>
-                  <td className="p-4 font-mono font-semibold text-foreground">{item.voucherNo}</td>
-                  <td className="p-4 text-muted-foreground">{item.voucherDate.split("T")[0]}</td>
-                  <td className="p-4 text-foreground font-medium">{item.debitAccount}</td>
-                  <td className="p-4 text-foreground font-medium">{item.creditAccount}</td>
-                  <td className="p-4 text-right font-mono font-bold text-foreground">₹ {item.amount.toFixed(2)}</td>
-                  <td className="p-4 text-center">
+                <tr
+                  key={item.id}
+                  className={`elevated-table-row transition-colors ${
+                    item.isCancelled ? "opacity-65 bg-destructive/5" : ""
+                  }`}
+                >
+                  <td className="px-4 py-2.5 font-mono text-xs font-semibold text-foreground">
+                    {item.voucherNo}
+                  </td>
+                  <td className="px-4 py-2.5 text-xs text-muted-foreground tabular-nums">
+                    {item.voucherDate.split("T")[0]}
+                  </td>
+                  <td className="px-4 py-2.5 text-foreground font-medium">{item.debitAccount}</td>
+                  <td className="px-4 py-2.5 text-foreground font-medium">{item.creditAccount}</td>
+                  <td className="px-4 py-2.5 text-right font-mono font-semibold text-foreground tabular-nums">
+                    ₹ {Number(item.amount || 0).toFixed(2)}
+                  </td>
+                  <td className="px-4 py-2.5">
                     {item.isCancelled ? (
-                      <span className="text-destructive font-semibold text-sm">Voided</span>
+                      <StatusBadge variant="destructive">Voided</StatusBadge>
                     ) : (
+                      <StatusBadge variant="success">Posted</StatusBadge>
+                    )}
+                  </td>
+                  <td className="px-4 py-2.5 text-right">
+                    {!item.isCancelled && (
                       <button
-                        onClick={() => {
-                          setDeleteId(item.id);
-                          setShowDeleteModal(true);
-                        }}
-                        className="bg-destructive text-destructive-foreground px-3 py-1 rounded cursor-pointer hover:bg-destructive/90 text-xs font-semibold shadow-sm"
+                        type="button"
+                        onClick={() => setVoidTarget(item)}
+                        className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md border border-border bg-background hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 text-xs font-medium text-muted-foreground cursor-pointer transition-colors"
                       >
-                        Void
+                        <Ban className="w-3 h-3" />
+                        <span>Void</span>
                       </button>
                     )}
                   </td>
@@ -277,46 +299,29 @@ function JournalVoucher() {
               ))}
               {entries.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="p-8 text-center text-muted-foreground font-medium">
-                    No journal vouchers found.
+                  <td colSpan="7" className="px-4 py-8 text-center text-xs text-muted-foreground">
+                    No journal vouchers recorded yet.
                   </td>
                 </tr>
               )}
             </tbody>
-
           </table>
         </TableWrapper>
-
       </div>
-      <CommonModal
-        isOpen={showDeleteModal}
-        title="Void Confirmation"
-      >
-        <div className="text-foreground">
-          <p className="mb-4">
-            Are you sure you want to void this journal voucher?
-          </p>
 
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={() => {
-                setShowDeleteModal(false);
-                setDeleteId(null);
-              }}
-              className="bg-secondary text-secondary-foreground px-4 py-2 rounded cursor-pointer hover:bg-secondary/80 font-medium transition"
-            >
-              Cancel
-            </button>
-
-            <button
-              onClick={handleCancel}
-              className="bg-destructive text-destructive-foreground px-4 py-2 rounded cursor-pointer hover:bg-destructive/90 font-medium transition"
-            >
-              Void Voucher
-            </button>
-          </div>
-        </div>
-      </CommonModal>
+      <ConfirmDialog
+        isOpen={Boolean(voidTarget)}
+        title="Void Journal Voucher"
+        message={
+          voidTarget
+            ? `Are you sure you want to void journal voucher ${voidTarget.voucherNo}?`
+            : ""
+        }
+        confirmLabel="Void Voucher"
+        loading={voiding}
+        onConfirm={handleCancel}
+        onCancel={() => !voiding && setVoidTarget(null)}
+      />
     </div>
   );
 }

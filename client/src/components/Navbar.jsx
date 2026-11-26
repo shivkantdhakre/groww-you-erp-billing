@@ -11,13 +11,20 @@ import {
   KeyRound,
   Settings,
   LogOut,
-  Menu
+  Menu,
+  Search,
+  Building2,
+  ChevronDown,
+  X,
 } from "lucide-react";
 
+/**
+ * Top utility bar with global search, branch context switcher, theme toggle,
+ * notifications drawer, and user menu.
+ */
 function Navbar() {
   const navigate = useNavigate();
 
-  // Store bindings
   const user = useStore((state) => state.user);
   const logout = useStore((state) => state.logout);
   const notifications = useStore((state) => state.notifications);
@@ -25,20 +32,29 @@ function Navbar() {
   const clearNotifications = useStore((state) => state.clearNotifications);
   const sidebarOpen = useStore((state) => state.sidebarOpen);
   const setSidebarOpen = useStore((state) => state.setSidebarOpen);
+  const branches = useStore((state) => state.branches);
+  const activeBranchId = useStore((state) => state.activeBranchId);
+  const fetchBranches = useStore((state) => state.fetchBranches);
+  const setActiveBranch = useStore((state) => state.setActiveBranch);
 
-  // Component UI state
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [loadingSearch, setLoadingSearch] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "light");
 
   const searchRef = useRef(null);
   const notificationsRef = useRef(null);
   const profileRef = useRef(null);
 
-  // Dismiss dropdowns when clicking outside
+  useEffect(() => {
+    if (user) {
+      fetchBranches();
+    }
+  }, [user, fetchBranches]);
+
   useEffect(() => {
     function handleClickOutside(event) {
       if (searchRef.current && !searchRef.current.contains(event.target)) {
@@ -57,9 +73,6 @@ function Navbar() {
     };
   }, []);
 
-  // Theme Toggler state
-  const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
-
   useEffect(() => {
     if (theme === "dark") {
       document.documentElement.classList.add("dark");
@@ -70,10 +83,9 @@ function Navbar() {
   }, [theme]);
 
   const toggleTheme = () => {
-    setTheme(theme === "light" ? "dark" : "light");
+    setTheme((prev) => (prev === "light" ? "dark" : "light"));
   };
 
-  // Debounced search logic
   useEffect(() => {
     if (!search.trim()) {
       return;
@@ -83,8 +95,8 @@ function Navbar() {
       setLoadingSearch(true);
       try {
         const res = await api.get(`/search?q=${encodeURIComponent(search)}`);
-        setSearchResults(res.data);
-        if (res.data.length > 0) {
+        setSearchResults(res.data || []);
+        if ((res.data || []).length > 0) {
           setShowSearchDropdown(true);
         }
       } catch (err) {
@@ -93,7 +105,7 @@ function Navbar() {
       } finally {
         setLoadingSearch(false);
       }
-    }, 300);
+    }, 280);
 
     return () => clearTimeout(delayDebounceFn);
   }, [search]);
@@ -117,223 +129,305 @@ function Navbar() {
   };
 
   const unreadCount = notifications.filter((item) => !item.read).length;
+  const canSwitchBranch =
+    user?.role === "SUPER_ADMIN" || user?.role === "COMPANY_ADMIN";
+  const currentBranch =
+    branches.find((b) => String(b.id) === String(activeBranchId)) ||
+    branches.find((b) => String(b.id) === String(user?.branchId)) ||
+    branches[0];
 
   return (
-    <div className="bg-card border-b border-border shadow px-6 py-4 flex justify-between items-center relative text-foreground no-print">
-      
-      {/* Left side Search & Hamburger Section */}
-      <div className="flex items-center flex-1 min-w-0 mr-4">
-        {/* Hamburger Toggle Button for mobile/tablet */}
+    <header className="sticky top-0 z-30 h-14 bg-card/95 backdrop-blur-sm border-b border-border px-4 sm:px-6 flex justify-between items-center gap-3 text-foreground no-print shrink-0">
+      {/* Left: Mobile Drawer Trigger + Global Search */}
+      <div className="flex items-center gap-2.5 flex-1 min-w-0">
         <button
+          type="button"
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="lg:hidden p-2 -ml-2 mr-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer focus:outline-none transition-colors flex items-center justify-center shrink-0"
+          className="lg:hidden h-8 w-8 rounded-md border border-border bg-background/60 hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer flex items-center justify-center shrink-0 transition-colors"
           aria-label="Toggle Navigation Sidebar"
         >
-          <Menu className="w-6 h-6" strokeWidth={1.5} />
+          <Menu className="w-4 h-4" strokeWidth={1.75} />
         </button>
 
-        {/* Search Input Box */}
-        <div ref={searchRef} className="w-full max-w-md md:max-w-lg lg:max-w-xl relative flex-1 min-w-0">
-          <input
-            type="text"
-            placeholder="Search..."
-            value={search}
-            onChange={handleSearchChange}
-            onFocus={() => {
-              if (search.trim()) {
-                setShowSearchDropdown(true);
-              }
-            }}
-            className="w-full border border-border bg-card text-foreground p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:truncate"
-          />
+        <div ref={searchRef} className="w-full max-w-xs sm:max-w-sm md:max-w-md relative flex-1 min-w-0">
+          <div className="relative flex items-center">
+            <Search
+              className="w-4 h-4 text-muted-foreground absolute left-3 pointer-events-none"
+              aria-hidden="true"
+            />
+            <input
+              type="text"
+              placeholder="Search invoices, parties, items..."
+              value={search}
+              onChange={handleSearchChange}
+              onFocus={() => {
+                if (search.trim()) {
+                  setShowSearchDropdown(true);
+                }
+              }}
+              className="w-full h-9 pl-9 pr-8 border border-input bg-background/70 focus:bg-card text-foreground text-xs sm:text-sm rounded-md placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors"
+            />
+            {search && (
+              <button
+                type="button"
+                aria-label="Clear search"
+                onClick={() => {
+                  setSearch("");
+                  setSearchResults([]);
+                  setShowSearchDropdown(false);
+                }}
+                className="absolute right-2 p-0.5 rounded text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
 
           {search && showSearchDropdown && (
-            <div className="absolute bg-card border border-border rounded-lg shadow-lg w-full mt-1 z-50 max-h-80 overflow-y-auto text-foreground">
+            <div className="absolute left-0 right-0 mt-1.5 bg-card border border-border rounded-lg popover-shadow z-50 max-h-80 overflow-y-auto scrollbar-thin text-foreground divide-y divide-border/60">
               {loadingSearch ? (
-                <div className="p-3 text-muted-foreground flex items-center justify-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin shrink-0 text-primary" aria-hidden="true" />
-                  <span>Searching...</span>
+                <div className="p-3.5 text-xs text-muted-foreground flex items-center justify-center gap-2">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" aria-hidden="true" />
+                  <span>Searching records...</span>
                 </div>
               ) : searchResults.length > 0 ? (
                 searchResults.map((item, index) => (
-                  <div
+                  <button
                     key={index}
+                    type="button"
                     onClick={() => handleResultClick(item)}
-                    className="p-3 hover:bg-muted cursor-pointer flex justify-between items-center border-b border-border last:border-0"
+                    className="w-full text-left px-3.5 py-2.5 hover:bg-secondary/60 cursor-pointer flex justify-between items-center gap-3 transition-colors"
                   >
-                    <div>
-                      <span className="font-semibold">{item.name}</span>
-                      <span className="text-xs text-muted-foreground block">{item.details}</span>
+                    <div className="min-w-0">
+                      <span className="text-sm font-medium text-foreground block truncate">
+                        {item.name}
+                      </span>
+                      {item.details && (
+                        <span className="text-xs text-muted-foreground block truncate">
+                          {item.details}
+                        </span>
+                      )}
                     </div>
-                    <span className="text-xs font-semibold px-2 py-1 bg-primary/10 text-primary rounded uppercase">
+                    <span className="text-[10px] font-semibold px-2 py-0.5 bg-primary/10 text-primary-text border border-primary/20 rounded uppercase shrink-0">
                       {item.type}
                     </span>
-                  </div>
+                  </button>
                 ))
               ) : (
-                <div className="p-3 text-muted-foreground text-center">No Results Found</div>
+                <div className="p-4 text-xs text-muted-foreground text-center">No matching records</div>
               )}
             </div>
           )}
         </div>
       </div>
 
-      {/* Right Side Icons */}
-      <div className="flex items-center gap-4">
+      {/* Right: Branch Switcher, Theme, Notifications, Profile */}
+      <div className="flex items-center gap-2 shrink-0">
+        {branches.length > 0 && (
+          <div className="hidden md:flex items-center h-8 px-2.5 rounded-md border border-border bg-background/70 text-xs text-foreground gap-1.5">
+            <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" aria-hidden="true" />
+            {canSwitchBranch ? (
+              <select
+                aria-label="Active Branch"
+                value={activeBranchId || currentBranch?.id || ""}
+                onChange={(e) => setActiveBranch(Number(e.target.value))}
+                className="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer pr-1 max-w-[165px] truncate"
+              >
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.id} className="bg-card text-foreground">
+                    {branch.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span className="font-medium truncate max-w-[150px]">
+                {currentBranch?.name || "Main Branch"}
+              </span>
+            )}
+          </div>
+        )}
 
-        {/* Theme Switch Toggler */}
         <button
+          type="button"
           onClick={toggleTheme}
-          className="p-2 rounded-lg hover:bg-muted transition-colors cursor-pointer text-muted-foreground hover:text-foreground flex items-center justify-center"
+          className="h-8 w-8 rounded-md border border-border bg-background/70 hover:bg-secondary transition-colors cursor-pointer text-muted-foreground hover:text-foreground flex items-center justify-center"
           title={theme === "light" ? "Switch to Dark Mode" : "Switch to Light Mode"}
           aria-label={theme === "light" ? "Switch to Dark Mode" : "Switch to Light Mode"}
         >
           {theme === "light" ? (
-            <Moon className="w-5 h-5 shrink-0" aria-hidden="true" />
+            <Moon className="w-4 h-4" aria-hidden="true" />
           ) : (
-            <Sun className="w-5 h-5 shrink-0" aria-hidden="true" />
+            <Sun className="w-4 h-4" aria-hidden="true" />
           )}
         </button>
-        
-        {/* Notification Bell Dropdown */}
+
+        {/* Notifications */}
         <div ref={notificationsRef} className="relative">
           <button
-            onClick={() => setShowNotifications(!showNotifications)}
-            className="relative p-2 rounded-lg hover:bg-muted transition-colors cursor-pointer text-muted-foreground hover:text-foreground flex items-center justify-center"
+            type="button"
+            onClick={() => setShowNotifications((prev) => !prev)}
+            className="relative h-8 w-8 rounded-md border border-border bg-background/70 hover:bg-secondary transition-colors cursor-pointer text-muted-foreground hover:text-foreground flex items-center justify-center"
             aria-label="Notifications"
           >
-            <Bell className="w-5 h-5 shrink-0" aria-hidden="true" />
+            <Bell className="w-4 h-4" aria-hidden="true" />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] font-bold px-2 py-0.5 rounded-full">
+              <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 bg-destructive text-destructive-foreground text-[10px] font-semibold rounded-full flex items-center justify-center tabular-nums">
                 {unreadCount}
               </span>
             )}
           </button>
 
           {showNotifications && (
-            <div className="absolute right-0 mt-3 w-80 bg-card border border-border rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto text-foreground">
-              <div className="p-4 border-b border-border flex justify-between items-center">
-                <h3 className="font-semibold">Notifications</h3>
+            <div className="absolute right-0 mt-2 w-80 bg-card border border-border rounded-lg popover-shadow z-50 max-h-96 overflow-y-auto scrollbar-thin text-foreground">
+              <div className="px-4 py-3 border-b border-border flex justify-between items-center">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Notifications
+                </h3>
                 {notifications.length > 0 && (
                   <button
+                    type="button"
                     onClick={() => {
                       clearNotifications();
                       setShowNotifications(false);
                     }}
-                    className="text-destructive hover:text-destructive/80 text-xs font-semibold cursor-pointer"
+                    className="text-destructive hover:text-destructive/80 text-xs font-medium cursor-pointer"
                   >
-                    Clear All
+                    Clear all
                   </button>
                 )}
               </div>
 
               {notifications.length > 0 ? (
-                notifications.map((item) => (
-                  <div
-                    key={item.id}
-                    className={`p-4 border-b border-border last:border-0 transition-colors ${
-                      item.read ? "bg-card" : "bg-primary/5"
-                    }`}
-                  >
-                    <p className="text-sm">{item.message}</p>
-                    <div className="flex justify-between items-center mt-2">
-                      <span className="text-[10px] text-muted-foreground">
-                        {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                      {!item.read && (
-                        <button
-                          onClick={() => markNotificationRead(item.id)}
-                          className="text-primary hover:text-primary/85 text-xs font-semibold cursor-pointer"
-                        >
-                          Mark As Read
-                        </button>
-                      )}
+                <div className="divide-y divide-border/70">
+                  {notifications.map((item) => (
+                    <div
+                      key={item.id}
+                      className={`px-4 py-3 transition-colors ${
+                        item.read ? "bg-card" : "bg-primary/5"
+                      }`}
+                    >
+                      <p className="text-xs sm:text-sm text-foreground leading-relaxed">
+                        {item.message}
+                      </p>
+                      <div className="flex justify-between items-center mt-1.5">
+                        <span className="text-[11px] text-muted-foreground tabular-nums">
+                          {new Date(item.createdAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                        {!item.read && (
+                          <button
+                            type="button"
+                            onClick={() => markNotificationRead(item.id)}
+                            className="text-primary-text hover:underline text-xs font-medium cursor-pointer"
+                          >
+                            Mark read
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))
+                  ))}
+                </div>
               ) : (
-                <div className="p-6 text-center text-muted-foreground text-sm">No Notifications</div>
+                <div className="p-6 text-center text-muted-foreground text-xs">
+                  No pending alerts
+                </div>
               )}
             </div>
           )}
         </div>
 
-        {/* User Profile Dropdown */}
+        {/* User Profile Menu */}
         <div ref={profileRef} className="relative">
           <button
-            onClick={() => setShowProfile(!showProfile)}
-            className="flex items-center gap-2 bg-muted px-3 py-2 rounded-lg hover:bg-muted/80 transition-colors cursor-pointer text-foreground"
+            type="button"
+            onClick={() => setShowProfile((prev) => !prev)}
+            className="h-8 pl-1.5 pr-2 rounded-md border border-border bg-background/70 hover:bg-secondary transition-colors cursor-pointer text-foreground flex items-center gap-2"
           >
-            <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
+            <div className="w-5 h-5 bg-primary text-primary-foreground rounded text-[11px] font-semibold flex items-center justify-center">
               {user?.name?.charAt(0).toUpperCase() || "U"}
             </div>
-            <span className="font-medium hidden sm:inline">
+            <span className="text-xs font-medium hidden sm:inline max-w-[110px] truncate">
               {user?.name || "User"}
             </span>
+            <ChevronDown className="w-3.5 h-3.5 text-muted-foreground hidden sm:inline" />
           </button>
 
           {showProfile && (
-            <div className="absolute right-0 mt-3 w-72 bg-card border border-border rounded-lg shadow-xl z-50 text-foreground">
-              <div className="p-4 border-b border-border bg-muted/20 rounded-t-lg">
-                <h3 className="font-bold text-base">{user?.name || "User"}</h3>
-                <p className="text-xs text-muted-foreground uppercase mt-0.5 font-semibold">
-                  {user?.role === "COMPANY_ADMIN" ? "Administrator" : (user?.subRole || user?.role || "Staff")}
+            <div className="absolute right-0 mt-2 w-64 bg-card border border-border rounded-lg popover-shadow z-50 text-foreground overflow-hidden">
+              <div className="px-4 py-3 border-b border-border bg-secondary/40">
+                <p className="font-semibold text-sm text-foreground truncate">
+                  {user?.name || "User"}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1 truncate">{user?.email || ""}</p>
+                <p className="text-[11px] text-primary-text uppercase font-semibold tracking-wider mt-0.5">
+                  {user?.role === "COMPANY_ADMIN"
+                    ? "Administrator"
+                    : user?.subRole || user?.role || "Staff"}
+                </p>
+                {user?.email && (
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">{user.email}</p>
+                )}
               </div>
 
-              <button
-                onClick={() => {
-                  setShowProfile(false);
-                  navigate("/profile-settings");
-                }}
-                className="w-full text-left p-3 text-sm hover:bg-muted transition-colors cursor-pointer flex items-center gap-2"
-              >
-                <User className="w-4 h-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
-                <span>My Profile</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  setShowProfile(false);
-                  navigate("/profile-settings");
-                }}
-                className="w-full text-left p-3 text-sm hover:bg-muted transition-colors cursor-pointer flex items-center gap-2"
-              >
-                <KeyRound className="w-4 h-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
-                <span>Change Password</span>
-              </button>
-
-              {user?.role === "COMPANY_ADMIN" && (
+              <div className="py-1">
                 <button
+                  type="button"
                   onClick={() => {
                     setShowProfile(false);
-                    navigate("/company-settings");
+                    navigate("/profile-settings");
                   }}
-                  className="w-full text-left p-3 text-sm hover:bg-muted transition-colors cursor-pointer flex items-center gap-2"
+                  className="w-full text-left px-3.5 py-2 text-xs sm:text-sm hover:bg-secondary/70 transition-colors cursor-pointer flex items-center gap-2.5"
                 >
-                  <Settings className="w-4 h-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
-                  <span>Settings</span>
+                  <User className="w-4 h-4 text-muted-foreground shrink-0" strokeWidth={1.6} />
+                  <span>My Profile</span>
                 </button>
-              )}
 
-              <button
-                onClick={() => {
-                  setShowProfile(false);
-                  logout();
-                }}
-                className="w-full text-left p-3 text-sm hover:bg-destructive/5 text-destructive font-semibold border-t border-border cursor-pointer flex items-center gap-2"
-              >
-                <LogOut className="w-4 h-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
-                <span>Logout</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowProfile(false);
+                    navigate("/profile-settings");
+                  }}
+                  className="w-full text-left px-3.5 py-2 text-xs sm:text-sm hover:bg-secondary/70 transition-colors cursor-pointer flex items-center gap-2.5"
+                >
+                  <KeyRound className="w-4 h-4 text-muted-foreground shrink-0" strokeWidth={1.6} />
+                  <span>Change Password</span>
+                </button>
+
+                {(user?.role === "COMPANY_ADMIN" || user?.role === "SUPER_ADMIN") && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowProfile(false);
+                      navigate("/company-settings");
+                    }}
+                    className="w-full text-left px-3.5 py-2 text-xs sm:text-sm hover:bg-secondary/70 transition-colors cursor-pointer flex items-center gap-2.5"
+                  >
+                    <Settings className="w-4 h-4 text-muted-foreground shrink-0" strokeWidth={1.6} />
+                    <span>Company Settings</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="border-t border-border py-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowProfile(false);
+                    logout();
+                  }}
+                  className="w-full text-left px-3.5 py-2 text-xs sm:text-sm hover:bg-destructive/10 text-destructive font-medium cursor-pointer flex items-center gap-2.5"
+                >
+                  <LogOut className="w-4 h-4 shrink-0" strokeWidth={1.6} />
+                  <span>Sign Out</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
-
       </div>
-
-    </div>
+    </header>
   );
 }
 

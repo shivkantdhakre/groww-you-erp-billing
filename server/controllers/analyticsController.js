@@ -1,25 +1,26 @@
 import prisma from "../utils/prisma.js";
-import { generatePipelineInsights } from "../utils/geminiService.js";
+import { generatePipelineInsights, GeminiServiceError } from "../utils/geminiService.js";
 import { getInsightsCache, setInsightsCache } from "../utils/cacheService.js";
 
 /**
  * GET /api/analytics/sales-insights
- * Fetches or generates AI Sales Pipeline Insights with multi-tenant database aggregations.
+ * Fetches or generates live Gemini AI Sales Pipeline Insights from multi-tenant, branch-scoped raw DB data.
  */
 export const getSalesInsights = async (req, res, next) => {
   try {
     const companyId = req.user.companyId;
+    const branchId = req.user.branchId || null;
     const forceRefresh = req.query.forceRefresh === "true";
     const generateIfMissing = req.query.generate === "true";
 
-    // 1. Check cache unless forced refresh
+    // 1. Check branch-scoped cache unless forced refresh
     if (!forceRefresh) {
-      const cachedInsights = getInsightsCache(companyId);
+      const cachedInsights = getInsightsCache(companyId, branchId);
       if (cachedInsights) {
         return res.json({
           cached: true,
           hasCache: true,
-          insights: cachedInsights
+          insights: cachedInsights,
         });
       }
 
@@ -29,116 +30,258 @@ export const getSalesInsights = async (req, res, next) => {
           cached: false,
           hasCache: false,
           insights: null,
-          message: "No cached insights stored for this tenant."
+          message: "No cached insights stored for this scope.",
         });
       }
     }
 
-    // 2. Perform strictly aggregated database queries (Tenant Isolated)
+    // 2. Perform live PostgreSQL aggregations (Tenant & Branch Isolated)
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const thirtyDaysAgo = new Date(now);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const branchWhere = branchId ? { branchId } : {};
 
     const [
+      branchRecord,
       salesAgg,
       purchaseAgg,
+      salesReturnsAgg,
+      purchaseReturnsAgg,
       customersCount,
       vendorsCount,
       topCustomersAgg,
-      outstandingAgg,
-      lowStockItemsCount,
+      outstandingCustomers,
+      itemsWithStock,
       monthlySalesAgg,
       monthlyPurchaseAgg,
-      ordersCount
+      recent30dSalesAgg,
+      ordersCount,
+      leadsGrouped,
     ] = await Promise.all([
-      // Total Sales Volume
+      branchId
+        ? prisma.branch.findFirst({ where: { id: branchId, companyId }, select: { name: true } })
+        : Promise.resolve(null),
       prisma.invoice.aggregate({
         _sum: { grandTotal: true },
-        where: { companyId, invoiceType: "SALE" }
+        where: { companyId, ...branchWhere, invoiceType: "SALE" },
       }),
-      // Total Purchase Expenses
       prisma.invoice.aggregate({
         _sum: { grandTotal: true },
-        where: { companyId, invoiceType: "PURCHASE" }
+        where: { companyId, ...branchWhere, invoiceType: "PURCHASE" },
       }),
-      // Active Customers Count
+      prisma.return.aggregate({
+        _sum: { grandTotal: true },
+        where: { companyId, ...branchWhere, returnType: "SALE" },
+      }),
+      prisma.return.aggregate({
+        _sum: { grandTotal: true },
+        where: { companyId, ...branchWhere, returnType: "PURCHASE" },
+      }),
       prisma.customer.count({
-        where: { companyId, isActive: true }
+        where: { companyId, isActive: true },
       }),
-      // Active Vendors Count
       prisma.vendor.count({
-        where: { companyId, isActive: true }
+        where: { companyId, isActive: true },
       }),
-      // Top 3 Customer Revenue (for Concentration calculation)
       prisma.invoice.groupBy({
         by: ["customerId"],
         _sum: { grandTotal: true },
-        where: { companyId, invoiceType: "SALE", customerId: { not: null } },
+        where: { companyId, ...branchWhere, invoiceType: "SALE", customerId: { not: null } },
         orderBy: { _sum: { grandTotal: "desc" } },
-        take: 3
+        take: 3,
       }),
-      // Total Outstanding Receivables
-      prisma.customer.aggregate({
-        _sum: { outstandingBalance: true },
-        where: { companyId, isActive: true }
+      prisma.customer.findMany({
+        where: { companyId, isActive: true, outstandingBalance: { gt: 0 } },
+        orderBy: { outstandingBalance: "desc" },
+        select: { id: true, name: true, outstandingBalance: true },
       }),
-      // Low Stock Alert Count
-      prisma.item.count({
-        where: { companyId, isActive: true, openingStock: { lte: 10 } }
+      prisma.item.findMany({
+        where: { companyId, isActive: true },
+        select: {
+          id: true,
+          name: true,
+          openingStock: true,
+          minStockAlert: true,
+          branchStocks: {
+            where: branchId ? { branchId } : {},
+            select: { branchId: true, stock: true },
+          },
+        },
       }),
-      // Monthly Sales
       prisma.invoice.aggregate({
         _sum: { grandTotal: true },
-        where: { companyId, invoiceType: "SALE", invoiceDate: { gte: startOfMonth } }
+        where: { companyId, ...branchWhere, invoiceType: "SALE", invoiceDate: { gte: startOfMonth } },
       }),
-      // Monthly Purchase
       prisma.invoice.aggregate({
         _sum: { grandTotal: true },
-        where: { companyId, invoiceType: "PURCHASE", invoiceDate: { gte: startOfMonth } }
+        where: { companyId, ...branchWhere, invoiceType: "PURCHASE", invoiceDate: { gte: startOfMonth } },
       }),
-      // Total Sales Orders Count
+      prisma.invoice.aggregate({
+        _sum: { grandTotal: true },
+        _count: { id: true },
+        where: { companyId, ...branchWhere, invoiceType: "SALE", invoiceDate: { gte: thirtyDaysAgo } },
+      }),
       prisma.invoice.count({
-        where: { companyId, invoiceType: "SALE" }
-      })
+        where: { companyId, ...branchWhere, invoiceType: "SALE" },
+      }),
+      prisma.lead.groupBy({
+        by: ["stage"],
+        where: { companyId },
+        _count: { id: true },
+        _sum: { dealValue: true },
+      }),
     ]);
 
     const totalSales = salesAgg._sum.grandTotal || 0;
     const totalPurchases = purchaseAgg._sum.grandTotal || 0;
-    const totalProfit = totalSales - totalPurchases;
-    const outstandingAmount = outstandingAgg._sum.outstandingBalance || 0;
+    const salesReturnsTotal = salesReturnsAgg._sum.grandTotal || 0;
+    const purchaseReturnsTotal = purchaseReturnsAgg._sum.grandTotal || 0;
+    const totalProfit = (totalSales - salesReturnsTotal) - (totalPurchases - purchaseReturnsTotal);
     const monthlySales = monthlySalesAgg._sum.grandTotal || 0;
     const monthlyPurchases = monthlyPurchaseAgg._sum.grandTotal || 0;
+    const recent30dSales = recent30dSalesAgg._sum.grandTotal || 0;
+    const recent30dOrdersCount = recent30dSalesAgg._count.id || 0;
 
-    // Calculate Top Customer Share %
-    const top3Revenue = topCustomersAgg.reduce((acc, curr) => acc + (curr._sum.grandTotal || 0), 0);
-    const topCustomerShare = totalSales > 0 ? (top3Revenue / totalSales) * 100 : 0;
+    const outstandingAmount = outstandingCustomers.reduce(
+      (sum, c) => sum + (c.outstandingBalance || 0),
+      0
+    );
+    const overdueCustomers = outstandingCustomers.slice(0, 5);
 
-    const metricsPayload = {
+    // Resolve names for top 3 billed customers
+    const topCustomerIds = topCustomersAgg.map((t) => t.customerId).filter(Boolean);
+    const topCustomerRecords = topCustomerIds.length > 0
+      ? await prisma.customer.findMany({
+          where: { id: { in: topCustomerIds }, companyId },
+          select: { id: true, name: true },
+        })
+      : [];
+    const topCustomerNameMap = new Map(topCustomerRecords.map((c) => [c.id, c.name]));
+
+    const topCustomers = topCustomersAgg.map((curr) => {
+      const amount = curr._sum.grandTotal || 0;
+      return {
+        name: topCustomerNameMap.get(curr.customerId) || `Customer #${curr.customerId}`,
+        amount,
+        sharePct: totalSales > 0 ? Number(((amount / totalSales) * 100).toFixed(1)) : 0,
+      };
+    });
+    const top3Revenue = topCustomers.reduce((acc, c) => acc + c.amount, 0);
+    const topCustomerShare = totalSales > 0 ? Number(((top3Revenue / totalSales) * 100).toFixed(1)) : 0;
+
+    // Live stock calculation via BranchStock (matches reportsController semantics)
+    const evaluatedStockItems = itemsWithStock.map((item) => {
+      const liveStock = branchId
+        ? (item.branchStocks.find((b) => b.branchId === branchId)?.stock ?? 0)
+        : item.branchStocks.length > 0
+          ? item.branchStocks.reduce((sum, b) => sum + b.stock, 0)
+          : item.openingStock;
+      const threshold = item.minStockAlert > 0 ? item.minStockAlert : 10;
+      return {
+        name: item.name,
+        stock: liveStock,
+        isLow: liveStock < threshold,
+      };
+    });
+    const lowStockAll = evaluatedStockItems.filter((i) => i.isLow).sort((a, b) => a.stock - b.stock);
+    const lowStockItemsCount = lowStockAll.length;
+    const lowStockItems = lowStockAll.slice(0, 8).map(({ name, stock }) => ({ name, stock }));
+
+    // Aggregate CRM Pipeline metrics
+    let totalLeads = 0;
+    let openLeadsCount = 0;
+    let openPipelineValue = 0;
+    let wonPipelineValue = 0;
+    const stageParts = [];
+    for (const row of leadsGrouped) {
+      const count = row._count?.id || 0;
+      const val = row._sum?.dealValue || 0;
+      totalLeads += count;
+      if (row.stage === "CLOSED_WON") {
+        wonPipelineValue += val;
+      } else if (row.stage !== "CLOSED_LOST") {
+        openLeadsCount += count;
+        openPipelineValue += val;
+      }
+      stageParts.push(`${row.stage}: ${count} (₹${Number(val).toLocaleString("en-IN")})`);
+    }
+
+    const scopeLabel = branchId
+      ? `Branch: ${branchRecord?.name || `#${branchId}`}`
+      : "Consolidated (All Branches)";
+
+    const metricsSnapshot = {
+      scopeLabel,
+      branchId,
       totalSales,
       totalPurchases,
+      outstandingAmount,
+      activeCustomersCount: customersCount,
+      totalOrders: ordersCount,
+      lowStockItemsCount,
+      crmLeadsCount: totalLeads,
+      crmOpenPipelineValue: openPipelineValue,
+    };
+
+    const metricsPayload = {
+      scopeLabel,
+      totalSales,
+      totalPurchases,
+      salesReturnsTotal,
+      purchaseReturnsTotal,
       totalProfit,
       outstandingAmount,
       monthlySales,
       monthlyPurchases,
+      recent30dSales,
+      recent30dOrdersCount,
       activeCustomersCount: customersCount,
       activeVendorsCount: vendorsCount,
       topCustomerShare,
+      topCustomers,
+      overdueCustomers,
       lowStockItemsCount,
-      totalOrders: ordersCount
+      lowStockItems,
+      totalOrders: ordersCount,
+      crmPipeline: {
+        totalLeads,
+        openLeadsCount,
+        openPipelineValue,
+        wonPipelineValue,
+        stageBreakdownText: stageParts.join(", "),
+      },
+      metricsSnapshot,
     };
 
-    // 3. Generate AI insights via Gemini Service
+    // 3. Generate live AI insights via Gemini Service (throws on AI error, never returns mock)
     const insightsResult = await generatePipelineInsights(metricsPayload);
 
-    // 4. Cache the results for 1 hour
-    setInsightsCache(companyId, insightsResult);
+    // 4. Only cache genuine Gemini AI insights per tenant+branch scope for 1 hour
+    if (insightsResult.source === "gemini-ai") {
+      setInsightsCache(companyId, insightsResult, { branchId });
+      return res.json({
+        cached: false,
+        hasCache: true,
+        insights: getInsightsCache(companyId, branchId),
+      });
+    }
 
     return res.json({
       cached: false,
       hasCache: true,
-      insights: getInsightsCache(companyId) // Return stored format with timestamp
+      insights: insightsResult,
     });
   } catch (error) {
     console.error("[AnalyticsController] Error getting sales insights:", error);
+    if (error instanceof GeminiServiceError) {
+      return res.status(error.statusCode).json({
+        error: error.userMessage,
+        message: error.userMessage,
+        code: error.code,
+      });
+    }
     next(error);
   }
 };

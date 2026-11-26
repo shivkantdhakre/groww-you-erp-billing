@@ -15,6 +15,17 @@ export const useStore = create((set, get) => ({
   // UI Responsive States
   sidebarOpen: false,
   setSidebarOpen: (isOpen) => set({ sidebarOpen: isOpen }),
+  branches: [],
+  activeBranchId: (() => {
+    const stored = localStorage.getItem("activeBranchId");
+    if (stored) return parseInt(stored, 10) || null;
+    try {
+      const parsedUser = JSON.parse(localStorage.getItem("user"));
+      return parsedUser?.branchId || null;
+    } catch {
+      return null;
+    }
+  })(),
 
   // Master Data Cache
   customers: [],
@@ -36,21 +47,65 @@ export const useStore = create((set, get) => ({
   login: (token, user) => {
     localStorage.setItem("token", token);
     localStorage.setItem("user", JSON.stringify(user));
-    set({ token, user });
+    if (user?.branchId) {
+      localStorage.setItem("activeBranchId", String(user.branchId));
+    } else {
+      localStorage.removeItem("activeBranchId");
+    }
+    set({ token, user, activeBranchId: user?.branchId || null });
   },
 
   logout: () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    localStorage.removeItem("activeBranchId");
     set({
       token: null,
       user: null,
+      activeBranchId: null,
+      branches: [],
       customers: [],
       vendors: [],
       items: [],
+      leads: [],
       company: null,
       notifications: [],
       users: [],
+    });
+  },
+
+  fetchBranches: async () => {
+    try {
+      const res = await api.get("/branches");
+      const list = Array.isArray(res.data) ? res.data : [];
+      set({ branches: list });
+      return list;
+    } catch (err) {
+      console.error("Failed to fetch branches:", err);
+      return [];
+    }
+  },
+
+  setActiveBranch: async (branchId) => {
+    const parsedId = branchId ? parseInt(branchId, 10) : null;
+    if (parsedId) {
+      localStorage.setItem("activeBranchId", String(parsedId));
+    } else {
+      localStorage.removeItem("activeBranchId");
+    }
+
+    const currentUser = get().user;
+    const updatedUser = currentUser ? { ...currentUser, branchId: parsedId } : null;
+    if (updatedUser) {
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+    }
+
+    set({
+      activeBranchId: parsedId,
+      user: updatedUser,
+      customers: [],
+      vendors: [],
+      items: [],
     });
   },
 
@@ -413,7 +468,7 @@ export const useStore = create((set, get) => ({
 
   addLeadInteraction: async (leadId, interactionData) => {
     try {
-      const res = await api.post(`/leads/${leadId}/interactions`, interactionData);
+      await api.post(`/leads/${leadId}/interactions`, interactionData);
       // Re-fetch or update lead locally
       const leadRes = await api.get(`/leads/${leadId}`);
       set((state) => ({
@@ -437,6 +492,13 @@ export const useStore = create((set, get) => ({
       console.error("Failed to analyze lead with AI:", err);
       throw err;
     }
+  },
+
+  syncLeadInStore: (updatedLead) => {
+    if (!updatedLead?.id) return;
+    set((state) => ({
+      leads: state.leads.map((l) => (l.id === updatedLead.id ? { ...l, ...updatedLead } : l)),
+    }));
   },
 
   deleteLead: async (leadId) => {

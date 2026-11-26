@@ -1,7 +1,17 @@
 import { useState, useRef } from "react";
 import api from "../../utils/api";
+import StatusBadge from "../common/StatusBadge";
+import { ScanLine, UploadCloud, AlertCircle, Loader2, X, RotateCcw } from "lucide-react";
 
-export default function InvoiceOcrUpload({ onOcrSuccess, onClearOcr, hasOcrData, ocrConfidenceScore }) {
+/**
+ * Drag-and-drop & file-picker OCR intake panel for vendor purchase invoices.
+ */
+export default function InvoiceOcrUpload({
+  onOcrSuccess,
+  onClearOcr,
+  hasOcrData,
+  ocrConfidenceScore,
+}) {
   const [loading, setLoading] = useState(false);
   const [statusText, setStatusText] = useState("");
   const [error, setError] = useState("");
@@ -11,17 +21,20 @@ export default function InvoiceOcrUpload({ onOcrSuccess, onClearOcr, hasOcrData,
   const processFile = async (file) => {
     if (!file) return;
 
-    // Reset messages
     setError("");
 
-    // 1. Client-Side Size Validation (5MB limit)
     if (file.size > 5 * 1024 * 1024) {
       setError("File size exceeds 5MB limit. Please upload a smaller PDF or image.");
       return;
     }
 
-    // 2. Client-Side Mime / Extension Validation
-    const allowedTypes = ["application/pdf", "image/jpeg", "image/jpg", "image/png", "image/webp"];
+    const allowedTypes = [
+      "application/pdf",
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/webp",
+    ];
     const allowedExts = ["pdf", "jpg", "jpeg", "png", "webp"];
     const fileType = (file.type || "").toLowerCase();
     const fileExt = file.name?.split(".").pop()?.toLowerCase() || "";
@@ -31,7 +44,7 @@ export default function InvoiceOcrUpload({ onOcrSuccess, onClearOcr, hasOcrData,
     }
 
     setLoading(true);
-    setStatusText("Analyzing document with Gemini Vision AI...");
+    setStatusText("Extracting invoice lines and supplier details...");
 
     try {
       const formData = new FormData();
@@ -39,12 +52,12 @@ export default function InvoiceOcrUpload({ onOcrSuccess, onClearOcr, hasOcrData,
 
       const res = await api.post("/invoices/ocr", formData, {
         headers: {
-          "Content-Type": "multipart/form-data"
-        }
+          "Content-Type": "multipart/form-data",
+        },
       });
 
       if (res.data && res.data.success) {
-        setStatusText("Extraction complete! Fuzzy matching master data...");
+        setStatusText("Extraction complete. Matching master records...");
         setTimeout(() => {
           setLoading(false);
           setStatusText("");
@@ -59,7 +72,7 @@ export default function InvoiceOcrUpload({ onOcrSuccess, onClearOcr, hasOcrData,
         err.response?.data?.error ||
         err.response?.data?.message ||
         err.message ||
-        "Failed to parse document with Gemini AI.";
+        "Failed to extract invoice data using AI OCR. Please ensure the document is clear and legible.";
       setError(errMsg);
       setLoading(false);
       setStatusText("");
@@ -96,66 +109,83 @@ export default function InvoiceOcrUpload({ onOcrSuccess, onClearOcr, hasOcrData,
   };
 
   return (
-    <div className="bg-card p-6 rounded-2xl border border-border shadow-sm mb-6 transition-all duration-200">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-        <div>
-          <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-            <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-500/10 text-indigo-500">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </span>
-            Multimodal AI OCR Scanner
-          </h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Upload vendor invoice or receipt (PDF, PNG, JPG max 5MB, &le;3 pages). Gemini AI will auto-populate the form.
-          </p>
+    <div className="bg-card p-4 sm:p-5 rounded-lg border border-border surface-shadow mb-5">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3.5">
+        <div className="flex items-start gap-2.5">
+          <div className="h-8 w-8 rounded-md bg-primary/10 border border-primary/20 text-primary-text flex items-center justify-center shrink-0">
+            <ScanLine className="w-4 h-4" aria-hidden="true" />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">AI Bill Scanner (OCR)</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Upload supplier invoice (PDF, PNG, JPG, WEBP max 5MB, up to 3 pages) to prefill line items and GSTIN.
+            </p>
+          </div>
         </div>
 
         {hasOcrData && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              AI Parsed ({ocrConfidenceScore || 90}% confidence)
-            </span>
+          <div className="flex items-center gap-2 shrink-0">
+            <StatusBadge variant="success" className="tabular-nums">
+              OCR Extracted ({ocrConfidenceScore || 90}% confidence)
+            </StatusBadge>
             <button
+              type="button"
               onClick={onClearOcr}
-              className="text-xs text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg border border-border hover:bg-secondary transition duration-150 cursor-pointer"
+              className="inline-flex items-center gap-1 h-7 px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground rounded-md border border-border bg-background hover:bg-secondary transition-colors cursor-pointer"
             >
-              Clear OCR Data
+              <RotateCcw className="w-3 h-3" />
+              <span>Clear OCR</span>
             </button>
           </div>
         )}
       </div>
 
       {error && (
-        <div className="mb-4 p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-start justify-between">
-          <div className="flex items-center gap-2">
-            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>{error}</span>
+        <div
+          role="alert"
+          className="mb-3.5 px-3.5 py-2.5 rounded-md bg-destructive/10 border border-destructive/25 text-destructive text-xs flex items-start justify-between gap-2"
+        >
+          <div className="flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
+            <span className="leading-relaxed">{error}</span>
           </div>
-          <button onClick={() => setError("")} className="text-destructive/70 hover:text-destructive text-sm font-bold cursor-pointer">&times;</button>
+          <button
+            type="button"
+            onClick={() => setError("")}
+            aria-label="Dismiss error"
+            className="text-destructive/75 hover:text-destructive p-0.5 cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
 
       {loading ? (
-        <div className="p-8 rounded-xl border-2 border-dashed border-indigo-500/30 bg-indigo-500/5 flex flex-col items-center justify-center text-center">
-          <div className="w-10 h-10 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mb-3"></div>
-          <p className="text-sm font-semibold text-foreground">{statusText}</p>
-          <p className="text-xs text-muted-foreground mt-1">Please wait while Gemini processes the document and matches tenant records...</p>
+        <div className="py-6 px-4 rounded-md border border-dashed border-primary/40 bg-primary/5 flex flex-col items-center justify-center text-center">
+          <Loader2 className="w-6 h-6 text-primary-text animate-spin mb-2" aria-hidden="true" />
+          <p className="text-xs sm:text-sm font-medium text-foreground">{statusText}</p>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            Matching vendor GSTIN and inventory catalog items...
+          </p>
         </div>
       ) : (
         <div
+          role="button"
+          tabIndex={0}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          className={`p-6 rounded-xl border-2 border-dashed transition-all duration-200 cursor-pointer flex flex-col items-center justify-center text-center ${
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              fileInputRef.current?.click();
+            }
+          }}
+          className={`px-4 py-4 rounded-md border border-dashed transition-colors duration-150 cursor-pointer flex flex-col sm:flex-row items-center justify-center gap-3 text-center sm:text-left ${
             dragActive
-              ? "border-indigo-500 bg-indigo-500/10 scale-[1.005]"
-              : "border-border hover:border-indigo-500/50 hover:bg-secondary/40"
+              ? "border-primary bg-primary/10"
+              : "border-border hover:border-primary/50 hover:bg-secondary/40"
           }`}
         >
           <input
@@ -166,18 +196,21 @@ export default function InvoiceOcrUpload({ onOcrSuccess, onClearOcr, hasOcrData,
             className="hidden"
           />
 
-          <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-3 text-muted-foreground group-hover:text-indigo-500 transition duration-150">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
+          <div className="w-9 h-9 rounded-md bg-secondary border border-border flex items-center justify-center text-muted-foreground shrink-0">
+            <UploadCloud className="w-4 h-4" aria-hidden="true" />
           </div>
 
-          <p className="text-sm font-semibold text-foreground">
-            <span className="text-indigo-500 font-bold">Click to upload</span> or drag and drop invoice / receipt
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Supports PDF, PNG, JPG or WEBP (Max 5MB, up to 3 pages)
-          </p>
+          <div>
+            <p className="text-xs sm:text-sm font-medium text-foreground">
+              <span className="text-primary-text font-semibold underline decoration-primary/30 underline-offset-2">
+                Click to upload
+              </span>{" "}
+              or drag and drop vendor bill
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              PDF, PNG, JPG, or WEBP up to 5MB
+            </p>
+          </div>
         </div>
       )}
     </div>
