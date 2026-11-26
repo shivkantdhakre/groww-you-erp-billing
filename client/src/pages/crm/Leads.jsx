@@ -219,7 +219,13 @@ export default function Leads() {
         <CommonCard
           title="Avg Deal Risk Score"
           value={`${metrics.avgRiskScore} / 100`}
-          color="text-primary-text"
+          color={
+            metrics.avgRiskScore <= 30
+              ? "text-success"
+              : metrics.avgRiskScore <= 65
+                ? "text-warning"
+                : "text-destructive"
+          }
           subtitle="Sentiment & stage weighted"
           icon={Sparkles}
         />
@@ -295,7 +301,7 @@ export default function Leads() {
                     </StatusBadge>
                   </td>
 
-                  <td className="px-4 py-3 text-right font-mono font-semibold text-foreground tabular-nums">
+                  <td className="px-4 py-3 text-right font-mono font-semibold text-foreground tabular-nums whitespace-nowrap">
                     ₹ {Number(lead.dealValue || 0).toLocaleString("en-IN")}
                   </td>
 

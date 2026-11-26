@@ -251,7 +251,10 @@ function PricingPlans() {
         subtitle="Select your workspace tier, branch capacity, and GST filing entitlements"
         badge={
           activeSub?.planCode && (
-            <StatusBadge variant="success">Active: {activeSub.planCode}</StatusBadge>
+            <StatusBadge variant="success">
+              Active:{" "}
+              {plans.find((p) => p.code === activeSub.planCode)?.name || activeSub.planCode}
+            </StatusBadge>
           )
         }
       />
@@ -317,7 +320,7 @@ function PricingPlans() {
 
                     <div className="flex items-baseline gap-1 mb-3">
                       <span className="text-2xl sm:text-3xl font-semibold tracking-tight tabular-nums">
-                        ₹ {plan.price}
+                        ₹ {Number(plan.price || 0).toLocaleString("en-IN")}
                       </span>
                       <span className="text-muted-foreground text-xs">
                         / {plan.interval.toLowerCase() === "yearly" ? "year" : "month"}
@@ -434,8 +437,8 @@ function PricingPlans() {
                         <td className="px-4 py-2.5 font-mono text-xs font-semibold text-foreground">
                           {inv.invoiceNo}
                         </td>
-                        <td className="px-4 py-2.5 text-right font-mono font-semibold tabular-nums">
-                          ₹ {inv.amount}
+                        <td className="px-4 py-2.5 text-right font-mono font-semibold tabular-nums whitespace-nowrap">
+                          ₹ {Number(inv.amount || 0).toLocaleString("en-IN")}
                         </td>
                         <td className="px-4 py-2.5 text-right">
                           <StatusBadge variant="success">{inv.status}</StatusBadge>

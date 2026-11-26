@@ -243,7 +243,7 @@ function CompanySettings() {
               id="fyLocked"
               checked={financialYearLocked}
               onChange={(e) => setFinancialYearLocked(e.target.checked)}
-              className="h-4 w-4 mt-0.5 rounded border-border text-primary focus:ring-ring cursor-pointer"
+              className="h-4 w-4 mt-0.5 rounded border-border accent-primary focus:ring-ring cursor-pointer"
             />
             <div>
               <span className="text-xs sm:text-sm font-medium text-foreground block">

@@ -7,7 +7,10 @@ import TableWrapper from "../../components/common/TableWrapper";
 import ValidationMessage from "../../components/common/ValidationMessage";
 import StatusBadge from "../../components/common/StatusBadge";
 import api from "../../utils/api";
-import { BookMarked, Loader2, Printer, RotateCcw, Search } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, BookMarked, Loader2, Printer, RotateCcw, Scale, Search } from "lucide-react";
+
+const formatINR = (num) =>
+  `₹ ${Number(num || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const INPUT_CLASS =
   "h-9 px-3 rounded-md w-full border border-input bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary transition-colors";
@@ -187,23 +190,26 @@ function CustomerLedger() {
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             <CommonCard
               title="Opening Balance"
-              value={`₹ ${ledgerData.openingBalance.toFixed(2)}`}
+              value={formatINR(ledgerData.openingBalance)}
               icon={BookMarked}
             />
             <CommonCard
               title="Total Billed (Dr)"
-              value={`₹ ${totalDebit.toFixed(2)}`}
+              value={formatINR(totalDebit)}
               color="text-foreground"
+              icon={ArrowUpRight}
             />
             <CommonCard
               title="Receipts & Credits (Cr)"
-              value={`₹ ${totalCredit.toFixed(2)}`}
+              value={formatINR(totalCredit)}
               color="text-success"
+              icon={ArrowDownLeft}
             />
             <CommonCard
               title="Outstanding Balance"
-              value={`₹ ${outstandingBalance.toFixed(2)}`}
+              value={formatINR(outstandingBalance)}
               color={outstandingBalance > 0 ? "text-warning" : "text-success"}
+              icon={Scale}
             />
           </div>
 
@@ -245,8 +251,8 @@ function CustomerLedger() {
                     <td className="px-4 py-2.5 text-right font-mono text-muted-foreground tabular-nums">
                       -
                     </td>
-                    <td className="px-4 py-2.5 text-right font-mono font-semibold text-foreground tabular-nums">
-                      ₹ {ledgerData.openingBalance.toFixed(2)}
+                    <td className="px-4 py-2.5 text-right font-mono font-semibold text-foreground tabular-nums whitespace-nowrap">
+                      {formatINR(ledgerData.openingBalance)}
                     </td>
                   </tr>
                   {ledgerData.transactions
@@ -270,14 +276,14 @@ function CustomerLedger() {
                             {tx.isCancelled && <StatusBadge variant="destructive">Voided</StatusBadge>}
                           </div>
                         </td>
-                        <td className="px-4 py-2.5 text-right font-mono text-xs text-foreground tabular-nums">
-                          {tx.debit > 0 ? `₹ ${tx.debit.toFixed(2)}` : "-"}
+                        <td className="px-4 py-2.5 text-right font-mono text-xs text-foreground tabular-nums whitespace-nowrap">
+                          {tx.debit > 0 ? formatINR(tx.debit) : "-"}
                         </td>
-                        <td className="px-4 py-2.5 text-right font-mono text-xs text-success tabular-nums">
-                          {tx.credit > 0 ? `₹ ${tx.credit.toFixed(2)}` : "-"}
+                        <td className="px-4 py-2.5 text-right font-mono text-xs text-success tabular-nums whitespace-nowrap">
+                          {tx.credit > 0 ? formatINR(tx.credit) : "-"}
                         </td>
-                        <td className="px-4 py-2.5 text-right font-mono text-xs font-semibold text-foreground tabular-nums">
-                          ₹ {tx.balance.toFixed(2)}{" "}
+                        <td className="px-4 py-2.5 text-right font-mono text-xs font-semibold text-foreground tabular-nums whitespace-nowrap">
+                          {formatINR(tx.balance)}{" "}
                           <StatusBadge variant={tx.balance >= 0 ? "warning" : "success"} className="ml-1">
                             {tx.balance >= 0 ? "Dr" : "Cr"}
                           </StatusBadge>

@@ -47,6 +47,7 @@
 
 @layer base {
   :root {
+    color-scheme: light;
     --background: 43 26% 95%;
     --foreground: 120 6% 13%;
     --sidebar: 42 22% 92%;
@@ -88,6 +89,7 @@
   }
 
   .dark {
+    color-scheme: dark;
     --background: 140 8% 8%;
     --foreground: 44 20% 90%;
     --sidebar: 140 7% 9%;

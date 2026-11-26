@@ -102,7 +102,7 @@ function RoleManagement() {
                         aria-label={`${moduleName} ${action}`}
                         checked={Boolean(matrix[role]?.[moduleName]?.[action])}
                         onChange={() => togglePermission(moduleName, action)}
-                        className="h-4 w-4 rounded border-border text-primary focus:ring-ring cursor-pointer"
+                        className="h-4 w-4 rounded border-border accent-primary focus:ring-ring cursor-pointer"
                       />
                     </td>
                   ))}

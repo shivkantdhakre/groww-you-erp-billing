@@ -12,7 +12,7 @@ import { useBarcodeScanner } from "../../hooks/useBarcodeScanner";
 import { Plus, Trash2, Printer, Barcode, Save, CheckCircle2 } from "lucide-react";
 
 const ITEM_GRID_COLS =
-  "grid grid-cols-[minmax(170px,1.6fr)_56px_74px_86px_54px_96px_48px] items-center gap-2";
+  "grid grid-cols-[minmax(195px,1.8fr)_50px_72px_82px_48px_92px_40px] items-center gap-2";
 
 /**
  * Virtualized sales line-item table with synchronized CSS grid columns.
@@ -191,7 +191,7 @@ function InvoiceTable({
                             }
                           }
                         }}
-                        className="h-9 px-2 rounded-md w-16 text-right border border-input bg-card text-foreground font-mono text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary"
+                        className="h-9 pl-2 pr-1 rounded-md w-[70px] text-right border border-input bg-card text-foreground font-mono text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary"
                       />
                     </div>
 

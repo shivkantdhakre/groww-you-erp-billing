@@ -6,12 +6,12 @@ function CommonCard({ title, value, color = "text-foreground", subtitle, icon: I
     <div
       className={`bg-card text-card-foreground border border-border rounded-lg p-4 sm:p-5 surface-shadow transition-colors ${className}`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground truncate">
+      <div className="flex items-start justify-between gap-2.5">
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground leading-tight">
             {title}
           </p>
-          <h2 className={`text-xl sm:text-2xl font-semibold tracking-tight tabular-nums mt-1.5 ${color}`}>
+          <h2 className={`text-lg sm:text-xl xl:text-[22px] font-semibold tracking-tight tabular-nums whitespace-nowrap mt-1.5 ${color}`}>
             {value}
           </h2>
           {subtitle && (

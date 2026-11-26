@@ -241,8 +241,8 @@ function Inventory() {
           {editId !== null && <StatusBadge variant="warning">Editing ID #{editId}</StatusBadge>}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+          <div className="sm:col-span-2">
             <label className={LABEL_CLASS}>Item Name *</label>
             <input
               type="text"
@@ -253,7 +253,7 @@ function Inventory() {
             />
           </div>
 
-          <div>
+          <div className="lg:col-span-2">
             <label className={LABEL_CLASS}>SKU / Barcode *</label>
             <input
               type="text"
@@ -331,28 +331,30 @@ function Inventory() {
           </div>
 
           <div>
-            <label className={LABEL_CLASS}>Opening Stock / Alert</label>
-            <div className="grid grid-cols-2 gap-2">
-              <input
-                type="number"
-                placeholder="Open"
-                title="Opening Stock"
-                value={openingStock}
-                onChange={(e) => setOpeningStock(e.target.value)}
-                disabled={editId !== null}
-                className={`${INPUT_CLASS} font-mono tabular-nums ${
-                  editId !== null ? "opacity-50 cursor-not-allowed bg-muted" : ""
-                }`}
-              />
-              <input
-                type="number"
-                placeholder="Min"
-                title="Minimum Stock Alert"
-                value={minStockAlert}
-                onChange={(e) => setMinStockAlert(e.target.value)}
-                className={`${INPUT_CLASS} font-mono tabular-nums`}
-              />
-            </div>
+            <label className={LABEL_CLASS}>Opening Stock</label>
+            <input
+              type="number"
+              placeholder="0"
+              title="Opening Stock"
+              value={openingStock}
+              onChange={(e) => setOpeningStock(e.target.value)}
+              disabled={editId !== null}
+              className={`${INPUT_CLASS} font-mono tabular-nums ${
+                editId !== null ? "opacity-50 cursor-not-allowed bg-muted" : ""
+              }`}
+            />
+          </div>
+
+          <div>
+            <label className={LABEL_CLASS}>Min Stock Alert</label>
+            <input
+              type="number"
+              placeholder="10"
+              title="Minimum Stock Alert"
+              value={minStockAlert}
+              onChange={(e) => setMinStockAlert(e.target.value)}
+              className={`${INPUT_CLASS} font-mono tabular-nums`}
+            />
           </div>
         </div>
 
@@ -407,18 +409,17 @@ function Inventory() {
             <table className="w-full text-sm text-left border-collapse">
               <thead className="bg-secondary/70 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border">
                 <tr>
-                  <th className="px-4 py-2.5 w-12">#</th>
-                  <th className="px-4 py-2.5">Item Name</th>
-                  <th className="px-4 py-2.5">SKU</th>
-                  <th className="px-4 py-2.5 hidden lg:table-cell">Category</th>
-                  <th className="px-4 py-2.5 hidden xl:table-cell">HSN</th>
-                  <th className="px-4 py-2.5 text-right">GST</th>
-                  <th className="px-4 py-2.5 hidden sm:table-cell">Unit</th>
-                  <th className="px-4 py-2.5 text-right">Purchase</th>
-                  <th className="px-4 py-2.5 text-right">Sale</th>
-                  <th className="px-4 py-2.5 text-right">Stock</th>
-                  <th className="px-4 py-2.5">Status</th>
-                  <th className="px-4 py-2.5 text-right">Actions</th>
+                  <th className="px-2.5 py-2.5 w-10">#</th>
+                  <th className="px-2.5 py-2.5">Item Name</th>
+                  <th className="px-2.5 py-2.5">SKU</th>
+                  <th className="px-2.5 py-2.5 hidden xl:table-cell">Category</th>
+                  <th className="px-2.5 py-2.5 hidden 2xl:table-cell">HSN</th>
+                  <th className="px-2.5 py-2.5 text-right">GST</th>
+                  <th className="px-2.5 py-2.5 text-right">Purchase</th>
+                  <th className="px-2.5 py-2.5 text-right">Sale</th>
+                  <th className="px-2.5 py-2.5 text-right">Stock</th>
+                  <th className="px-2.5 py-2.5">Status</th>
+                  <th className="px-2.5 py-2.5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/70">
@@ -428,42 +429,44 @@ function Inventory() {
 
                   return (
                     <tr key={item.id} className="elevated-table-row transition-colors">
-                      <td className="px-4 py-2.5 text-xs text-muted-foreground tabular-nums">
+                      <td className="px-2.5 py-2.5 text-xs text-muted-foreground tabular-nums">
                         {index + 1}
                       </td>
-                      <td className="px-4 py-2.5 text-foreground font-medium">{item.name}</td>
-                      <td className="px-4 py-2.5 text-xs text-muted-foreground font-mono">
+                      <td className="px-2.5 py-2.5 text-foreground font-medium">
+                        <div>{item.name}</div>
+                        <div className="text-[11px] text-muted-foreground xl:hidden">
+                          {item.category || "General"}
+                        </div>
+                      </td>
+                      <td className="px-2.5 py-2.5 text-xs text-muted-foreground font-mono">
                         {item.sku || "-"}
                       </td>
-                      <td className="px-4 py-2.5 text-xs text-muted-foreground hidden lg:table-cell">
+                      <td className="px-2.5 py-2.5 text-xs text-muted-foreground hidden xl:table-cell">
                         {item.category || "-"}
                       </td>
-                      <td className="px-4 py-2.5 text-xs text-muted-foreground font-mono hidden xl:table-cell">
+                      <td className="px-2.5 py-2.5 text-xs text-muted-foreground font-mono hidden 2xl:table-cell">
                         {item.hsnCode || "-"}
                       </td>
-                      <td className="px-4 py-2.5 text-right font-mono text-xs text-muted-foreground tabular-nums">
+                      <td className="px-2.5 py-2.5 text-right font-mono text-xs text-muted-foreground tabular-nums whitespace-nowrap">
                         {item.gstPercentage || 0}%
                       </td>
-                      <td className="px-4 py-2.5 text-xs text-muted-foreground hidden sm:table-cell">
-                        {item.unit || "-"}
+                      <td className="px-2.5 py-2.5 text-right font-mono text-xs text-foreground tabular-nums whitespace-nowrap">
+                        ₹ {Number(item.purchasePrice || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
-                      <td className="px-4 py-2.5 text-right font-mono text-xs text-foreground tabular-nums whitespace-nowrap">
-                        ₹ {Number(item.purchasePrice || 0).toFixed(2)}
+                      <td className="px-2.5 py-2.5 text-right font-mono text-xs font-medium text-foreground tabular-nums whitespace-nowrap">
+                        ₹ {Number(item.salePrice || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
-                      <td className="px-4 py-2.5 text-right font-mono text-xs font-medium text-foreground tabular-nums whitespace-nowrap">
-                        ₹ {Number(item.salePrice || 0).toFixed(2)}
+                      <td className="px-2.5 py-2.5 text-right font-mono text-xs font-semibold text-foreground tabular-nums whitespace-nowrap">
+                        {activeBranchStock} {item.unit ? <span className="font-normal text-muted-foreground">{item.unit}</span> : null}
                       </td>
-                      <td className="px-4 py-2.5 text-right font-mono text-xs font-semibold text-foreground tabular-nums">
-                        {activeBranchStock}
-                      </td>
-                      <td className="px-4 py-2.5">
+                      <td className="px-2.5 py-2.5 whitespace-nowrap">
                         {isLow ? (
                           <StatusBadge variant="destructive">Low Stock</StatusBadge>
                         ) : (
                           <StatusBadge variant="success">In Stock</StatusBadge>
                         )}
                       </td>
-                      <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                      <td className="px-2.5 py-2.5 text-right whitespace-nowrap">
                         <div className="inline-flex items-center gap-1.5">
                           <button
                             type="button"
@@ -480,7 +483,7 @@ function Inventory() {
                               setOpeningStock(item.openingStock || "");
                               setMinStockAlert(item.minStockAlert || "10");
                             }}
-                            className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md border border-border bg-background hover:bg-secondary text-xs font-medium text-foreground transition-colors cursor-pointer"
+                            className="inline-flex items-center gap-1 h-7 px-2 rounded-md border border-border bg-background hover:bg-secondary text-xs font-medium text-foreground transition-colors cursor-pointer"
                           >
                             <Pencil className="w-3 h-3" />
                             <span>Edit</span>
@@ -488,7 +491,7 @@ function Inventory() {
                           <button
                             type="button"
                             onClick={() => setDeleteTarget(item)}
-                            className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md border border-border bg-background hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 text-xs font-medium text-muted-foreground transition-colors cursor-pointer"
+                            className="inline-flex items-center gap-1 h-7 px-2 rounded-md border border-border bg-background hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 text-xs font-medium text-muted-foreground transition-colors cursor-pointer"
                           >
                             <Trash2 className="w-3 h-3" />
                             <span>Delete</span>
