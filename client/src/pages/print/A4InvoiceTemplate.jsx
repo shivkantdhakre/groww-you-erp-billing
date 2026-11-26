@@ -2,13 +2,16 @@ import { useState, useEffect } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import api from "../../utils/api";
 import { ArrowLeft, Printer, FileDown, Loader2 } from "lucide-react";
+import PrintSelectorCard from "./PrintSelectorCard";
+import { usePrintSelectorState } from "./usePrintSelectorState";
 
 const formatINR = (num) =>
   `₹ ${Number(num || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /**
  * Shared live-data A4 print template for Sales Tax Invoices and Purchase Bills.
- * Resolves the requested `:id` or `?id=` record, or defaults to the latest live invoice.
+ * Requires an explicit `:id` or `?id=` to display/print an invoice, or renders an
+ * explicit invoice selection list when opened without an ID (never silently printing the latest).
  */
 export default function A4InvoiceTemplate({ invoiceType = "SALE" }) {
   const { id: paramId } = useParams();
@@ -26,33 +29,58 @@ export default function A4InvoiceTemplate({ invoiceType = "SALE" }) {
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [pdfError, setPdfError] = useState("");
 
+  // Selection mode state when no invoice ID is supplied in the URL
+  const [invoiceList, setInvoiceList] = useState([]);
+  const [selectorPagination, setSelectorPagination] = useState({ total: 0, page: 1, totalPages: 1 });
+  const {
+    page: selectorPage,
+    searchQuery,
+    setPage: setSelectorPage,
+    setSearchQuery,
+  } = usePrintSelectorState(`${isPurchase ? "PURCHASE" : "SALE"}:${requestedId || ""}`);
+
   useEffect(() => {
     let active = true;
-    const loadInvoiceData = async () => {
+    const loadInvoiceOrList = async () => {
       try {
         setLoading(true);
         setError("");
+        setPdfError("");
+        setInvoice(null);
         const listEndpoint = isPurchase
           ? "/transactions/purchase-invoices"
           : "/transactions/sales-invoices";
 
-        const [companyRes, targetId] = await Promise.all([
-          api.get("/company"),
-          requestedId
-            ? Promise.resolve(requestedId)
-            : api.get(`${listEndpoint}?limit=1&page=1`).then((r) => r.data?.data?.[0]?.id || null),
-        ]);
-
-        if (!active) return;
-        setCompany(companyRes.data);
-
-        if (!targetId) {
-          setInvoice(null);
+        if (!requestedId) {
+          const [compRes, listRes] = await Promise.all([
+            api.get("/company"),
+            api.get(`${listEndpoint}?limit=25&page=${selectorPage}`),
+          ]);
+          if (!active) return;
+          setCompany(compRes.data);
+          setInvoiceList(listRes.data?.data || []);
+          setSelectorPagination(
+            listRes.data?.pagination || { total: 0, page: selectorPage, totalPages: 1 }
+          );
           return;
         }
 
-        const invRes = await api.get(`${listEndpoint}/${targetId}`);
+        const numericId = Number(requestedId);
+        if (!Number.isInteger(numericId) || numericId <= 0) {
+          const compRes = await api.get("/company");
+          if (!active) return;
+          setCompany(compRes.data);
+          setError("Requested invoice ID is invalid.");
+          return;
+        }
+
+        const [compRes, invRes] = await Promise.all([
+          api.get("/company"),
+          api.get(`${listEndpoint}/${numericId}`),
+        ]);
+
         if (!active) return;
+        setCompany(compRes.data);
         setInvoice(invRes.data);
       } catch (err) {
         if (!active) return;
@@ -67,18 +95,18 @@ export default function A4InvoiceTemplate({ invoiceType = "SALE" }) {
       }
     };
 
-    loadInvoiceData();
+    loadInvoiceOrList();
     return () => {
       active = false;
     };
-  }, [isPurchase, requestedId]);
+  }, [isPurchase, requestedId, selectorPage]);
 
   useEffect(() => {
-    if (autoPrint && invoice && company && !loading && !error) {
+    if (requestedId && autoPrint && invoice && company && !loading && !error) {
       const timer = setTimeout(() => window.print(), 450);
       return () => clearTimeout(timer);
     }
-  }, [autoPrint, invoice, company, loading, error]);
+  }, [requestedId, autoPrint, invoice, company, loading, error]);
 
   const handleDownloadPdf = async () => {
     if (!invoice?.id) return;
@@ -100,46 +128,106 @@ export default function A4InvoiceTemplate({ invoiceType = "SALE" }) {
   };
 
   const fallbackRoute = isPurchase ? "/purchase-invoice" : "/sales-invoice";
+  const printBaseRoute = isPurchase ? "/print/purchase-invoice" : "/print/sales-invoice";
+  const docLabel = isPurchase ? "Purchase Bill" : "Sales Invoice";
 
   if (loading) {
     return (
       <div style={styles.page} className="flex items-center justify-center">
         <div className="flex items-center gap-2 text-sm text-[#1C1F1C]">
           <Loader2 className="w-4 h-4 animate-spin" />
-          <span>Loading A4 invoice sheet...</span>
+          <span>{requestedId ? "Loading A4 invoice sheet..." : `Loading ${docLabel.toLowerCase()}s...`}</span>
         </div>
       </div>
     );
   }
 
-  if (error) {
+  // Explicit selection view when no invoice ID is provided
+  if (!requestedId) {
+    const query = searchQuery.trim().toLowerCase();
+    const filteredInvoices = invoiceList.filter((inv) => {
+      if (!query) return true;
+      const partyName = (isPurchase ? inv.vendor?.name : inv.customer?.name) || "";
+      return (
+        String(inv.invoiceNo || "").toLowerCase().includes(query) ||
+        partyName.toLowerCase().includes(query)
+      );
+    });
+
     return (
-      <div style={styles.page} className="flex flex-col items-center justify-center gap-3 text-center">
-        <p className="text-sm font-medium text-[#B63A32]">{error}</p>
-        <button
-          type="button"
-          onClick={() => navigate(fallbackRoute)}
-          className="px-4 py-2 rounded-md bg-[#2D5A47] text-white text-xs font-medium cursor-pointer"
-        >
-          Back to {isPurchase ? "Purchase Invoices" : "Sales Invoices"}
-        </button>
-      </div>
+      <PrintSelectorCard
+        backRoute={fallbackRoute}
+        backLabel={`Back to ${docLabel}`}
+        companyName={company?.name}
+        selectorTag={`A4 ${docLabel} Selector`}
+        title={`Select a ${docLabel} to Print A4`}
+        subtitle="No invoice ID was specified. Choose an explicit record below to preview, print, or download PDF."
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder="Filter by invoice no or party..."
+        error={error}
+        items={filteredInvoices}
+        totalFetchedCount={invoiceList.length}
+        emptyBranchMessage={`No ${isPurchase ? "purchase" : "sales"} invoices recorded in the active branch yet.`}
+        emptyFilterMessage="No invoices matched your filter on this page."
+        emptyActionLabel={`Go to ${docLabel}`}
+        onNavigate={navigate}
+        columns={[
+          { label: "Invoice No" },
+          { label: "Date" },
+          { label: isPurchase ? "Vendor" : "Customer" },
+          { label: "Qty", align: "right" },
+          { label: "Grand Total", align: "right" },
+        ]}
+        renderRowCells={(inv) => (
+          <>
+            <td className="px-4 py-2.5 font-mono font-semibold text-[#1C1F1C] whitespace-nowrap">
+              {inv.invoiceNo}
+            </td>
+            <td className="px-4 py-2.5 text-[#5C5F58] whitespace-nowrap tabular-nums">
+              {new Date(inv.invoiceDate).toLocaleDateString("en-IN")}
+            </td>
+            <td className="px-4 py-2.5 text-[#1C1F1C]">
+              {(isPurchase ? inv.vendor?.name : inv.customer?.name) ||
+                (isPurchase ? "Cash Supplier" : "Walk-in Customer")}
+            </td>
+            <td className="px-4 py-2.5 text-right text-[#5C5F58] tabular-nums">{inv.totalQty}</td>
+            <td className="px-4 py-2.5 text-right font-mono font-semibold text-[#2D5A47] whitespace-nowrap tabular-nums">
+              {formatINR(inv.grandTotal)}
+            </td>
+          </>
+        )}
+        getOpenRoute={(inv) => `${printBaseRoute}/${inv.id}`}
+        pagination={selectorPagination}
+        page={selectorPage}
+        onPageChange={setSelectorPage}
+        pageContainerStyle={styles.page}
+      />
     );
   }
 
-  if (!invoice) {
+  if (error || !invoice) {
     return (
       <div style={styles.page} className="flex flex-col items-center justify-center gap-3 text-center">
-        <p className="text-sm text-[#1C1F1C]">
-          No {isPurchase ? "purchase" : "sales"} invoices recorded in the active branch yet.
+        <p className="text-sm font-medium text-[#B63A32]">
+          {error || `Requested ${docLabel.toLowerCase()} not found in the active branch.`}
         </p>
-        <button
-          type="button"
-          onClick={() => navigate(fallbackRoute)}
-          className="px-4 py-2 rounded-md bg-[#2D5A47] text-white text-xs font-medium cursor-pointer"
-        >
-          Go to {isPurchase ? "Purchase Invoice" : "Sales Invoice"}
-        </button>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigate(printBaseRoute)}
+            className="px-4 py-2 rounded-md border border-[#D8D3C8] bg-white text-[#1C1F1C] text-xs font-medium cursor-pointer hover:bg-[#F5F3EE]"
+          >
+            Choose a {docLabel}
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate(fallbackRoute)}
+            className="px-4 py-2 rounded-md bg-[#2D5A47] text-white text-xs font-medium cursor-pointer"
+          >
+            Back to {docLabel}s
+          </button>
+        </div>
       </div>
     );
   }
@@ -186,6 +274,9 @@ export default function A4InvoiceTemplate({ invoiceType = "SALE" }) {
             border: none !important;
             box-shadow: none !important;
           }
+          .a4-table-scroll {
+            overflow: visible !important;
+          }
         }
       `}</style>
 
@@ -202,6 +293,13 @@ export default function A4InvoiceTemplate({ invoiceType = "SALE" }) {
 
         <div className="flex flex-wrap items-center gap-2">
           {pdfError && <span className="text-xs text-[#B63A32]">{pdfError}</span>}
+          <button
+            type="button"
+            onClick={() => navigate(printBaseRoute)}
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md border border-[#D8D3C8] bg-[#F5F3EE] hover:bg-[#E9E5DC] text-xs font-medium text-[#1C1F1C] cursor-pointer"
+          >
+            <span>All {docLabel}s</span>
+          </button>
           <button
             type="button"
             onClick={handleDownloadPdf}
@@ -269,6 +367,7 @@ export default function A4InvoiceTemplate({ invoiceType = "SALE" }) {
 
         <hr style={styles.divider} />
 
+        <div className="a4-table-scroll overflow-x-auto">
         <table style={styles.table}>
           <thead>
             <tr>
@@ -308,6 +407,7 @@ export default function A4InvoiceTemplate({ invoiceType = "SALE" }) {
             ))}
           </tbody>
         </table>
+        </div>
 
         <div style={styles.totalsWrapper}>
           <div style={styles.totalsBox}>

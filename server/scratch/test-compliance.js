@@ -115,6 +115,7 @@ async function runComplianceTests() {
       data: {
         invoiceNo: 'COMP-0001',
         invoiceType: 'SALE',
+        invoiceDate: new Date('2026-06-05T10:00:00Z'),
         totalItems: 1,
         totalQty: 1,
         grandTotal: 100,
@@ -123,11 +124,12 @@ async function runComplianceTests() {
       },
     });
 
-    // Create return referencing invoice number
+    // Create return referencing invoice number in the June 2026 GSTR-1 return period
     const returnRecord = await basePrisma.return.create({
       data: {
         returnNo: 'COMP-SRT-0001',
         returnType: 'SALE',
+        returnDate: new Date('2026-06-10T10:00:00Z'),
         invoiceNo: 'COMP-0001',
         invoiceId: invoice.id, // linked foreign key
         totalItems: 1,
